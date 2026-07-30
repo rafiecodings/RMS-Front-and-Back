@@ -1,0 +1,231 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { OrderTimeline } from "./OrderTimeline";
+import type { Order } from "@/lib/types";
+import { cn, formatCurrency, formatTime } from "@/lib/utils";
+
+const STATUS_STYLES: Record<string, string> = {
+  placed: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  confirmed:
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  preparing:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  served:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  completed:
+    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+};
+
+const ITEM_STATUS_STYLES: Record<string, string> = {
+  pending: "bg-gray-100 text-gray-700",
+  preparing: "bg-amber-100 text-amber-700",
+  ready: "bg-emerald-100 text-emerald-700",
+  served: "bg-purple-100 text-purple-700",
+  cancelled: "bg-red-100 text-red-700",
+};
+
+interface OrderDetailProps {
+  order: Order;
+}
+
+export function OrderDetail({ order }: OrderDetailProps) {
+  const totalPaid = order.payments.reduce((sum, p) => sum + p.amount, 0);
+  const balance = order.total_amount - totalPaid;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold">{order.order_number}</h2>
+            <Badge
+              variant="secondary"
+              className={cn(
+                "text-[10px] px-1.5 py-0",
+                STATUS_STYLES[order.status]
+              )}
+            >
+              {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+            </Badge>
+            <Badge variant="outline" className="text-[10px] capitalize">
+              {order.order_type.replace(/_/g, " ")}
+            </Badge>
+          </div>
+          <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
+            {order.table && <span>Table {order.table.number}</span>}
+            {order.customer && <span>{order.customer.name}</span>}
+            {order.served_by && <span>Served by {order.served_by.name}</span>}
+          </div>
+        </div>
+        {order.placed_at && (
+          <div className="text-sm text-muted-foreground">
+            Placed at {formatTime(order.placed_at)}
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Order Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {order.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">
+                        {item.menu_item_name}
+                      </span>
+                      {item.variant && (
+                        <span className="text-xs text-muted-foreground">
+                          ({item.variant})
+                        </span>
+                      )}
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[9px] px-1 py-0",
+                          ITEM_STATUS_STYLES[item.status]
+                        )}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    {item.modifiers && item.modifiers.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {item.modifiers.map((m) => m.name).join(", ")}
+                      </p>
+                    )}
+                    {item.notes && (
+                      <p className="text-xs text-muted-foreground mt-0.5 italic">
+                        {item.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right ml-4 shrink-0">
+                    <p className="text-sm font-medium">
+                      {item.quantity} × {formatCurrency(item.unit_price)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(item.total_amount)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{formatCurrency(order.subtotal)}</span>
+              </div>
+              {order.tax_amount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span>{formatCurrency(order.tax_amount)}</span>
+                </div>
+              )}
+              {order.discount_amount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>Discount</span>
+                  <span>-{formatCurrency(order.discount_amount)}</span>
+                </div>
+              )}
+              {order.service_charge > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service Charge</span>
+                  <span>{formatCurrency(order.service_charge)}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-bold text-base">
+                <span>Total</span>
+                <span>{formatCurrency(order.total_amount)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Status Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrderTimeline order={order} />
+            </CardContent>
+          </Card>
+
+          {order.payments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {order.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div>
+                      <span className="capitalize">
+                        {payment.payment_method.replace(/_/g, " ")}
+                      </span>
+                      {payment.reference && (
+                        <span className="text-muted-foreground ml-1">
+                          ({payment.reference})
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-medium">
+                      {formatCurrency(payment.amount)}
+                    </span>
+                  </div>
+                ))}
+                <Separator />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Paid</span>
+                  <span className="font-medium">{formatCurrency(totalPaid)}</span>
+                </div>
+                {balance > 0 && (
+                  <div className="flex justify-between text-sm font-bold">
+                    <span>Balance Due</span>
+                    <span className="text-amber-600">{formatCurrency(balance)}</span>
+                  </div>
+                )}
+                {balance <= 0 && (
+                  <div className="text-center text-xs text-emerald-600 font-medium pt-1">
+                    Fully Paid
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {order.notes && (
+            <Card>
+              <CardContent className="pt-3">
+                <p className="text-xs text-muted-foreground font-medium mb-1">
+                  Order Notes
+                </p>
+                <p className="text-sm">{order.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

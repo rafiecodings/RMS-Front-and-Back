@@ -1,0 +1,137 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api/client";
+import { normalizePaginated } from "@/lib/utils/api";
+import type {
+  ApiResponse,
+  QueryParams,
+  PaginatedResponse,
+  Staff,
+  StaffFormData,
+  StaffPerformance,
+  ShiftSchedule,
+  ShiftScheduleFormData,
+  AttendanceRecord,
+} from "@/lib/types";
+
+export function useStaff(params?: QueryParams & { role?: string }) {
+  const queryClient = useQueryClient();
+
+  const list = useQuery({
+    queryKey: ["staff", params],
+    queryFn: () =>
+      api
+        .get<PaginatedResponse<Staff>>("/staff", { params })
+        .then((res) => normalizePaginated(res.data)),
+    staleTime: 30_000,
+  });
+
+  const create = useMutation({
+    mutationFn: (data: StaffFormData) =>
+      api.post<ApiResponse<Staff>>("/staff", data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<StaffFormData> }) =>
+      api.put<ApiResponse<Staff>>(`/staff/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/staff/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+  });
+
+  return { list, create, update, remove };
+}
+
+export function useStaffMember(id: string) {
+  return useQuery({
+    queryKey: ["staff", id],
+    queryFn: () =>
+      api
+        .get<ApiResponse<Staff>>(`/staff/${id}`)
+        .then((res) => res.data.data),
+    enabled: !!id,
+  });
+}
+
+export function useStaffPerformance(id: string) {
+  return useQuery({
+    queryKey: ["staff-performance", id],
+    queryFn: () =>
+      api
+        .get<ApiResponse<StaffPerformance>>(`/staff/${id}/performance`)
+        .then((res) => res.data.data),
+    enabled: !!id,
+  });
+}
+
+export function useShiftSchedule(params?: QueryParams & { staff_id?: string; date?: string; date_from?: string; date_to?: string }) {
+  const queryClient = useQueryClient();
+
+  const list = useQuery({
+    queryKey: ["shift-schedules", params],
+    queryFn: () =>
+      api
+        .get<PaginatedResponse<ShiftSchedule>>("/staff/schedule", { params })
+        .then((res) => normalizePaginated(res.data)),
+    staleTime: 30_000,
+  });
+
+  const create = useMutation({
+    mutationFn: (data: ShiftScheduleFormData) =>
+      api.post<ApiResponse<ShiftSchedule>>("/staff/schedule", data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shift-schedules"] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ShiftScheduleFormData> }) =>
+      api.put<ApiResponse<ShiftSchedule>>(`/staff/schedule/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shift-schedules"] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/staff/schedule/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shift-schedules"] }),
+  });
+
+  return { list, create, update, remove };
+}
+
+export function useAttendance(params?: QueryParams & { staff_id?: string; date?: string; date_from?: string; date_to?: string; status?: string }) {
+  return useQuery({
+    queryKey: ["attendance", params],
+    queryFn: () =>
+      api
+        .get<PaginatedResponse<AttendanceRecord>>("/staff/attendance", { params })
+        .then((res) => normalizePaginated(res.data)),
+    staleTime: 30_000,
+  });
+}
+
+export function useClockIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data?: { staff_id?: string; notes?: string }) =>
+      api.post<ApiResponse<AttendanceRecord>>("/staff/clock-in", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+  });
+}
+
+export function useClockOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data?: { staff_id?: string; notes?: string }) =>
+      api.post<ApiResponse<AttendanceRecord>>("/staff/clock-out", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+  });
+}

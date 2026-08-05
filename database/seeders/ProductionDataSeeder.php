@@ -13,6 +13,7 @@ class ProductionDataSeeder extends Seeder
     private array $ids = [];
     private Carbon $now;
     private Carbon $sixMonthsAgo;
+    private ?string $userPassword = null;
 
     public function run(): void
     {
@@ -71,6 +72,21 @@ class ProductionDataSeeder extends Seeder
     private function uid(string $prefix, int $num): string
     {
         return sprintf('00000000-0000-0000-0000-%s', substr(md5($prefix . $num), 0, 12));
+    }
+
+    private function userSeedPassword(): string
+    {
+        if ($this->userPassword !== null) {
+            return $this->userPassword;
+        }
+
+        $password = env('DEMO_USER_PASSWORD');
+        if (!$password) {
+            $password = Str::random(16);
+            $this->command?->warn('No DEMO_USER_PASSWORD env set. Generated demo user password: '.$password);
+        }
+
+        return $this->userPassword = $password;
     }
 
     private function randomFrom(array $arr)
@@ -227,7 +243,7 @@ class ProductionDataSeeder extends Seeder
                 'id' => $id,
                 'name' => $userData['name'],
                 'email' => $userData['email'],
-                'password' => Hash::make('password'),
+                'password' => Hash::make($this->userSeedPassword()),
                 'is_active' => true,
                 'email_verified_at' => $createdAt,
                 'avatar' => null,

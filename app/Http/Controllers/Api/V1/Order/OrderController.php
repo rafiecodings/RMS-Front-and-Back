@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Order;
 
 use App\Http\Controllers\Controller;
+use App\Models\Discount;
 use App\Models\Invoice;
+use App\Models\MenuItem;
 use App\Models\Payment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Table;
+use App\Services\PricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -90,29 +94,69 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|string|exists:menu_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.quantity' => 'required|integer|min:1|max:9999',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
             'items.*.notes' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'sometimes|array',
             'items.*.modifier_ids.*' => 'string|exists:menu_modifiers,id',
+            'discount_id' => 'nullable|string|exists:discounts,id',
+            'discount_code' => 'nullable|string|max:50',
         ]);
 
-        $result = DB::transaction(function () use ($validated, $request) {
-            $orderNumber = 'ORD-' . strtoupper(uniqid());
+        $pricing = app(PricingService::class);
 
-            $subtotal = 0;
-            foreach ($validated['items'] as $item) {
-                $itemTotal = $item['unit_price'] * $item['quantity'];
-                $subtotal += $itemTotal;
+        $menuItemIds = collect($validated['items'])->pluck('menu_item_id')->unique()->all();
+        $menuItems = MenuItem::with('modifiers')
+            ->whereIn('id', $menuItemIds)
+            ->get()
+            ->keyBy('id');
+
+        $lineItems = [];
+        $subtotal = 0.0;
+        foreach ($validated['items'] as $itemData) {
+            $menuItem = $menuItems->get($itemData['menu_item_id']);
+
+            if (!$menuItem) {
+                return $this->error('One or more menu items were not found.', 422);
             }
 
-            $restaurantSettings = \App\Models\RestaurantSetting::first();
-            $taxRate = $restaurantSettings?->default_tax_rate ?? 0;
-            $taxAmount = $subtotal * ($taxRate / 100);
-            $serviceCharge = $restaurantSettings?->service_charge_enabled
-                ? $subtotal * (($restaurantSettings->default_service_charge ?? 0) / 100)
-                : 0;
-            $total = $subtotal + $taxAmount + $serviceCharge;
+            $line = $pricing->buildLineItem(
+                $menuItem,
+                (int) $itemData['quantity'],
+                $itemData['modifier_ids'] ?? [],
+            );
+
+            if ($line['error'] !== null) {
+                return $this->error($line['error'], 422);
+            }
+
+            $lineItems[] = [
+                'menu_item' => $menuItem,
+                'data' => $itemData,
+                'line' => $line,
+            ];
+
+            $subtotal += $line['total_price'];
+        }
+
+        if ($subtotal > 9999999999.99) {
+            return $this->error('Order subtotal exceeds the maximum allowed amount.', 422);
+        }
+
+        $discountResolution = $pricing->resolveDiscount(
+            $validated['discount_id'] ?? null,
+            $validated['discount_code'] ?? null,
+            $subtotal,
+        );
+
+        if ($discountResolution['error'] !== null) {
+            return $this->error($discountResolution['error'], 422);
+        }
+
+        $totals = $pricing->orderTotals($subtotal, $discountResolution['amount']);
+
+        $result = DB::transaction(function () use ($validated, $request, $lineItems, $discountResolution, $totals) {
+            $orderNumber = 'ORD-' . strtoupper(uniqid());
 
             $order = Order::create([
                 'order_number' => $orderNumber,
@@ -120,33 +164,47 @@ class OrderController extends Controller
                 'table_id' => $validated['table_id'] ?? null,
                 'order_type' => $validated['order_type'],
                 'status' => 'pending',
-                'subtotal' => $subtotal,
-                'tax_amount' => $taxAmount,
-                'discount_amount' => 0,
-                'service_charge' => $serviceCharge,
-                'total' => $total,
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax_amount'],
+                'discount_amount' => $totals['discount_amount'],
+                'service_charge' => $totals['service_charge'],
+                'total' => $totals['total'],
                 'payment_status' => 'unpaid',
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
 
-            foreach ($validated['items'] as $itemData) {
-                $itemTotal = $itemData['unit_price'] * $itemData['quantity'];
-
+            foreach ($lineItems as $entry) {
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
-                    'menu_item_id' => $itemData['menu_item_id'],
-                    'name' => $itemData['name'] ?? '',
-                    'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_price' => $itemTotal,
+                    'menu_item_id' => $entry['menu_item']->id,
+                    'name' => $entry['menu_item']->name,
+                    'quantity' => $entry['data']['quantity'],
+                    'unit_price' => $entry['line']['unit_price'],
+                    'total_price' => $entry['line']['total_price'],
                     'discount_amount' => 0,
-                    'notes' => $itemData['notes'] ?? null,
+                    'notes' => $entry['data']['notes'] ?? null,
                     'status' => 'pending',
                 ]);
 
-                if (!empty($itemData['modifier_ids'])) {
-                    $orderItem->modifiers()->sync($itemData['modifier_ids']);
+                if ($entry['line']['modifier_snapshot'] !== []) {
+                    $orderItem->modifiers()->sync($entry['line']['modifier_snapshot']);
+                }
+            }
+
+            if ($discountResolution['discount']) {
+                $discount = $discountResolution['discount'];
+
+                $claim = Discount::where('id', $discount->id)->where('is_active', true);
+
+                if ($discount->max_uses !== null) {
+                    $claim->where('used_count', '<', (int) $discount->max_uses);
+                }
+
+                if (!$claim->increment('used_count')) {
+                    throw ValidationException::withMessages([
+                        'discount' => ['Discount usage limit reached.'],
+                    ]);
                 }
             }
 
@@ -200,7 +258,7 @@ class OrderController extends Controller
                 'modifiers' => $item->modifiers->map(fn ($m) => [
                     'id' => $m->id,
                     'name' => $m->name,
-                    'price' => (float) $m->price,
+                    'price' => (float) ($m->pivot->price ?? $m->price),
                 ]),
             ]),
             'created_at' => $result->created_at?->toISOString(),
@@ -253,7 +311,7 @@ class OrderController extends Controller
                 'modifiers' => $item->modifiers->map(fn ($m) => [
                     'id' => $m->id,
                     'name' => $m->name,
-                    'price' => (float) $m->price,
+                    'price' => (float) ($m->pivot->price ?? $m->price),
                 ]),
             ]),
             'created_at' => $order->created_at?->toISOString(),
@@ -337,43 +395,57 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'menu_item_id' => 'required|string|exists:menu_items,id',
-            'quantity' => 'required|integer|min:1',
-            'unit_price' => 'required|numeric|min:0',
+            'quantity' => 'required|integer|min:1|max:9999',
+            'unit_price' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:500',
             'modifier_ids' => 'sometimes|array',
             'modifier_ids.*' => 'string|exists:menu_modifiers,id',
         ]);
 
-        $itemTotal = $validated['unit_price'] * $validated['quantity'];
+        $pricing = app(PricingService::class);
+
+        $menuItem = MenuItem::with('modifiers')->find($validated['menu_item_id']);
+
+        if (!$menuItem) {
+            return $this->error('Menu item not found.', 422);
+        }
+
+        $line = $pricing->buildLineItem(
+            $menuItem,
+            (int) $validated['quantity'],
+            $validated['modifier_ids'] ?? [],
+        );
+
+        if ($line['error'] !== null) {
+            return $this->error($line['error'], 422);
+        }
 
         $orderItem = OrderItem::create([
             'order_id' => $order->id,
-            'menu_item_id' => $validated['menu_item_id'],
+            'menu_item_id' => $menuItem->id,
+            'name' => $menuItem->name,
             'quantity' => $validated['quantity'],
-            'unit_price' => $validated['unit_price'],
-            'total_price' => $itemTotal,
+            'unit_price' => $line['unit_price'],
+            'total_price' => $line['total_price'],
             'discount_amount' => 0,
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
         ]);
 
-        if (!empty($validated['modifier_ids'])) {
-            $orderItem->modifiers()->sync($validated['modifier_ids']);
+        if ($line['modifier_snapshot'] !== []) {
+            $orderItem->modifiers()->sync($line['modifier_snapshot']);
         }
 
-        $newSubtotal = $order->subtotal + $itemTotal;
-        $restaurantSettings = \App\Models\RestaurantSetting::first();
-        $taxRate = $restaurantSettings?->default_tax_rate ?? 0;
-        $taxAmount = $newSubtotal * ($taxRate / 100);
-        $serviceCharge = $restaurantSettings?->service_charge_enabled
-            ? $newSubtotal * (($restaurantSettings->default_service_charge ?? 0) / 100)
-            : 0;
+        $totals = $pricing->orderTotals(
+            (float) $order->subtotal + $line['total_price'],
+            (float) $order->discount_amount,
+        );
 
         $order->update([
-            'subtotal' => $newSubtotal,
-            'tax_amount' => $taxAmount,
-            'service_charge' => $serviceCharge,
-            'total' => $newSubtotal + $taxAmount + $serviceCharge - $order->discount_amount,
+            'subtotal' => $totals['subtotal'],
+            'tax_amount' => $totals['tax_amount'],
+            'service_charge' => $totals['service_charge'],
+            'total' => $totals['total'],
         ]);
 
         $orderItem->load('modifiers');
@@ -389,7 +461,7 @@ class OrderController extends Controller
             'modifiers' => $orderItem->modifiers->map(fn ($m) => [
                 'id' => $m->id,
                 'name' => $m->name,
-                'price' => (float) $m->price,
+                'price' => (float) ($m->pivot->price ?? $m->price),
             ]),
             'order' => [
                 'subtotal' => (float) $order->subtotal,
@@ -415,40 +487,64 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'quantity' => 'sometimes|integer|min:1',
+            'quantity' => 'sometimes|integer|min:1|max:9999',
             'notes' => 'nullable|string|max:500',
             'modifier_ids' => 'sometimes|array',
             'modifier_ids.*' => 'string|exists:menu_modifiers,id',
         ]);
 
+        $pricing = app(PricingService::class);
+
         $oldTotal = (float) $orderItem->total_price;
 
-        if (isset($validated['quantity']) && $validated['quantity'] !== $orderItem->quantity) {
-            $validated['total_price'] = (float) $orderItem->unit_price * $validated['quantity'];
+        $modifierChanged = array_key_exists('modifier_ids', $validated);
+
+        $update = [];
+        if (isset($validated['quantity'])) {
+            $update['quantity'] = $validated['quantity'];
+        }
+        if (array_key_exists('notes', $validated)) {
+            $update['notes'] = $validated['notes'];
         }
 
-        $orderItem->update($validated);
+        if ($modifierChanged) {
+            $menuItem = MenuItem::with('modifiers')->find($orderItem->menu_item_id);
 
-        if (array_key_exists('modifier_ids', $validated)) {
-            $orderItem->modifiers()->sync($validated['modifier_ids']);
+            if (!$menuItem) {
+                return $this->error('Menu item not found.', 422);
+            }
+
+            $line = $pricing->buildLineItem(
+                $menuItem,
+                (int) ($validated['quantity'] ?? $orderItem->quantity),
+                $validated['modifier_ids'] ?? [],
+            );
+
+            if ($line['error'] !== null) {
+                return $this->error($line['error'], 422);
+            }
+
+            $update['unit_price'] = $line['unit_price'];
+            $update['total_price'] = $line['total_price'];
+
+            $orderItem->modifiers()->sync($line['modifier_snapshot']);
+        } elseif (isset($validated['quantity']) && (int) $validated['quantity'] !== (int) $orderItem->quantity) {
+            $update['total_price'] = round((float) $orderItem->unit_price * (int) $validated['quantity'], 2);
         }
+
+        $orderItem->update($update);
 
         $newTotal = (float) $orderItem->total_price;
         $subtotalDiff = $newTotal - $oldTotal;
-        $newSubtotal = (float) $order->subtotal + $subtotalDiff;
+        $newSubtotal = max(0.0, (float) $order->subtotal + $subtotalDiff);
 
-        $restaurantSettings = \App\Models\RestaurantSetting::first();
-        $taxRate = $restaurantSettings?->default_tax_rate ?? 0;
-        $taxAmount = $newSubtotal * ($taxRate / 100);
-        $serviceCharge = $restaurantSettings?->service_charge_enabled
-            ? $newSubtotal * (($restaurantSettings->default_service_charge ?? 0) / 100)
-            : 0;
+        $totals = $pricing->orderTotals($newSubtotal, (float) $order->discount_amount);
 
         $order->update([
-            'subtotal' => $newSubtotal,
-            'tax_amount' => $taxAmount,
-            'service_charge' => $serviceCharge,
-            'total' => $newSubtotal + $taxAmount + $serviceCharge - $order->discount_amount,
+            'subtotal' => $totals['subtotal'],
+            'tax_amount' => $totals['tax_amount'],
+            'service_charge' => $totals['service_charge'],
+            'total' => $totals['total'],
         ]);
 
         $orderItem->load('modifiers');
@@ -462,7 +558,7 @@ class OrderController extends Controller
             'modifiers' => $orderItem->modifiers->map(fn ($m) => [
                 'id' => $m->id,
                 'name' => $m->name,
-                'price' => (float) $m->price,
+                'price' => (float) ($m->pivot->price ?? $m->price),
             ]),
             'order' => [
                 'subtotal' => (float) $order->subtotal,
@@ -492,20 +588,15 @@ class OrderController extends Controller
         $orderItem->modifiers()->detach();
         $orderItem->delete();
 
-        $newSubtotal = (float) $order->subtotal - $itemTotal;
+        $newSubtotal = max(0.0, (float) $order->subtotal - $itemTotal);
 
-        $restaurantSettings = \App\Models\RestaurantSetting::first();
-        $taxRate = $restaurantSettings?->default_tax_rate ?? 0;
-        $taxAmount = max(0, $newSubtotal * ($taxRate / 100));
-        $serviceCharge = $restaurantSettings?->service_charge_enabled
-            ? max(0, $newSubtotal * (($restaurantSettings->default_service_charge ?? 0) / 100))
-            : 0;
+        $totals = app(PricingService::class)->orderTotals($newSubtotal, (float) $order->discount_amount);
 
         $order->update([
-            'subtotal' => max(0, $newSubtotal),
-            'tax_amount' => $taxAmount,
-            'service_charge' => $serviceCharge,
-            'total' => max(0, $newSubtotal + $taxAmount + $serviceCharge - $order->discount_amount),
+            'subtotal' => $totals['subtotal'],
+            'tax_amount' => $totals['tax_amount'],
+            'service_charge' => $totals['service_charge'],
+            'total' => $totals['total'],
         ]);
 
         return $this->success([
@@ -600,12 +691,9 @@ class OrderController extends Controller
                 $newSubtotal += (float) $item->total_price;
             }
 
-            $restaurantSettings = \App\Models\RestaurantSetting::first();
-            $taxRate = $restaurantSettings?->default_tax_rate ?? 0;
-            $taxAmount = $newSubtotal * ($taxRate / 100);
-            $serviceCharge = $restaurantSettings?->service_charge_enabled
-                ? $newSubtotal * (($restaurantSettings->default_service_charge ?? 0) / 100)
-                : 0;
+            $pricing = app(PricingService::class);
+
+            $newTotals = $pricing->orderTotals($newSubtotal, 0.0);
 
             $newOrder = Order::create([
                 'order_number' => 'ORD-' . strtoupper(uniqid()),
@@ -613,11 +701,11 @@ class OrderController extends Controller
                 'table_id' => $validated['new_table_id'] ?? $order->table_id,
                 'order_type' => $order->order_type,
                 'status' => 'pending',
-                'subtotal' => $newSubtotal,
-                'tax_amount' => $taxAmount,
+                'subtotal' => $newTotals['subtotal'],
+                'tax_amount' => $newTotals['tax_amount'],
                 'discount_amount' => 0,
-                'service_charge' => $serviceCharge,
-                'total' => $newSubtotal + $taxAmount + $serviceCharge,
+                'service_charge' => $newTotals['service_charge'],
+                'total' => $newTotals['total'],
                 'payment_status' => 'unpaid',
                 'created_by' => $request->user()->id,
             ]);
@@ -631,16 +719,13 @@ class OrderController extends Controller
                 $remainingSubtotal += (float) $item->total_price;
             });
 
-            $remainingTaxAmount = $remainingSubtotal * ($taxRate / 100);
-            $remainingServiceCharge = $restaurantSettings?->service_charge_enabled
-                ? $remainingSubtotal * (($restaurantSettings->default_service_charge ?? 0) / 100)
-                : 0;
+            $remainingTotals = $pricing->orderTotals($remainingSubtotal, (float) $order->discount_amount);
 
             $order->update([
-                'subtotal' => $remainingSubtotal,
-                'tax_amount' => $remainingTaxAmount,
-                'service_charge' => $remainingServiceCharge,
-                'total' => $remainingSubtotal + $remainingTaxAmount + $remainingServiceCharge - $order->discount_amount,
+                'subtotal' => $remainingTotals['subtotal'],
+                'tax_amount' => $remainingTotals['tax_amount'],
+                'service_charge' => $remainingTotals['service_charge'],
+                'total' => $remainingTotals['total'],
             ]);
 
             return $newOrder;

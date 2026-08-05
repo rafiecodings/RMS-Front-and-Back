@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
+    private ?string $adminPassword = null;
 
     public function run(): void
     {
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->createAdminUser();
         $this->createRestaurantSettings();
         $this->call(ProductionDataSeeder::class);
+        $this->createAdminUser();
     }
 
     private function createRoles(): void
@@ -185,6 +187,21 @@ class DatabaseSeeder extends Seeder
         );
     }
 
+    private function adminSeedPassword(): string
+    {
+        if ($this->adminPassword !== null) {
+            return $this->adminPassword;
+        }
+
+        $password = env('ADMIN_PASSWORD');
+        if (!$password) {
+            $password = Str::random(24);
+            $this->command?->warn('No ADMIN_PASSWORD env set. Generated admin password: '.$password);
+        }
+
+        return $this->adminPassword = $password;
+    }
+
     private function createAdminUser(): void
     {
         $admin = User::firstOrCreate(
@@ -192,7 +209,7 @@ class DatabaseSeeder extends Seeder
             [
                 'id' => Str::uuid()->toString(),
                 'name' => 'Admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($this->adminSeedPassword()),
                 'is_active' => true,
                 'email_verified_at' => now(),
             ]

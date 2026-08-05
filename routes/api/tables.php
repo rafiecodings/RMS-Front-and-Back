@@ -7,10 +7,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('floor-plans')->group(function () {
         Route::get('/', [FloorPlanController::class, 'index']);
-        Route::post('/', [FloorPlanController::class, 'store']);
+        Route::post('/', [FloorPlanController::class, 'store'])->middleware('role:admin,manager');
         Route::get('/{id}', [FloorPlanController::class, 'show']);
-        Route::put('/{id}', [FloorPlanController::class, 'update']);
-        Route::delete('/{id}', [FloorPlanController::class, 'destroy']);
+        Route::put('/{id}', [FloorPlanController::class, 'update'])->middleware('role:admin,manager');
+        Route::delete('/{id}', [FloorPlanController::class, 'destroy'])->middleware('role:admin,manager');
     });
 
     Route::prefix('tables')->group(function () {

@@ -45,6 +45,7 @@ class OrderItem extends BaseModel
 
     public function modifiers(): BelongsToMany
     {
-        return $this->belongsToMany(MenuModifier::class, 'order_item_modifiers');
+        return $this->belongsToMany(MenuModifier::class, 'order_item_modifiers', 'order_item_id', 'modifier_id')
+            ->withPivot('name', 'price');
     }
 }

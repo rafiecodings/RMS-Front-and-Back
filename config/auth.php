@@ -22,6 +22,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Login Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Limits the number of FAILED login attempts per email (falling back to IP)
+    | within the decay window. Applied to POST /auth/login via the "throttle:login"
+    | middleware, using the "login" rate limiter registered in AppServiceProvider.
+    | Adjust via LOGIN_MAX_ATTEMPTS and LOGIN_DECAY_MINUTES in your .env file.
+    |
+    */
+
+    'throttle' => [
+        'login_max_attempts' => (int) env('LOGIN_MAX_ATTEMPTS', 5),
+        'login_decay_minutes' => (int) env('LOGIN_DECAY_MINUTES', 1),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
     |

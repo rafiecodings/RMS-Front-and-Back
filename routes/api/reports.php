@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('reports')->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('reports')->group(function () {
     Route::get('/revenue', [ReportController::class, 'revenue']);
     Route::get('/sales', [ReportController::class, 'sales']);
     Route::get('/menu-performance', [ReportController::class, 'menuPerformance']);

@@ -79,6 +79,11 @@ export default function LoginPage() {
           password: fieldErrors.password?.[0],
         });
         setApiError(apiErr.response.data.message || "Please fix the errors below");
+      } else if (apiErr.response?.status === 429) {
+        setApiError(
+          apiErr.response.data?.message ||
+            "Too many login attempts. Please try again later."
+        );
       } else {
         setApiError(
           apiErr.response?.data?.message ||

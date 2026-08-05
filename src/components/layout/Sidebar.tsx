@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -37,12 +38,15 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  roles?: string[];
 }
 
 interface NavGroup {
   label: string;
   items: NavItem[];
 }
+
+const ADMIN_ROLES = ["admin", "manager"];
 
 const navGroups: NavGroup[] = [
   {
@@ -63,42 +67,59 @@ const navGroups: NavGroup[] = [
   {
     label: "Menu",
     items: [
-      { label: "Categories", href: "/menu/categories", icon: ShoppingBag },
-      { label: "Items", href: "/menu/items", icon: UtensilsCrossed },
+      { label: "Categories", href: "/menu/categories", icon: ShoppingBag, roles: ADMIN_ROLES },
+      { label: "Items", href: "/menu/items", icon: UtensilsCrossed, roles: ADMIN_ROLES },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Ingredients", href: "/inventory/ingredients", icon: Package },
-      { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck },
-      { label: "Suppliers", href: "/inventory/suppliers", icon: Truck },
+      { label: "Ingredients", href: "/inventory/ingredients", icon: Package, roles: ADMIN_ROLES },
+      { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck, roles: ADMIN_ROLES },
+      { label: "Suppliers", href: "/inventory/suppliers", icon: Truck, roles: ADMIN_ROLES },
       {
         label: "Purchase Orders",
         href: "/inventory/purchase-orders",
         icon: FileBarChart,
+        roles: ADMIN_ROLES,
       },
     ],
   },
   {
     label: "Management",
     items: [
-      { label: "Staff", href: "/staff", icon: UserCog },
-      { label: "Reports", href: "/reports", icon: BarChart3 },
-      { label: "Settings", href: "/settings", icon: Settings },
+      { label: "Staff", href: "/staff", icon: UserCog, roles: ADMIN_ROLES },
+      { label: "Reports", href: "/reports", icon: BarChart3, roles: ADMIN_ROLES },
+      { label: "Settings", href: "/settings", icon: Settings, roles: ADMIN_ROLES },
     ],
   },
 ];
+
+function useFilteredNavGroups(): NavGroup[] {
+  const { user } = useAuth();
+  const role = user?.role ?? "user";
+  return useMemo(() => {
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) => !item.roles || item.roles.includes(role)
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [role]);
+}
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_COLLAPSED_WIDTH = 68;
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const filteredNavGroups = useFilteredNavGroups();
 
   return (
     <nav className="flex-1 overflow-y-auto py-4">
-      {navGroups.map((group, groupIndex) => (
+      {filteredNavGroups.map((group, groupIndex) => (
         <div key={group.label} className={cn(groupIndex > 0 && "mt-6")}>
           <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
             {group.label}
@@ -162,10 +183,11 @@ function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
 
 function CollapsedNavLinks() {
   const pathname = usePathname();
+  const filteredNavGroups = useFilteredNavGroups();
 
   return (
     <nav className="flex-1 overflow-y-auto py-4">
-      {navGroups.map((group) =>
+      {filteredNavGroups.map((group) =>
         group.items.map((item) => {
           const isActive =
             pathname === item.href ||

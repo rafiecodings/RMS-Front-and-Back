@@ -79,7 +79,7 @@ class StaffController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|string|exists:users,id|unique:staff_profiles,user_id',
+            'user_id' => 'required|uuid|exists:users,id|unique:staff_profiles,user_id',
             'employee_id' => 'required|string|max:50|unique:staff_profiles,employee_id',
             'position' => 'required|string|max:255',
             'department' => 'nullable|string|max:255',
@@ -225,7 +225,7 @@ class StaffController extends Controller
     public function clockIn(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => 'required|string|exists:staff_profiles,id',
+            'staff_id' => 'required|uuid|exists:staff_profiles,id',
         ]);
 
         $existingClockIn = Attendance::where('staff_id', $validated['staff_id'])
@@ -253,7 +253,7 @@ class StaffController extends Controller
     public function clockOut(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => 'required|string|exists:staff_profiles,id',
+            'staff_id' => 'required|uuid|exists:staff_profiles,id',
         ]);
 
         $attendance = Attendance::where('staff_id', $validated['staff_id'])
@@ -283,6 +283,14 @@ class StaffController extends Controller
 
     public function schedule(Request $request): JsonResponse
     {
+        $request->validate([
+            'date' => 'nullable|date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'staff_id' => 'nullable|uuid',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
         $query = ShiftSchedule::with(['staff.user', 'shift']);
 
         if ($date = $request->input('date')) {
@@ -337,8 +345,8 @@ class StaffController extends Controller
     public function createSchedule(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => 'required|string|exists:staff_profiles,id',
-            'shift_id' => 'required|string|exists:staff_shifts,id',
+            'staff_id' => 'required|uuid|exists:staff_profiles,id',
+            'shift_id' => 'required|uuid|exists:staff_shifts,id',
             'date' => 'required|date',
             'status' => 'sometimes|string|in:scheduled,confirmed,absent,swap',
             'notes' => 'nullable|string|max:500',

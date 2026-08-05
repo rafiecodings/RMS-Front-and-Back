@@ -27,6 +27,6 @@ class MenuCombo extends BaseModel
 
     public function items(): BelongsToMany
     {
-        return $this->belongsToMany(MenuItem::class, 'menu_combo_items');
+        return $this->belongsToMany(MenuItem::class, 'menu_combo_items', 'combo_id', 'menu_item_id');
     }
 }

@@ -29,6 +29,6 @@ class MenuCategory extends BaseModel
 
     public function items(): HasMany
     {
-        return $this->hasMany(MenuItem::class);
+        return $this->hasMany(MenuItem::class, 'category_id');
     }
 }

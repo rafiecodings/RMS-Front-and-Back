@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderStatusHistory extends BaseModel
 {
+    public static function bootSoftDeletes(): void
+    {
+        // Append-only ledger table: no soft-delete global scope.
+    }
+
+    public function initializeSoftDeletes(): void
+    {
+        // Append-only ledger table: no deleted_at cast.
+    }
+
     protected $fillable = [
         'order_id',
         'status',

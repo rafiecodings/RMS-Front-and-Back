@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends BaseModel
@@ -56,9 +57,9 @@ class Order extends BaseModel
         return $this->hasMany(OrderItem::class);
     }
 
-    public function payments(): HasMany
+    public function payments(): HasManyThrough
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasManyThrough(Payment::class, Invoice::class);
     }
 
     public function invoice(): HasOne

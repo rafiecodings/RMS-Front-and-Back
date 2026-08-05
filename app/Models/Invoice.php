@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Invoice extends BaseModel
 {
@@ -47,8 +48,8 @@ class Invoice extends BaseModel
         return $this->hasMany(Payment::class);
     }
 
-    public function refunds(): HasMany
+    public function refunds(): HasManyThrough
     {
-        return $this->hasMany(Refund::class);
+        return $this->hasManyThrough(Refund::class, Payment::class);
     }
 }

@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 abstract class BaseModel extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasUuid;
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -18,9 +18,6 @@ abstract class BaseModel extends Model
     protected static function booted(): void
     {
         static::creating(function (Model $model) {
-            if (empty($model->id)) {
-                $model->id = Str::uuid()->toString();
-            }
             if (Schema::hasColumn($model->getTable(), 'created_by') && empty($model->created_by) && auth()->check()) {
                 $model->created_by = auth()->id();
             }

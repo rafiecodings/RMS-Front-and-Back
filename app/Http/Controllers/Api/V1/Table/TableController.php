@@ -16,6 +16,9 @@ class TableController extends Controller
         $query = Table::with('floorPlan');
 
         if ($floorPlanId = $request->input('floor_plan_id')) {
+            $request->validate([
+                'floor_plan_id' => 'uuid',
+            ]);
             $query->where('floor_plan_id', $floorPlanId);
         }
 
@@ -58,7 +61,7 @@ class TableController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'floor_plan_id' => 'required|exists:floor_plans,id',
+            'floor_plan_id' => ['required','uuid','exists:floor_plans,id'],
             'number' => 'required|string|max:50',
             'capacity' => 'required|integer|min:1',
             'status' => 'sometimes|string|in:available,occupied,reserved,maintenance',
@@ -134,7 +137,7 @@ class TableController extends Controller
         }
 
         $validated = $request->validate([
-            'floor_plan_id' => 'sometimes|exists:floor_plans,id',
+            'floor_plan_id' => ['sometimes','uuid','exists:floor_plans,id'],
             'number' => 'sometimes|string|max:50',
             'capacity' => 'sometimes|integer|min:1',
             'status' => 'sometimes|string|in:available,occupied,reserved,maintenance',
@@ -200,7 +203,7 @@ class TableController extends Controller
     {
         $validated = $request->validate([
             'table_ids' => 'required|array|min:2',
-            'table_ids.*' => 'required|string|exists:tables,id',
+            'table_ids.*' => ['required','uuid','exists:tables,id'],
         ]);
 
         $tables = Table::whereIn('id', $validated['table_ids'])->get();
@@ -241,7 +244,7 @@ class TableController extends Controller
     public function split(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'table_id' => 'required|string|exists:tables,id',
+            'table_id' => ['required','uuid','exists:tables,id'],
         ]);
 
         $table = Table::find($validated['table_id']);
@@ -291,8 +294,8 @@ class TableController extends Controller
     public function transfer(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'from_table_id' => 'required|string|exists:tables,id',
-            'to_table_id' => 'required|string|exists:tables,id|different:from_table_id',
+            'from_table_id' => ['required','uuid','exists:tables,id'],
+            'to_table_id' => ['required','uuid','exists:tables,id','different:from_table_id'],
         ]);
 
         $fromTable = Table::find($validated['from_table_id']);

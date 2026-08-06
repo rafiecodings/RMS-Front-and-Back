@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\V1\POS\PaymentController;
 use App\Http\Controllers\Api\V1\POS\CashRegisterController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin,manager,cashier'])->group(function () {
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
         Route::post('/generate', [InvoiceController::class, 'generate']);
@@ -21,12 +21,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund']);
     });
 
-    Route::prefix('discounts')->group(function () {
-        Route::get('/', [DiscountController::class, 'index']);
-        Route::post('/', [DiscountController::class, 'store']);
-        Route::get('/{id}', [DiscountController::class, 'show']);
-        Route::put('/{id}', [DiscountController::class, 'update']);
-        Route::delete('/{id}', [DiscountController::class, 'destroy']);
+    Route::middleware('role:admin,manager,cashier')->group(function () {
+        Route::prefix('discounts')->group(function () {
+            Route::get('/', [DiscountController::class, 'index']);
+            Route::post('/', [DiscountController::class, 'store']);
+            Route::get('/{id}', [DiscountController::class, 'show']);
+            Route::put('/{id}', [DiscountController::class, 'update']);
+            Route::delete('/{id}', [DiscountController::class, 'destroy']);
+        });
     });
 
     Route::prefix('cash-register')->group(function () {

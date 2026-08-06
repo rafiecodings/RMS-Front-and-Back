@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Order\OrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('orders')->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin,manager,waiter,cashier'])->prefix('orders')->group(function () {
     Route::get('/', [OrderController::class, 'index']);
     Route::post('/', [OrderController::class, 'store']);
     Route::get('/{id}', [OrderController::class, 'show']);
@@ -15,8 +15,10 @@ Route::middleware(['auth:sanctum'])->prefix('orders')->group(function () {
     Route::post('/{id}/hold', [OrderController::class, 'hold']);
     Route::post('/{id}/recall', [OrderController::class, 'recall']);
     Route::post('/{id}/split', [OrderController::class, 'split']);
-    Route::post('/{id}/void', [OrderController::class, 'void']);
-    Route::post('/{id}/payments', [OrderController::class, 'pay']);
+Route::post('/{id}/reorder', [OrderController::class, 'reorder']);
     Route::get('/{id}/timeline', [OrderController::class, 'timeline']);
-    Route::post('/{id}/reorder', [OrderController::class, 'reorder']);
+    Route::middleware('role:admin,manager,cashier')->group(function () {
+        Route::post('/{id}/void', [OrderController::class, 'void']);
+        Route::post('/{id}/payments', [OrderController::class, 'pay']);
+    });
 });

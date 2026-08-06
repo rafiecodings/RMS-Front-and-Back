@@ -22,6 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        // API-only backend: the Next.js web client handles auth itself and no
+        // server-side `login` route is defined. Laravel 12 defaults the auth
+        // redirect target to route('login'); that throws a RouteNotFoundException
+        // for unauthenticated non-JSON requests, which was masked as a 500
+        // (e.g. GET /api/v1/dashboard/summary -> 500). Returning null makes the
+        // Authenticate middleware throw an AuthenticationException, which the
+        // handler below renders as a clean 401 JSON response.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {
@@ -69,6 +78,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => $message,
+                'error' => app()->isLocal() ? $e->getMessage() : null,
             ], $status);
         });
     })->create();

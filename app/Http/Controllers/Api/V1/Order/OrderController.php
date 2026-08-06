@@ -757,6 +757,14 @@ class OrderController extends Controller
             return $this->notFound('Order not found.');
         }
 
+        if (in_array($order->status, ['completed', 'voided'])) {
+            return $this->error('Cannot void a ' . $order->status . ' order.', 409);
+        }
+
+        if ($order->payment_status === 'paid') {
+            return $this->error('Cannot void an order that is fully paid. Process a refund instead.', 409);
+        }
+
         $validated = $request->validate([
             'reason' => 'required|string|max:1000',
         ]);
@@ -789,6 +797,10 @@ class OrderController extends Controller
 
         if (!$order) {
             return $this->notFound('Order not found.');
+        }
+
+        if (in_array($order->status, ['voided', 'cancelled'])) {
+            return $this->error('Cannot process payment for a ' . $order->status . ' order.', 409);
         }
 
         $validated = $request->validate([

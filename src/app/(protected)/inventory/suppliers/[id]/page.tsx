@@ -6,6 +6,7 @@ import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers } from "@/lib/hooks";
+import { formatDate } from "@/lib/utils";
 import { Pencil, Mail, Phone } from "lucide-react";
 
 export default function SupplierDetailPage() {
@@ -87,11 +88,7 @@ export default function SupplierDetailPage() {
       <div className="rounded-lg border p-4">
         <p className="text-xs text-muted-foreground">Created</p>
         <p className="font-medium mt-1">
-          {new Date(supplier.created_at).toLocaleDateString("en-PH", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          {formatDate(supplier.created_at)}
         </p>
       </div>
     </div>

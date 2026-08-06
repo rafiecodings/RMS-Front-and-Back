@@ -26,8 +26,11 @@ import type { ReportPeriod, DateRange } from "@/features/reports/types";
 import { LoadingSpinner } from "@/components/shared";
 import { ChartEmptyState } from "@/components/shared";
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-PH", {
+function formatDate(dateStr: string | null | undefined) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-PH", {
     month: "short",
     year: "2-digit",
   });

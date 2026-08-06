@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatLabel } from "@/lib/utils";
+import { formatCurrency, formatLabel, safeNumber } from "@/lib/utils";
 import { Loader2, ChevronLeft, ChevronRight, type LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 import {
   Dialog,
@@ -30,9 +30,9 @@ export const PageHeader = memo(function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+        <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight">{title}</h1>
         {description && (
-          <p className="text-muted-foreground mt-1.5 text-base">{description}</p>
+          <p className="mt-1.5 text-sm leading-5 text-muted-foreground">{description}</p>
         )}
       </div>
       <div className="flex items-center gap-3">{action}{children}</div>
@@ -183,13 +183,13 @@ export const StatusBadge = memo(function StatusBadge({
     available: "bg-success/10 text-success",
     occupied: "bg-destructive/10 text-destructive",
     reserved: "bg-warning/10 text-warning",
-    needs_cleaning: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    needs_cleaning: "bg-warning/10 text-warning",
     maintenance: "bg-muted text-muted-foreground",
     placed: "bg-info/10 text-info",
     confirmed: "bg-info/10 text-info",
     preparing: "bg-warning/10 text-warning",
     ready: "bg-success/10 text-success",
-    served: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    served: "bg-success/10 text-success",
     completed: "bg-success/10 text-success",
     cancelled: "bg-destructive/10 text-destructive",
     voided: "bg-destructive/10 text-destructive",
@@ -200,13 +200,13 @@ export const StatusBadge = memo(function StatusBadge({
     approved: "bg-success/10 text-success",
     rejected: "bg-destructive/10 text-destructive",
     ordered: "bg-info/10 text-info",
-    partial: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    partial: "bg-warning/10 text-warning",
     paid: "bg-success/10 text-success",
     unpaid: "bg-warning/10 text-warning",
-    refunded: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    refunded: "bg-info/10 text-info",
     active: "bg-success/10 text-success",
     inactive: "bg-muted text-muted-foreground",
-    on_hold: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    on_hold: "bg-warning/10 text-warning",
     expired: "bg-muted text-muted-foreground",
     low: "bg-warning/10 text-warning",
     critical: "bg-destructive/10 text-destructive",
@@ -221,11 +221,12 @@ export const StatusBadge = memo(function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border border-transparent",
+        "inline-flex items-center gap-1.5 rounded-full border border-current/15 px-2.5 py-0.5 font-mono text-[11px] font-medium leading-4",
         variants[status] || "bg-muted text-muted-foreground",
         className
       )}
     >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {formatLabel(status)}
     </span>
   );
@@ -248,22 +249,21 @@ export const StatsCard = memo(function StatsCard({
   format = "number",
   trend,
 }: StatsCardProps) {
+  const num = safeNumber(value);
   const formattedValue =
     format === "currency"
-      ? formatCurrency(typeof value === "string" ? parseFloat(value) || 0 : value)
+      ? formatCurrency(num)
       : format === "percentage"
-        ? `${value}%`
-        : typeof value === "number"
-          ? value.toLocaleString()
-          : value;
+        ? `${num.toFixed(1)}%`
+        : num.toLocaleString();
 
   return (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground truncate mb-1">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{formattedValue}</p>
+            <p className="mb-1 font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground truncate">{title}</p>
+            <p className="font-heading text-3xl font-bold tracking-tight">{formattedValue}</p>
             <div className="flex items-center gap-2 mt-2">
               {trend && (
                 <span
@@ -288,7 +288,7 @@ export const StatsCard = memo(function StatsCard({
             </div>
           </div>
           {Icon && (
-            <div className="rounded-xl bg-primary/10 p-3 ml-4">
+            <div className="ml-4 rounded-lg bg-primary/10 p-3">
               <Icon className="h-5 w-5 text-primary" />
             </div>
           )}

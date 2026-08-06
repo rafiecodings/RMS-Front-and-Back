@@ -13,14 +13,22 @@ import type {
   ReportFilters,
   ExportPayload,
 } from "../types";
+import {
+  normalizeRevenueReport,
+  normalizeSalesReport,
+  normalizeMenuPerformanceReport,
+  normalizeInventoryReport,
+  normalizeStaffReport,
+  normalizeTaxReport,
+} from "../normalizers";
 
 export function useRevenueReport(filters?: ReportFilters) {
   return useQuery({
     queryKey: ["reports", "revenue", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<RevenueReport>>("/reports/revenue", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/revenue", { params: filters })
+        .then((res) => normalizeRevenueReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -30,8 +38,8 @@ export function useSalesReport(filters?: ReportFilters) {
     queryKey: ["reports", "sales", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<SalesReport>>("/reports/sales", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/sales", { params: filters })
+        .then((res) => normalizeSalesReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -41,8 +49,8 @@ export function useMenuPerformanceReport(filters?: ReportFilters) {
     queryKey: ["reports", "menu-performance", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<MenuPerformanceReport>>("/reports/menu-performance", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/menu-performance", { params: filters })
+        .then((res) => normalizeMenuPerformanceReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -52,8 +60,8 @@ export function useInventoryReport(filters?: ReportFilters) {
     queryKey: ["reports", "inventory", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<InventoryReport>>("/reports/inventory", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/inventory", { params: filters })
+        .then((res) => normalizeInventoryReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -63,8 +71,8 @@ export function useStaffReport(filters?: ReportFilters) {
     queryKey: ["reports", "staff", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<StaffReport>>("/reports/staff", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/staff", { params: filters })
+        .then((res) => normalizeStaffReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -74,8 +82,8 @@ export function useTaxReport(filters?: ReportFilters) {
     queryKey: ["reports", "tax", filters],
     queryFn: () =>
       api
-        .get<ApiResponse<TaxReport>>("/reports/tax", { params: filters })
-        .then((res) => res.data.data),
+        .get<ApiResponse<unknown>>("/reports/tax", { params: filters })
+        .then((res) => normalizeTaxReport(res.data.data)),
     staleTime: 60000,
   });
 }

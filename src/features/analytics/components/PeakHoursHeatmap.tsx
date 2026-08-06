@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, safeNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { ChartEmptyState } from "@/components/shared";
 import type { HourlyDistribution } from "../types";
@@ -93,7 +93,7 @@ export function PeakHoursHeatmap({ data }: PeakHoursHeatmapProps) {
                     })}
                     <td className="p-0.5">
                       <div className="h-8 w-full rounded-sm flex items-center justify-center text-[10px] font-medium bg-muted">
-                        {row.average.toFixed(0)}
+                        {safeNumber(row.average).toFixed(0)}
                       </div>
                     </td>
                   </tr>

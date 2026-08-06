@@ -3,8 +3,7 @@
 import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, safeNumber } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 interface KpiCardProps {
@@ -24,14 +23,15 @@ export const KpiCard = memo(function KpiCard({
   icon,
   subtitle,
 }: KpiCardProps) {
+  const v = safeNumber(value);
   const formattedValue =
     fmt === "currency"
-      ? formatCurrency(value)
+      ? formatCurrency(v)
       : fmt === "percentage"
-        ? `${value.toFixed(1)}%`
+        ? `${v.toFixed(1)}%`
         : fmt === "hours"
-          ? `${value.toFixed(1)}h`
-          : value.toLocaleString();
+          ? `${v.toFixed(1)}h`
+          : v.toLocaleString();
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -58,7 +58,7 @@ export const KpiCard = memo(function KpiCard({
               ) : (
                 <Minus className="mr-1 h-3 w-3" />
               )}
-              {Math.abs(change).toFixed(1)}%
+              {safeNumber(change).toFixed(1)}%
             </div>
           )}
         </div>

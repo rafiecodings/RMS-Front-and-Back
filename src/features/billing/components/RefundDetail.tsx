@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import type { Refund } from "../types";
 
 const STATUS_CONFIG: Record<
@@ -50,7 +50,7 @@ export function RefundDetail({ refund }: RefundDetailProps) {
             Refund #{refund.refund_number}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {new Date(refund.created_at).toLocaleString("en-PH")}
+            {formatDateTime(refund.created_at)}
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export function RefundDetail({ refund }: RefundDetailProps) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Processed At</span>
                   <span>
-                    {new Date(refund.processed_at).toLocaleString("en-PH")}
+                    {formatDateTime(refund.processed_at)}
                   </span>
                 </div>
               )}

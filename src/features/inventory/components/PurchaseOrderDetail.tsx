@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { ArrowLeft, CheckCircle, Truck, XCircle } from "lucide-react";
 import type { PurchaseOrder, PurchaseOrderStatus } from "@/lib/types";
 
@@ -38,7 +38,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
             <h2 className="text-lg font-semibold">{order.po_number}</h2>
             <p className="text-sm text-muted-foreground">
               {order.supplier?.name ?? "Unknown supplier"} •{" "}
-              {new Date(order.order_date).toLocaleDateString("en-PH")}
+              {formatDate(order.order_date)}
             </p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
           <p className="text-xs text-muted-foreground">Expected Delivery</p>
           <p className="font-medium">
             {order.expected_delivery_date
-              ? new Date(order.expected_delivery_date).toLocaleDateString("en-PH")
+              ? formatDate(order.expected_delivery_date)
               : "—"}
           </p>
         </div>
@@ -85,7 +85,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
           <p className="text-xs text-muted-foreground">Received Date</p>
           <p className="font-medium">
             {order.received_date
-              ? new Date(order.received_date).toLocaleDateString("en-PH")
+              ? formatDate(order.received_date)
               : "—"}
           </p>
         </div>

@@ -9,8 +9,11 @@ interface OrderTimerProps {
   className?: string;
 }
 
-function getElapsedMs(createdAt: string): number {
-  return Date.now() - new Date(createdAt).getTime();
+function getElapsedMs(createdAt: string | null | undefined): number {
+  if (!createdAt) return 0;
+  const created = new Date(createdAt).getTime();
+  if (Number.isNaN(created)) return 0;
+  return Math.max(0, Date.now() - created);
 }
 
 function formatElapsed(ms: number): string {

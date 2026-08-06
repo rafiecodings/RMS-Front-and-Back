@@ -15,8 +15,10 @@ import { CHART_TOOLTIP_STYLE } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 import type { DashboardSummary } from "@/lib/types";
 
-function formatDateWithWeekday(dateStr: string) {
+function formatDateWithWeekday(dateStr: string | null | undefined) {
+  if (!dateStr) return "—";
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
 }
 

@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ReportFilters, ReportSummaryCard, ExportButton } from "@/features/reports";
 import { useMenuPerformanceReport } from "@/features/reports/hooks/useReports";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, safeNumber } from "@/lib/utils";
 import type { ReportPeriod, DateRange } from "@/features/reports/types";
 import { LoadingSpinner } from "@/components/shared";
 
@@ -104,12 +104,12 @@ export default function MenuPerformancePage() {
                         <TableCell className="text-right">
                           <span
                             className={
-                              item.margin_percentage >= 0
+                              safeNumber(item.margin_percentage) >= 0
                                 ? "text-emerald-600"
                                 : "text-red-600"
                             }
                           >
-                            {item.margin_percentage.toFixed(1)}%
+                            {safeNumber(item.margin_percentage).toFixed(1)}%
                           </span>
                         </TableCell>
                       </TableRow>
@@ -144,7 +144,7 @@ export default function MenuPerformancePage() {
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{formatCurrency(cat.total_revenue)}</span>
-                      <span>{cat.average_margin.toFixed(1)}% margin</span>
+                      <span>{safeNumber(cat.average_margin).toFixed(1)}% margin</span>
                     </div>
                   </div>
                 ))}

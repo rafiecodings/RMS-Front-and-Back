@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, safeNumber } from "@/lib/utils";
 import type { AttendanceSummary, ClockSummary, ShiftCoverage } from "../types";
 
 interface AttendanceSummaryCardProps {
@@ -21,7 +21,7 @@ export function AttendanceSummaryCard({ data }: AttendanceSummaryCardProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-semibold">Attendance Overview</CardTitle>
         <span className="text-sm font-medium text-emerald-600">
-          {data.attendance_rate.toFixed(1)}%
+          {safeNumber(data.attendance_rate).toFixed(1)}%
         </span>
       </CardHeader>
       <CardContent>
@@ -52,17 +52,17 @@ export function ClockSummaryCard({ data }: ClockSummaryCardProps) {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Avg Hours/Day</p>
-            <p className="text-2xl font-bold">{data.average_hours_per_day.toFixed(1)}</p>
+            <p className="text-2xl font-bold">{safeNumber(data.average_hours_per_day).toFixed(1)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Overtime</p>
             <p className="text-2xl font-bold text-amber-600">
-              {data.overtime_hours.toFixed(1)}h
+              {safeNumber(data.overtime_hours).toFixed(1)}h
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Total Hours</p>
-            <p className="text-2xl font-bold">{data.total_worked_hours.toFixed(1)}h</p>
+            <p className="text-2xl font-bold">{safeNumber(data.total_worked_hours).toFixed(1)}h</p>
           </div>
         </div>
       </CardContent>
@@ -89,7 +89,7 @@ export function ShiftCoverageCard({ data }: ShiftCoverageCardProps) {
                   {item.shift.replace(/_/g, " ")}
                 </span>
                 <span className="text-muted-foreground">
-                  {item.staff_count} staff ({item.coverage_percentage.toFixed(0)}%)
+                  {item.staff_count} staff ({safeNumber(item.coverage_percentage).toFixed(0)}%)
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted">

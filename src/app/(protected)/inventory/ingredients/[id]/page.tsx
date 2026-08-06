@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { StockAdjustDialog } from "@/features/inventory";
 import { useIngredients, useStockAdjust, useStockMovements } from "@/lib/hooks";
 import { StockMovementTable } from "@/features/inventory";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { Pencil, PackagePlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -123,7 +123,7 @@ export default function IngredientDetailPage() {
           <p className="text-xs text-muted-foreground">Expiry Date</p>
           <p className="font-medium">
             {ingredient.expiry_date
-              ? new Date(ingredient.expiry_date).toLocaleDateString("en-PH")
+              ? formatDate(ingredient.expiry_date)
               : "—"}
           </p>
         </div>

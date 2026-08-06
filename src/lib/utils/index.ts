@@ -1,39 +1,63 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { safeNumber, safeString } from "./safe";
+
+export * from "./safe";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number) {
+export function formatCurrency(amount: number | null | undefined) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
     minimumFractionDigits: 0,
-  }).format(amount);
+  }).format(safeNumber(amount));
 }
 
-export function formatLabel(value: string) {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+export function formatNumber(value: number | null | undefined) {
+  return safeNumber(value).toLocaleString();
 }
 
-export function formatDate(date: string | Date) {
+export function formatPercentage(value: number | null | undefined) {
+  return `${safeNumber(value).toFixed(1)}%`;
+}
+
+export function formatHours(value: number | null | undefined) {
+  return `${safeNumber(value).toFixed(1)}h`;
+}
+
+export function formatLabel(value: string): string {
+  return safeString(value).replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+export function formatDate(date: string | Date | null | undefined) {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  }).format(new Date(date));
+  }).format(d);
 }
 
-export function formatTime(date: string | Date) {
+export function formatTime(date: string | Date | null | undefined) {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("en-PH", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(new Date(date));
+  }).format(d);
 }
 
-export function formatDateTime(date: string | Date) {
+export function formatDateTime(date: string | Date | null | undefined) {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
     month: "short",
@@ -41,14 +65,15 @@ export function formatDateTime(date: string | Date) {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(new Date(date));
+  }).format(d);
 }
 
-export function timeAgo(date: string | Date) {
+export function timeAgo(date: string | Date | null | undefined) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
   const now = new Date();
-  const then = new Date(date);
-  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
-
+  const seconds = Math.floor((now.getTime() - d.getTime()) / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;

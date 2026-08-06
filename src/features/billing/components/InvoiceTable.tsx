@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import type { Invoice } from "../types";
 
@@ -117,7 +117,7 @@ export function InvoiceTable({
                     </Link>
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">
-                    {new Date(inv.created_at).toLocaleDateString("en-PH")}
+                    {formatDate(inv.created_at)}
                   </td>
                   <td className="px-3 py-2.5">
                     {inv.customer?.name ?? "Walk-in"}

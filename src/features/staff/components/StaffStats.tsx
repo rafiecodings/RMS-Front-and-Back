@@ -2,6 +2,7 @@
 
 import { Users, UserCheck, Clock, Star } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
+import { safeNumber } from "@/lib/utils";
 import type { StaffStatsData } from "@/lib/types";
 
 interface StaffStatsProps {
@@ -41,7 +42,7 @@ export function StaffStats({ stats, isLoading }: StaffStatsProps) {
     },
     {
       label: "Avg. Rating",
-      value: stats?.averageRating != null ? stats.averageRating.toFixed(1) : "—",
+      value: stats?.averageRating != null ? `${safeNumber(stats.averageRating).toFixed(1)}` : "—",
       icon: Star,
       color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
     },

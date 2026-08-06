@@ -136,7 +136,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                       isActive
                         ? "bg-primary/10 text-primary shadow-sm"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -166,7 +166,7 @@ function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
         collapsed && "justify-center px-0"
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
         <Store className="h-5 w-5" />
       </div>
       {!collapsed && (
@@ -199,7 +199,7 @@ function CollapsedNavLinks() {
               href={item.href}
               title={item.label}
               className={cn(
-                "mx-2 mb-1 flex items-center justify-center rounded-xl py-2.5 transition-all duration-150",
+                "mx-2 mb-1 flex items-center justify-center rounded-lg py-2.5 transition-colors duration-150",
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -238,7 +238,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           type="button"
           onClick={onToggleCollapse}
           className={cn(
-            "flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
+            "flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
             collapsed && "px-0"
           )}
         >
@@ -264,7 +264,7 @@ export function MobileSidebar() {
         render={
           <button
             type="button"
-            className="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           />
         }
       >

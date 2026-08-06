@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, safeNumber } from "@/lib/utils";
 import type { ConsumptionVariance, WastageSummary, TopSupplier } from "../types";
 
 interface ConsumptionVarianceTableProps {
@@ -44,10 +44,10 @@ export function ConsumptionVarianceTable({ data }: ConsumptionVarianceTableProps
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-right">
-                      {item.expected_usage.toFixed(1)}
+                      {safeNumber(item.expected_usage).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {item.actual_usage.toFixed(1)}
+                      {safeNumber(item.actual_usage).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right">
                       <span
@@ -60,7 +60,7 @@ export function ConsumptionVarianceTable({ data }: ConsumptionVarianceTableProps
                         }
                       >
                         {item.variance > 0 ? "+" : ""}
-                        {item.variance.toFixed(1)} ({item.variance_percentage.toFixed(1)}%)
+                        {safeNumber(item.variance).toFixed(1)} ({safeNumber(item.variance_percentage).toFixed(1)}%)
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium">

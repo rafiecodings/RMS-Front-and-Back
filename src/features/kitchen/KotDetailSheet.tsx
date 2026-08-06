@@ -34,7 +34,9 @@ const ITEM_STATUS_STYLES: Record<string, string> = {
 
 function formatTime(dateStr?: string) {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleTimeString("en-PH", {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-PH", {
     hour: "2-digit",
     minute: "2-digit",
   });

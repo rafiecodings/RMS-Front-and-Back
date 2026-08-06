@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate, safeNumber } from "@/lib/utils";
 import { CHART_TOOLTIP_STYLE, CHART_COLORS } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 import type {
@@ -30,13 +30,6 @@ import type {
 
 interface CustomerVisitTrendProps {
   data: VisitTrend[];
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function CustomerVisitTrend({ data }: CustomerVisitTrendProps) {
@@ -131,7 +124,7 @@ export function CustomerSegments({ data }: CustomerSegmentsProps) {
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">{segment.segment}</span>
                   <span className="text-muted-foreground">
-                    {segment.count} customers ({segment.percentage.toFixed(1)}%)
+                    {segment.count} customers ({safeNumber(segment.percentage).toFixed(1)}%)
                   </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted">
@@ -198,7 +191,7 @@ export function TopCustomersTable({ data }: TopCustomersTableProps) {
                     {formatCurrency(customer.total_spent)}
                   </TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">
-                    {new Date(customer.last_visit).toLocaleDateString("en-PH")}
+                    {customer.last_visit ? new Date(customer.last_visit).toLocaleDateString("en-PH") : "—"}
                   </TableCell>
                 </TableRow>
               ))}

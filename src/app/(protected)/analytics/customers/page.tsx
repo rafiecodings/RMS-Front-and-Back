@@ -12,6 +12,7 @@ import {
 } from "@/features/analytics";
 import { useCustomerAnalytics } from "@/features/analytics/hooks/useAnalytics";
 import { Users, UserPlus, Repeat, DollarSign } from "lucide-react";
+import { safeNumber } from "@/lib/utils";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
 export default function CustomerAnalyticsPage() {
@@ -84,13 +85,13 @@ export default function CustomerAnalyticsPage() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{freq.range}</span>
                         <span className="font-medium">
-                          {freq.count} ({freq.percentage.toFixed(1)}%)
+                          {freq.count} ({safeNumber(freq.percentage).toFixed(1)}%)
                         </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-muted">
                         <div
                           className="h-full rounded-full bg-blue-500"
-                          style={{ width: `${freq.percentage}%` }}
+                          style={{ width: `${Math.min(100, safeNumber(freq.percentage))}%` }}
                         />
                       </div>
                     </div>

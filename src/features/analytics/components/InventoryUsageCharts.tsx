@@ -20,7 +20,7 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, safeNumber } from "@/lib/utils";
 import { CHART_TOOLTIP_STYLE, CHART_COLORS } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 import type { ConsumedIngredient, UsageByCategory, LowStockAlert } from "../types";
@@ -96,7 +96,7 @@ export function UsageByCategoryChart({ data }: UsageByCategoryChartProps) {
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">{item.category}</span>
                   <span className="text-muted-foreground">
-                    {formatCurrency(item.usage_cost)} ({item.percentage.toFixed(1)}%)
+                    {formatCurrency(item.usage_cost)} ({safeNumber(item.percentage).toFixed(1)}%)
                   </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted">
@@ -149,7 +149,7 @@ export function LowStockAlerts({ data }: LowStockAlertsProps) {
             </TableHeader>
             <TableBody>
               {data.map((item) => {
-                const status = severityConfig[item.severity];
+                const status = severityConfig[item.severity] ?? severityConfig.low;
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>

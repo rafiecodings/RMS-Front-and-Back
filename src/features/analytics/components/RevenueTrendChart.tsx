@@ -20,20 +20,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { CHART_TOOLTIP_STYLE } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 import type { RevenueTrend } from "../types";
 
 interface RevenueTrendChartProps {
   data: RevenueTrend[];
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function RevenueTrendChart({ data }: RevenueTrendChartProps) {

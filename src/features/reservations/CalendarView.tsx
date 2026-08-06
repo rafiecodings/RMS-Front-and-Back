@@ -14,12 +14,13 @@ interface CalendarViewProps {
   onDateSelect: (date: Date | undefined) => void;
 }
 
-function formatTime(timeStr: string) {
+function formatTime(timeStr: string | undefined | null) {
+  if (!timeStr) return "—";
   const [h, m] = timeStr.split(":");
-  const hour = parseInt(h);
+  const hour = parseInt(h ?? "0") || 0;
   const ampm = hour >= 12 ? "PM" : "AM";
   const h12 = hour % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
+  return `${h12}:${m ?? "00"} ${ampm}`;
 }
 
 const STATUS_DOT: Record<string, string> = {

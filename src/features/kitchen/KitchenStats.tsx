@@ -43,15 +43,19 @@ function StatCard({
   );
 }
 
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return 0;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
 function formatAvgWait(kots: Kot[]): string {
   const withStarted = kots.filter((k) => k.started_at || k.created_at);
   if (withStarted.length === 0) return "—";
 
   const totalMs = withStarted.reduce((sum, k) => {
-    const start = new Date(k.started_at ?? k.created_at).getTime();
-    const end = k.completed_at
-      ? new Date(k.completed_at).getTime()
-      : Date.now();
+    const start = toTimestamp(k.started_at ?? k.created_at);
+    const end = k.completed_at ? toTimestamp(k.completed_at) : Date.now();
     return sum + (end - start);
   }, 0);
 

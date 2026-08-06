@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge, TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PurchaseOrder } from "@/lib/types";
 
 interface PurchaseOrderTableProps {
@@ -96,7 +96,7 @@ export function PurchaseOrderTable({
                   <td className="px-4 py-3 font-medium">{po.po_number}</td>
                   <td className="px-4 py-3 text-muted-foreground">{po.supplier?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(po.order_date).toLocaleDateString("en-PH")}
+                    {formatDate(po.order_date)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(po.total_amount)}</td>
                   <td className="px-4 py-3 text-center">

@@ -25,7 +25,10 @@ export function useWebSocket({
   const baseDelay = 1000;
 
   const onMessageRef = useRef(onMessage);
-  onMessageRef.current = onMessage;
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
     if (!enabled || !WS_URL) return;

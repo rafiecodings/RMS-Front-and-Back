@@ -28,6 +28,12 @@ const COLUMN_DOT: Record<KotStatus, string> = {
   ready: "bg-emerald-500",
 };
 
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return 0;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
 export function KotColumn({
   title,
   status,
@@ -41,7 +47,7 @@ export function KotColumn({
     const aPriority = priorityOrder[a.priority] ?? 2;
     const bPriority = priorityOrder[b.priority] ?? 2;
     if (aPriority !== bPriority) return aPriority - bPriority;
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return toTimestamp(a.created_at) - toTimestamp(b.created_at);
   });
 
   return (

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Refund } from "../types";
 
 interface RefundTableProps {
@@ -137,7 +137,7 @@ export function RefundTable({
                       </Link>
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString("en-PH")}
+                      {formatDate(r.created_at)}
                     </td>
                     <td className="px-3 py-2.5 text-center capitalize">
                       {r.type.replace("_", " ")}

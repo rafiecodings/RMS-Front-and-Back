@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Eye, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { RoleBadge } from "./RoleBadge";
+import { safeNumber } from "@/lib/utils";
 import type { Staff } from "@/lib/types";
 
 interface StaffTableProps {
@@ -111,7 +112,7 @@ export function StaffTable({
                     {s.average_rating != null ? (
                       <div className="flex items-center justify-center gap-1">
                         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span className="text-sm tabular-nums">{s.average_rating.toFixed(1)}</span>
+                        <span className="text-sm tabular-nums">{safeNumber(s.average_rating).toFixed(1)}</span>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>

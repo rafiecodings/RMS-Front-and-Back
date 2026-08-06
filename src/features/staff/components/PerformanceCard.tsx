@@ -2,6 +2,7 @@
 
 import { Star, TrendingUp, Clock, Award } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
+import { safeNumber, formatCurrency } from "@/lib/utils";
 import type { StaffPerformance } from "@/lib/types";
 
 interface PerformanceCardProps {
@@ -38,24 +39,24 @@ export function PerformanceCard({ performance, isLoading }: PerformanceCardProps
     },
     {
       label: "Average Rating",
-      value: performance.average_rating.toFixed(1),
+      value: safeNumber(performance.average_rating).toFixed(1),
       icon: Star,
       color: "bg-amber-100 text-amber-700",
       sub: `${performance.customer_feedback_count} reviews`,
     },
     {
       label: "Attendance Rate",
-      value: `${performance.attendance_rate.toFixed(0)}%`,
+      value: `${safeNumber(performance.attendance_rate).toFixed(0)}%`,
       icon: Clock,
       color: "bg-emerald-100 text-emerald-700",
-      sub: `Punctuality: ${performance.punctuality_score.toFixed(0)}%`,
+      sub: `Punctuality: ${safeNumber(performance.punctuality_score).toFixed(0)}%`,
     },
     {
       label: "Tips Earned",
-      value: `₱${performance.tips_earned.toLocaleString()}`,
+      value: `₱${safeNumber(performance.tips_earned).toLocaleString()}`,
       icon: Award,
       color: "bg-purple-100 text-purple-700",
-      sub: `₱${performance.total_sales.toLocaleString()} total sales`,
+      sub: `₱${safeNumber(performance.total_sales).toLocaleString()} total sales`,
     },
   ];
 

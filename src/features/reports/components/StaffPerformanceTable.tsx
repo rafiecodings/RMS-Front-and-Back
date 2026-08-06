@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
+import { safeNumber } from "@/lib/utils";
 import type { StaffPerformanceRanking } from "../types";
 
 interface StaffPerformanceTableProps {
@@ -59,12 +60,12 @@ export function StaffPerformanceTable({ data }: StaffPerformanceTableProps) {
                     </TableCell>
                     <TableCell className="text-right">{staff.orders_handled}</TableCell>
                     <TableCell className="text-right">
-                      ₱{staff.revenue_generated.toLocaleString()}
+                      ₱{safeNumber(staff.revenue_generated).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {staff.average_rating.toFixed(1)}
+                        {safeNumber(staff.average_rating).toFixed(1)}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -72,11 +73,11 @@ export function StaffPerformanceTable({ data }: StaffPerformanceTableProps) {
                         <div className="h-2 w-16 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full rounded-full bg-emerald-500"
-                            style={{ width: `${Math.min(100, staff.performance_score)}%` }}
+                            style={{ width: `${Math.min(100, safeNumber(staff.performance_score))}%` }}
                           />
                         </div>
                         <span className="ml-2 text-xs font-medium">
-                          {staff.performance_score.toFixed(0)}
+                          {safeNumber(staff.performance_score).toFixed(0)}
                         </span>
                       </div>
                     </TableCell>

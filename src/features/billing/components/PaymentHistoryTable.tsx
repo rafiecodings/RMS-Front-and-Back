@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import type { Payment } from "@/lib/types";
 
 interface PaymentHistoryTableProps {
@@ -103,7 +103,7 @@ export function PaymentHistoryTable({
               payments.map((p) => (
                 <tr key={p.id} className="border-b transition-colors hover:bg-muted/30">
                   <td className="px-3 py-2.5 text-muted-foreground">
-                    {new Date(p.processed_at).toLocaleString("en-PH")}
+                    {formatDateTime(p.processed_at)}
                   </td>
                   <td className="px-3 py-2.5">
                     <span className="capitalize">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Printer, RotateCcw } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import type { Invoice } from "../types";
 
@@ -32,7 +32,7 @@ export function InvoiceDetail({
               Invoice #{invoice.invoice_number}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Created {new Date(invoice.created_at).toLocaleString("en-PH")}
+              Created {formatDateTime(invoice.created_at)}
             </p>
           </div>
         </div>
@@ -104,7 +104,7 @@ export function InvoiceDetail({
                         {p.payment_method.replace("_", " ")}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(p.processed_at).toLocaleString("en-PH")}
+                        {formatDateTime(p.processed_at)}
                         {p.reference && ` • Ref: ${p.reference}`}
                       </p>
                     </div>
@@ -187,7 +187,7 @@ export function InvoiceDetail({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Placed</span>
                   <span>
-                    {new Date(invoice.placed_at).toLocaleString("en-PH")}
+                    {formatDateTime(invoice.placed_at)}
                   </span>
                 </div>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
+import { formatDate } from "@/lib/utils";
 import type { StockMovement } from "@/lib/types";
 
 interface StockMovementTableProps {
@@ -48,7 +49,7 @@ export function StockMovementTable({ movements, isLoading }: StockMovementTableP
                 </td>
                 <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">{m.notes ?? "—"}</td>
                 <td className="px-4 py-2 text-muted-foreground">
-                  {new Date(m.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                  {formatDate(m.created_at)}
                 </td>
               </tr>
             ))

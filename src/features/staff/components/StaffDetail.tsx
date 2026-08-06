@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "./RoleBadge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, safeNumber } from "@/lib/utils";
 import { Pencil, ArrowLeft, Mail, Phone, Star, Calendar, DollarSign } from "lucide-react";
 import type { Staff } from "@/lib/types";
 
@@ -60,7 +60,7 @@ export function StaffDetail({ staff }: StaffDetailProps) {
             Rating
           </div>
           <p className="font-medium text-sm">
-            {staff.average_rating != null ? `${staff.average_rating.toFixed(1)} / 5.0` : "—"}
+            {staff.average_rating != null ? `${safeNumber(staff.average_rating).toFixed(1)} / 5.0` : "—"}
           </p>
         </div>
         <div className="rounded-lg border p-4">
@@ -68,9 +68,7 @@ export function StaffDetail({ staff }: StaffDetailProps) {
             <Calendar className="h-3.5 w-3.5" />
             Hired
           </div>
-          <p className="font-medium text-sm">
-            {new Date(staff.hire_date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
-          </p>
+          <p className="font-medium text-sm">{formatDate(staff.hire_date)}</p>
         </div>
       </div>
 

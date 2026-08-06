@@ -185,7 +185,7 @@ export interface TopCustomer {
   email: string;
   total_orders: number;
   total_spent: number;
-  last_visit: string;
+  last_visit: string | null;
 }
 
 export interface VisitTrend {

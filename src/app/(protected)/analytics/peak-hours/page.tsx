@@ -12,6 +12,7 @@ import {
 import { usePeakHours } from "@/features/analytics/hooks/useAnalytics";
 import { Clock, TrendingUp, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeNumber } from "@/lib/utils";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
 export default function PeakHoursPage() {
@@ -90,7 +91,7 @@ export default function PeakHoursPage() {
                         {peak.day_of_week} at {peak.hour}:00
                       </span>
                       <span className="font-medium">
-                        ₱{peak.revenue.toLocaleString()}
+                        ₱{safeNumber(peak.revenue).toLocaleString()}
                       </span>
                     </div>
                   ))}

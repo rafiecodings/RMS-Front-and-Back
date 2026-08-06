@@ -9,7 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
+import { formatDate, formatTime, safeNumber } from "@/lib/utils";
+import { StatusBadge, TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import type { AttendanceRecord } from "@/lib/types";
 
@@ -95,7 +96,7 @@ export function AttendanceTable({
                     <p className="font-medium">{r.staff?.first_name} {r.staff?.last_name}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(r.date).toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" })}
+                    {formatDate(r.date)}
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums">
                     {r.clock_in ? new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : "—"}
@@ -104,7 +105,7 @@ export function AttendanceTable({
                     {r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : "—"}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {r.total_hours != null ? `${r.total_hours.toFixed(1)}h` : "—"}
+                    {r.total_hours != null ? `${safeNumber(r.total_hours).toFixed(1)}h` : "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status] ?? "bg-gray-100 text-gray-800"}`}>

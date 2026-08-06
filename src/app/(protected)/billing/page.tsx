@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { InvoiceStats } from "@/features/billing";
 import { useBillingStats, useInvoices } from "@/features/billing";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { Receipt, CreditCard, RotateCcw, ArrowRight } from "lucide-react";
 
 export default function BillingPage() {
@@ -82,7 +82,7 @@ export default function BillingPage() {
                     {inv.invoice_number}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(inv.created_at).toLocaleDateString("en-PH")} •{" "}
+                    {formatDate(inv.created_at)} •{" "}
                     {inv.customer?.name ?? "Walk-in"}
                   </p>
                 </div>

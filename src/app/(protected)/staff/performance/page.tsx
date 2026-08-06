@@ -4,6 +4,8 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { PerformanceCard } from "@/features/staff";
 import { useStaff, useStaffPerformance } from "@/lib/hooks";
+import { Button } from "@/components/ui/button";
+import { safeNumber, formatCurrency } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -59,11 +61,11 @@ export default function PerformancePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Sales</span>
-                <span className="font-medium tabular-nums">₱{performance.total_sales.toLocaleString()}</span>
+                <span className="font-medium tabular-nums">₱{safeNumber(performance.total_sales).toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Tips Earned</span>
-                <span className="font-medium tabular-nums">₱{performance.tips_earned.toLocaleString()}</span>
+                <span className="font-medium tabular-nums">₱{safeNumber(performance.tips_earned).toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Orders Handled</span>
@@ -81,15 +83,15 @@ export default function PerformancePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Attendance Rate</span>
-                <span className="font-medium tabular-nums">{performance.attendance_rate.toFixed(1)}%</span>
+                <span className="font-medium tabular-nums">{safeNumber(performance.attendance_rate).toFixed(1)}%</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Punctuality Score</span>
-                <span className="font-medium tabular-nums">{performance.punctuality_score.toFixed(1)}%</span>
+                <span className="font-medium tabular-nums">{safeNumber(performance.punctuality_score).toFixed(1)}%</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Average Rating</span>
-                <span className="font-medium tabular-nums">{performance.average_rating.toFixed(1)} / 5.0</span>
+                <span className="font-medium tabular-nums">{safeNumber(performance.average_rating).toFixed(1)} / 5.0</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Customer Reviews</span>

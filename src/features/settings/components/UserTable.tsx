@@ -16,6 +16,7 @@ import { Plus, Pencil } from "lucide-react";
 import { useUsers } from "../hooks/useSettings";
 import { UserForm } from "./UserForm";
 import { LoadingSpinner } from "@/components/shared";
+import { formatDate } from "@/lib/utils";
 import type { UserManagement } from "../types";
 
 export function UserTable() {
@@ -75,9 +76,7 @@ export function UserTable() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {user.last_login_at
-                        ? new Date(user.last_login_at).toLocaleDateString()
-                        : "Never"}
+                      {user.last_login_at ? formatDate(user.last_login_at) : "Never"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

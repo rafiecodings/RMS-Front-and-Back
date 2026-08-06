@@ -14,7 +14,7 @@ import { LoadingSpinner } from "@/components/shared";
 import { EntityActionDropdown } from "@/components/shared";
 import { XCircle, Users, Clock } from "lucide-react";
 import type { Reservation, ReservationStatus } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 
 const STATUS_BADGE: Record<ReservationStatus, string> = {
   pending:
@@ -31,20 +31,24 @@ const STATUS_BADGE: Record<ReservationStatus, string> = {
     "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-PH", {
+function formatDate(dateStr: string | undefined | null) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-PH", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function formatTime(timeStr: string) {
+function formatTime(timeStr: string | undefined | null) {
+  if (!timeStr) return "—";
   const [h, m] = timeStr.split(":");
-  const hour = parseInt(h);
+  const hour = parseInt(h ?? "0") || 0;
   const ampm = hour >= 12 ? "PM" : "AM";
   const h12 = hour % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
+  return `${h12}:${m ?? "00"} ${ampm}`;
 }
 
 interface ReservationTableProps {
@@ -134,10 +138,10 @@ export function ReservationTable({
                   variant="secondary"
                   className={cn(
                     "text-[10px] px-1.5 py-0",
-                    STATUS_BADGE[res.status]
+                    STATUS_BADGE[res.status] ?? STATUS_BADGE["pending"],
                   )}
                 >
-                  {res.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {formatLabel(res.status)}
                 </Badge>
               </TableCell>
               <TableCell>

@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useDashboard } from "@/lib/hooks";
-import type { DashboardSummary } from "@/lib/types";
 
 const RevenueChart = dynamic(
   () => import("@/features/dashboard").then((m) => ({ default: m.RevenueChart })),
@@ -34,26 +33,11 @@ const PeakHoursChart = dynamic(
   { loading: () => <div className="animate-pulse rounded-2xl bg-muted h-[350px]" /> }
 );
 
-function safeSummary(data: DashboardSummary | null | undefined): DashboardSummary {
-  const d = data || ({} as DashboardSummary);
-  return {
-    revenue: d.revenue || { today: 0, yesterday: 0, this_week: 0, this_month: 0, comparison_percentage: 0, daily_breakdown: [] },
-    sales: d.sales || { total_today: 0, transaction_count: 0, average_ticket: 0, by_type: [], by_payment: [] },
-    orders: d.orders || { total_today: 0, active: 0, completed: 0, cancelled: 0, average_preparation_time: 0, status_breakdown: [] },
-    tables: d.tables || { total: 0, available: 0, occupied: 0, reserved: 0, needs_cleaning: 0, maintenance: 0, occupancy_rate: 0 },
-    kitchen: d.kitchen || { queue_length: 0, avg_wait_time: 0, orders_in_progress: [] },
-    top_selling_items: d.top_selling_items || [],
-    peak_hours: d.peak_hours || [],
-    alerts: d.alerts || [],
-    inventory_alerts: d.inventory_alerts || [],
-    recent_orders: d.recent_orders || [],
-    recent_activities: d.recent_activities || [],
-  };
-}
+// Normalization now lives in `useDashboard` (src/features/dashboard/normalizer.ts)
+// so the page never consumes a raw/unsafe payload.
 
 export default function DashboardPage() {
   const { data, isLoading, error, refetch } = useDashboard();
-  const safeData = safeSummary(data);
 
   if (isLoading) {
     return (
@@ -76,6 +60,19 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  if (!data) {
+    return (
+      <div>
+        <PageHeader title="Dashboard" description="Overview of your restaurant" />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">No dashboard data available.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const safeData = data;
 
   return (
     <div>

@@ -55,6 +55,9 @@ export interface RecipeIngredient {
 
 export interface RecipeFormData {
   menu_item_id: string;
+  instructions?: string;
+  yield_quantity: number;
+  yield_unit: string;
   ingredients: { ingredient_id: string; quantity: number; unit: string }[];
 }
 
@@ -123,7 +126,8 @@ export interface StockLevel {
 export interface StockAdjustFormData {
   ingredient_id: string;
   type: "in" | "out" | "adjustment";
-  quantity: number;
+  quantity?: number;
+  new_stock?: number;
   reference_type?: string;
   reference_id?: string;
   notes?: string;
@@ -178,8 +182,7 @@ export interface SupplierFormData {
 
 export interface PurchaseOrderFormData {
   supplier_id: string;
-  order_date: string;
-  expected_delivery_date?: string;
+  expected_date?: string;
   notes?: string;
   items: { ingredient_id: string; quantity: number; unit_cost: number }[];
 }

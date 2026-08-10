@@ -104,13 +104,15 @@ export default function OrdersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="placed">Placed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="preparing">Preparing</SelectItem>
                 <SelectItem value="ready">Ready</SelectItem>
                 <SelectItem value="served">Served</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="voided">Voided</SelectItem>
               </SelectContent>
             </Select>
 

@@ -86,14 +86,13 @@ export function SplitPaymentLine({
           <Input
             type="number"
             min={0.01}
-            max={remaining}
             step={0.01}
             value={line.amount || ""}
             placeholder="0.00"
             onFocus={() => setTouched(true)}
             onChange={(e) => {
               const val = parseFloat(e.target.value) || 0;
-              onUpdate(line.id, { amount: Math.min(val, remaining) });
+              onUpdate(line.id, { amount: val });
             }}
             className="h-8"
           />

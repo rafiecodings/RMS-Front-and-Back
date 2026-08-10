@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { AttendanceTable, ClockInOutButton } from "@/features/staff";
-import { useAttendance, useClockIn, useClockOut } from "@/lib/hooks";
+import { useAttendance, useClockIn, useClockOut, useCurrentStaff } from "@/lib/hooks";
 import { toast } from "sonner";
 
 export default function AttendancePage() {
@@ -23,23 +23,38 @@ export default function AttendancePage() {
   const records = attendanceQuery.data?.data?.data ?? [];
   const totalPages = attendanceQuery.data?.data?.meta?.last_page ?? 1;
 
+  const { data: currentStaff } = useCurrentStaff();
   const clockIn = useClockIn();
   const clockOut = useClockOut();
 
   const isClockedIn = records.some((r) => r.status === "present" && !r.clock_out);
 
   function handleClockIn() {
-    clockIn.mutate(undefined, {
-      onSuccess: () => toast.success("Clocked in successfully"),
-      onError: (e: Error) => toast.error(e.message || "Failed to clock in"),
-    });
+    if (!currentStaff) {
+      toast.error("No staff profile found");
+      return;
+    }
+    clockIn.mutate(
+      { staff_id: currentStaff.id },
+      {
+        onSuccess: () => toast.success("Clocked in successfully"),
+        onError: (e: Error) => toast.error(e.message || "Failed to clock in"),
+      }
+    );
   }
 
   function handleClockOut() {
-    clockOut.mutate(undefined, {
-      onSuccess: () => toast.success("Clocked out successfully"),
-      onError: (e: Error) => toast.error(e.message || "Failed to clock out"),
-    });
+    if (!currentStaff) {
+      toast.error("No staff profile found");
+      return;
+    }
+    clockOut.mutate(
+      { staff_id: currentStaff.id },
+      {
+        onSuccess: () => toast.success("Clocked out successfully"),
+        onError: (e: Error) => toast.error(e.message || "Failed to clock out"),
+      }
+    );
   }
 
   return (

@@ -92,9 +92,9 @@ export function AttendanceTable({
             ) : (
               records.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{r.staff?.first_name} {r.staff?.last_name}</p>
-                  </td>
+                   <td className="px-4 py-3">
+                     <p className="font-medium">{r.staff?.user?.name ?? "—"}</p>
+                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(r.date)}
                   </td>

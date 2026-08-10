@@ -8,7 +8,8 @@ import type { Order } from "@/lib/types";
 import { cn, formatCurrency, formatTime } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
-  placed: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  on_hold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   confirmed:
     "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
   preparing:
@@ -19,6 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
   completed:
     "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  voided: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
 };
 
 const ITEM_STATUS_STYLES: Record<string, string> = {

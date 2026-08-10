@@ -12,14 +12,17 @@ export interface Table {
   id: string;
   floor_plan_id: string;
   name: string;
-  number: number;
+  number: string;
   capacity: number;
   status: TableStatus;
+  shape?: string;
   zone?: string;
   section?: string;
   is_wheelchair_accessible: boolean;
-  position_x: number;
-  position_y: number;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
   current_order_id?: string;
   created_at: string;
   updated_at: string;
@@ -40,14 +43,18 @@ export type TableStatus =
   | "maintenance";
 
 export interface TableFormData {
+  floor_plan_id?: string;
   name: string;
-  number: number;
+  number: string;
   capacity: number;
+  shape?: string;
   zone?: string;
   section?: string;
   is_wheelchair_accessible: boolean;
-  position_x: number;
-  position_y: number;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
 }
 
 export interface FloorPlanFormData {

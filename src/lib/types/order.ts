@@ -61,13 +61,15 @@ export interface OrderItemModifier {
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 
 export type OrderStatus =
-  | "placed"
+  | "pending"
   | "confirmed"
   | "preparing"
   | "ready"
   | "served"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "voided"
+  | "on_hold";
 
 export type OrderItemStatus =
   | "pending"

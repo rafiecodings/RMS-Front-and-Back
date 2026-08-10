@@ -24,7 +24,7 @@ export function RecipeDetail({ recipe }: RecipeDetailProps) {
           </Button>
           <div>
             <h2 className="text-lg font-semibold">
-              {recipe.menu_item_name ?? `Menu Item ${recipe.menu_item_id.slice(0, 8)}`}
+              {recipe.menu_item_name ?? `Menu Item ${recipe.menu_item_id?.slice(0, 8) ?? "N/A"}`}
             </h2>
             <p className="text-sm text-muted-foreground">
               {(recipe.ingredients ?? []).length} ingredients • Total cost: {formatCurrency(totalCost)}
@@ -50,8 +50,8 @@ export function RecipeDetail({ recipe }: RecipeDetailProps) {
           <tbody className="divide-y">
             {(recipe.ingredients ?? []).map((ri) => (
               <tr key={ri.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3">
-                  <p className="font-medium">{ri.ingredient?.name ?? `Ingredient ${ri.ingredient_id.slice(0, 8)}`}</p>
+                 <td className="px-4 py-3">
+                   <p className="font-medium">{ri.ingredient?.name ?? `Ingredient ${ri.ingredient_id?.slice(0, 8) ?? "N/A"}`}</p>
                   {ri.ingredient?.category && (
                     <p className="text-xs text-muted-foreground capitalize">{ri.ingredient.category}</p>
                   )}

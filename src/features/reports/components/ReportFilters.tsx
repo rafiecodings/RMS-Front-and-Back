@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -9,10 +8,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, ChevronDown } from "lucide-react";
+import {
+  CalendarIcon,
+  ChevronDown,
+  RotateCcw,
+  TrendingUp,
+} from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { ReportPeriod, DateRange } from "../types";
-
 
 const PERIODS: { value: ReportPeriod; label: string }[] = [
   { value: "today", label: "Today" },
@@ -22,7 +26,6 @@ const PERIODS: { value: ReportPeriod; label: string }[] = [
   { value: "last_month", label: "Last Month" },
   { value: "this_quarter", label: "This Quarter" },
   { value: "this_year", label: "This Year" },
-  { value: "custom", label: "Custom Range" },
 ];
 
 interface ReportFiltersProps {
@@ -40,56 +43,105 @@ export function ReportFilters({
 }: ReportFiltersProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  const handleReset = () => {
+    onPeriodChange("this_month");
+    onDateRangeChange({ from: "", to: "" });
+  };
+
+  const isCustom = period === "custom";
+  const hasCustomRange = dateRange?.from && dateRange?.to;
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-sm font-medium">Filter by Period</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {PERIODS.map((p) => (
-            <Button
-              key={p.value}
-              variant={period === p.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPeriodChange(p.value)}
-            >
-              {p.label}
-            </Button>
-          ))}
-          {period === "custom" && (
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger render={<Button variant="outline" size="sm" />}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange?.from && dateRange?.to
-                  ? `${format(new Date(dateRange.from), "MMM d")} - ${format(new Date(dateRange.to), "MMM d, yyyy")}`
-                  : "Select dates"}
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="range"
-                  selected={
-                    dateRange?.from && dateRange?.to
-                      ? { from: new Date(dateRange.from), to: new Date(dateRange.to) }
-                      : undefined
-                  }
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      onDateRangeChange({
-                        from: format(range.from, "yyyy-MM-dd"),
-                        to: format(range.to, "yyyy-MM-dd"),
-                      });
-                      setCalendarOpen(false);
-                    }
-                  }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-muted/30 p-1">
+        {PERIODS.map((p) => (
+          <Button
+            key={p.value}
+            variant="ghost"
+            size="sm"
+            onClick={() => onPeriodChange(p.value)}
+            className={cn(
+              "h-7 px-2.5 text-xs font-medium",
+              period === p.value && !isCustom
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {p.label}
+          </Button>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onPeriodChange("custom")}
+          className={cn(
+            "h-7 px-2.5 text-xs font-medium",
+            isCustom
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           )}
+        >
+          <CalendarIcon className="mr-1 h-3 w-3" />
+          Custom
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {isCustom && (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger render={<Button variant="outline" size="sm" />}>
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+              {hasCustomRange
+                ? `${format(new Date(dateRange.from), "MMM d")} - ${format(
+                    new Date(dateRange.to),
+                    "MMM d, yyyy"
+                  )}`
+                : "Select dates"}
+              <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={
+                  hasCustomRange
+                    ? {
+                        from: new Date(dateRange.from),
+                        to: new Date(dateRange.to),
+                      }
+                    : undefined
+                }
+                onSelect={(range) => {
+                  if (range?.from && range?.to) {
+                    onDateRangeChange({
+                      from: format(range.from, "yyyy-MM-dd"),
+                      to: format(range.to, "yyyy-MM-dd"),
+                    });
+                    setCalendarOpen(false);
+                  }
+                }}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {(isCustom || period !== "this_month") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="h-8 text-xs text-muted-foreground"
+          >
+            <RotateCcw className="mr-1 h-3 w-3" />
+            Reset
+          </Button>
+        )}
+
+        <div className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+          <TrendingUp className="h-3 w-3" />
+          <span>Live</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

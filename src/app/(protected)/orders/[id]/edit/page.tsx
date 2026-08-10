@@ -41,7 +41,7 @@ export default function EditOrderPage({
   const tables = tableList.data ?? [];
 
   const canEdit =
-    order && (order.status === "placed" || order.status === "confirmed");
+    order && (order.status === "pending" || order.status === "confirmed");
 
   function handleSubmit(data: OrderFormData) {
     update.mutate(

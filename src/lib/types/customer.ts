@@ -4,7 +4,9 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
-  customer_type: "walk_in" | "registered" | "vip";
+  birthday?: string;
+  dietary_restrictions?: string;
+  customer_type: "walk_in" | "registered" | "regular" | "corporate" | "vip";
   loyalty_points: number;
   total_orders: number;
   total_spent: number;
@@ -19,6 +21,8 @@ export interface CustomerFormData {
   email?: string;
   phone?: string;
   address?: string;
-  customer_type: "walk_in" | "registered" | "vip";
+  birthday?: string;
+  dietary_restrictions?: string;
+  customer_type: "walk_in" | "registered" | "regular" | "corporate" | "vip";
   notes?: string;
 }

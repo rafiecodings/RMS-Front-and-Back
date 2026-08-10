@@ -29,12 +29,9 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
   const suppliers = suppliersList.data?.data?.data ?? [];
   const ingredients = ingredientsList.data?.data?.data ?? [];
 
-  const today = new Date().toISOString().split("T")[0];
-
   const [form, setForm] = useState<PurchaseOrderFormData>({
     supplier_id: "",
-    order_date: today,
-    expected_delivery_date: "",
+    expected_date: "",
     notes: "",
     items: [{ ingredient_id: "", quantity: 1, unit_cost: 0 }],
   });
@@ -87,20 +84,11 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Order Date *</label>
-            <Input
-              type="date"
-              value={form.order_date}
-              onChange={(e) => setForm((prev) => ({ ...prev, order_date: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
             <label className="text-sm font-medium">Expected Delivery</label>
             <Input
               type="date"
-              value={form.expected_delivery_date ?? ""}
-              onChange={(e) => setForm((prev) => ({ ...prev, expected_delivery_date: e.target.value || undefined }))}
+              value={form.expected_date ?? ""}
+              onChange={(e) => setForm((prev) => ({ ...prev, expected_date: e.target.value || undefined }))}
             />
           </div>
         </div>

@@ -34,14 +34,16 @@ export function CustomerForm({
   isLoading,
   submitLabel = "Save Customer",
 }: CustomerFormProps) {
-  const [formData, setFormData] = useState<CustomerFormData>({
-    name: initialData?.name ?? "",
-    email: initialData?.email ?? "",
-    phone: initialData?.phone ?? "",
-    address: initialData?.address ?? "",
-    customer_type: initialData?.customer_type ?? "walk_in",
-    notes: initialData?.notes ?? "",
-  });
+   const [formData, setFormData] = useState<CustomerFormData>({
+     name: initialData?.name ?? "",
+     email: initialData?.email ?? "",
+     phone: initialData?.phone ?? "",
+     address: initialData?.address ?? "",
+     birthday: initialData?.birthday ?? "",
+     dietary_restrictions: initialData?.dietary_restrictions ?? "",
+     customer_type: initialData?.customer_type ?? "walk_in",
+     notes: initialData?.notes ?? "",
+   });
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -173,6 +175,31 @@ export function CustomerForm({
         />
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="birthday">Birthday</Label>
+          <Input
+            id="birthday"
+            type="date"
+            value={formData.birthday}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, birthday: e.target.value || undefined }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="dietary">Dietary Restrictions</Label>
+          <Input
+            id="dietary"
+            value={formData.dietary_restrictions}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, dietary_restrictions: e.target.value || undefined }))
+            }
+            placeholder="e.g. Nut allergy, vegetarian"
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <Textarea
@@ -181,7 +208,7 @@ export function CustomerForm({
           onChange={(e) =>
             setFormData((prev) => ({ ...prev, notes: e.target.value }))
           }
-          placeholder="Special preferences, dietary restrictions, etc."
+          placeholder="Special preferences, allergies, etc."
           rows={3}
         />
       </div>

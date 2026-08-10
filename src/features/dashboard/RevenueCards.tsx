@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Table } from "lucide-react";
+import { TrendingUp, TrendingDown, PhilippinePeso, ShoppingCart, Users, Table } from "lucide-react";
 import type { DashboardSummary } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -64,7 +64,7 @@ export function RevenueCards({ data }: { data: DashboardSummary }) {
         title="Today's Revenue"
         value={formatCurrency(data.revenue.today)}
         change={data.revenue.comparison_percentage}
-        icon={DollarSign}
+        icon={PhilippinePeso}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />
       <KPICard

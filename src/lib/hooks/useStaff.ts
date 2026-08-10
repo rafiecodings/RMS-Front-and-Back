@@ -61,10 +61,10 @@ export function useStaffMember(id: string) {
 export function useStaffPerformance(id: string) {
   return useQuery({
     queryKey: ["staff-performance", id],
-    queryFn: () =>
-      api
-        .get<ApiResponse<StaffPerformance>>(`/staff/${id}/performance`)
-        .then((res) => res.data.data),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<StaffPerformance>>(`/staff/${id}/performance`);
+      return data.data;
+    },
     enabled: !!id,
   });
 }
@@ -112,10 +112,32 @@ export function useAttendance(params?: QueryParams & { staff_id?: string; date?:
   });
 }
 
+export function useStaffShifts() {
+  return useQuery({
+    queryKey: ["staff-shifts"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<StaffShiftOption[]>>("/staff/shifts");
+      return data.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCurrentStaff() {
+  return useQuery({
+    queryKey: ["staff", "current"],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Staff | null>>("/staff/me");
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
 export function useClockIn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data?: { staff_id?: string; notes?: string }) =>
+    mutationFn: (data: { staff_id: string; notes?: string }) =>
       api.post<ApiResponse<AttendanceRecord>>("/staff/clock-in", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
@@ -127,7 +149,7 @@ export function useClockIn() {
 export function useClockOut() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data?: { staff_id?: string; notes?: string }) =>
+    mutationFn: (data: { staff_id: string; notes?: string }) =>
       api.post<ApiResponse<AttendanceRecord>>("/staff/clock-out", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });

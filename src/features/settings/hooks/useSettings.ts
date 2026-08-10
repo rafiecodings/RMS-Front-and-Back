@@ -27,7 +27,7 @@ export function useRestaurantInfo() {
     queryKey: ["settings", "restaurant"],
     queryFn: () =>
       api
-        .get<ApiResponse<RestaurantInfo>>("/admin/settings/restaurant")
+        .get<ApiResponse<RestaurantInfo>>("/admin/settings")
         .then((res) => res.data.data),
     staleTime: 2 * 60 * 1000,
   });
@@ -37,7 +37,7 @@ export function useUpdateRestaurantInfo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: RestaurantInfoFormData) =>
-      api.put<ApiResponse<RestaurantInfo>>("/admin/settings/restaurant", data),
+      api.put<ApiResponse<RestaurantInfo>>("/admin/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "restaurant"] });
     },

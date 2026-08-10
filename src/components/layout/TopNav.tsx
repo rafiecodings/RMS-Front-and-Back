@@ -5,8 +5,8 @@ import { UserMenu } from "@/components/layout/UserMenu";
 import { MobileSidebar } from "@/components/layout/Sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Search, Command, Maximize2, Minimize2, Sun, Moon } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Search, Command, Sun, Moon } from "lucide-react";
+import { useState } from "react";
 import { useTheme } from "next-themes";
 
 function ThemeToggle() {
@@ -27,34 +27,6 @@ function ThemeToggle() {
         <Moon className="h-4 w-4" />
       )}
       <span className="sr-only">Toggle theme</span>
-    </Button>
-  );
-}
-
-function FullscreenToggle() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const toggle = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true));
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false));
-    }
-  }, []);
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={toggle}
-      className="text-muted-foreground hover:text-foreground"
-    >
-      {isFullscreen ? (
-        <Minimize2 className="h-4 w-4" />
-      ) : (
-        <Maximize2 className="h-4 w-4" />
-      )}
-      <span className="sr-only">Toggle fullscreen</span>
     </Button>
   );
 }
@@ -87,7 +59,6 @@ export function TopNav() {
       {/* Right: Actions + Profile */}
       <div className="flex items-center gap-0.5 ml-auto shrink-0">
         <ThemeToggle />
-        <FullscreenToggle />
         <NotificationMenu />
         <Separator orientation="vertical" className="h-8 mx-1.5" />
         <UserMenu />

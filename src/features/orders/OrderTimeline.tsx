@@ -25,7 +25,7 @@ interface OrderTimelineProps {
 }
 
 const STATUS_FLOW: { status: OrderStatus; label: string }[] = [
-  { status: "placed", label: "Placed" },
+  { status: "pending", label: "Pending" },
   { status: "confirmed", label: "Confirmed" },
   { status: "preparing", label: "Preparing" },
   { status: "ready", label: "Ready" },

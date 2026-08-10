@@ -14,23 +14,27 @@ import { CHART_TOOLTIP_STYLE } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 
 const STATUS_COLORS: Record<string, string> = {
-  placed: "#3b82f6",
+  pending: "#3b82f6",
+  on_hold: "#eab308",
   confirmed: "#6366f1",
   preparing: "#f59e0b",
   ready: "#10b981",
   served: "#8b5cf6",
   completed: "#22c55e",
   cancelled: "#ef4444",
+  voided: "#6b7280",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  placed: "Placed",
+  pending: "Pending",
+  on_hold: "On Hold",
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready",
   served: "Served",
   completed: "Completed",
   cancelled: "Cancelled",
+  voided: "Voided",
 };
 
 export function OrderStatusChart({ data }: { data: DashboardSummary }) {

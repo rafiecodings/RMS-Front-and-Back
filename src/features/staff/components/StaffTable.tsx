@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { Search, Eye, ChevronLeft, ChevronRight, Star, Power } from "lucide-react";
 import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { RoleBadge } from "./RoleBadge";
 import { safeNumber } from "@/lib/utils";
@@ -27,16 +27,16 @@ interface StaffTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onToggleActive?: (staff: Staff) => void;
 }
 
 const ROLES: { value: string; label: string }[] = [
   { value: "all", label: "All Roles" },
+  { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
   { value: "cashier", label: "Cashier" },
   { value: "waiter", label: "Waiter" },
   { value: "kitchen_staff", label: "Kitchen Staff" },
-  { value: "host", label: "Host" },
-  { value: "bartender", label: "Bartender" },
 ];
 
 export function StaffTable({
@@ -49,6 +49,7 @@ export function StaffTable({
   currentPage,
   totalPages,
   onPageChange,
+  onToggleActive,
 }: StaffTableProps) {
   return (
     <div className="space-y-4">
@@ -93,21 +94,21 @@ export function StaffTable({
             ) : staff.length === 0 ? (
               <TableEmptyRow message="No staff members found" colSpan={7} />
             ) : (
-              staff.map((s) => (
-                <tr key={s.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium">{s.first_name} {s.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{s.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <RoleBadge role={s.role} />
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground capitalize">
-                    {s.shift ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.phone ?? "—"}</td>
+               staff.map((s) => (
+                 <tr key={s.id} className="hover:bg-muted/30">
+                   <td className="px-4 py-3">
+                     <div>
+                       <p className="font-medium">{s.user?.name ?? "—"}</p>
+                       <p className="text-xs text-muted-foreground">{s.user?.email ?? "—"}</p>
+                     </div>
+                   </td>
+                   <td className="px-4 py-3">
+                     <RoleBadge role={s.user?.role ?? ""} />
+                   </td>
+                   <td className="px-4 py-3 text-muted-foreground capitalize">
+                     {s.position ?? "—"}
+                   </td>
+                   <td className="px-4 py-3 text-muted-foreground">{s.phone ?? "—"}</td>
                   <td className="px-4 py-3 text-center">
                     {s.average_rating != null ? (
                       <div className="flex items-center justify-center gap-1">
@@ -123,11 +124,23 @@ export function StaffTable({
                       {s.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <Button variant="ghost" size="icon-sm" render={<Link href={`/staff/employees/${s.id}`} />}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </td>
+                   <td className="px-4 py-3 text-center">
+                     <div className="flex items-center justify-center gap-1">
+                       <Button variant="ghost" size="icon-sm" render={<Link href={`/staff/employees/${s.id}`} />}>
+                         <Eye className="h-4 w-4" />
+                       </Button>
+                       {onToggleActive && (
+                         <Button
+                           variant="ghost"
+                           size="icon-sm"
+                           onClick={() => onToggleActive(s)}
+                           className={s.is_active ? "text-emerald-600" : "text-muted-foreground"}
+                         >
+                           <Power className="h-4 w-4" />
+                         </Button>
+                       )}
+                     </div>
+                   </td>
                 </tr>
               ))
             )}

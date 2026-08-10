@@ -19,6 +19,10 @@ const CUSTOMER_TYPE_BADGE: Record<string, string> = {
   walk_in: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
   registered:
     "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  regular:
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  corporate:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   vip: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
 };
 

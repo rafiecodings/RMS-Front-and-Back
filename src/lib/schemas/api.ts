@@ -4,6 +4,7 @@ const PermissionModuleSchema = z.enum([
   "dashboard", "customers", "tables", "reservations", "menu",
   "orders", "kitchen", "pos", "billing", "inventory",
   "staff", "reports", "analytics", "settings", "admin",
+  "kot", "integration",
 ])
 
 export const PermissionSchema = z.object({
@@ -11,7 +12,7 @@ export const PermissionSchema = z.object({
   name: z.string(),
   display_name: z.string(),
   module: PermissionModuleSchema,
-  description: z.string().optional(),
+  description: z.string().nullish(),
 })
 
 export const RoleSchema = z.object({

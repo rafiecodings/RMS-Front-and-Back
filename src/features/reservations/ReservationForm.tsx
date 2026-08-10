@@ -33,7 +33,8 @@ interface ReservationFormProps {
 }
 
 interface FormErrors {
-  customer_id?: string;
+  guest_name?: string;
+  guest_email?: string;
   reservation_date?: string;
   reservation_time?: string;
   party_size?: string;
@@ -51,10 +52,14 @@ export function ReservationForm({
 }: ReservationFormProps) {
   const [formData, setFormData] = useState<ReservationFormData>({
     customer_id: initialData?.customer_id ?? "",
+    guest_name: initialData?.guest_name ?? "",
+    guest_phone: initialData?.guest_phone ?? "",
+    guest_email: initialData?.guest_email ?? "",
     table_id: initialData?.table_id ?? "",
     reservation_date: initialData?.reservation_date ?? new Date().toISOString().split("T")[0],
     reservation_time: initialData?.reservation_time ?? "18:00",
     party_size: initialData?.party_size ?? 2,
+    source: initialData?.source ?? "walk_in",
     special_requests: initialData?.special_requests ?? "",
   });
 
@@ -70,8 +75,11 @@ export function ReservationForm({
 
   function validate(): FormErrors {
     const errs: FormErrors = {};
-    if (!formData.customer_id) {
-      errs.customer_id = "Please select a customer";
+    if (!formData.guest_name.trim()) {
+      errs.guest_name = "Guest name is required";
+    }
+    if (formData.guest_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guest_email)) {
+      errs.guest_email = "Enter a valid email address";
     }
     if (!formData.reservation_date) {
       errs.reservation_date = "Date is required";
@@ -95,55 +103,94 @@ export function ReservationForm({
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
-    setTouched({ customer_id: true, reservation_date: true, reservation_time: true, party_size: true });
+    setTouched({ guest_name: true, guest_email: true, reservation_date: true, reservation_time: true, party_size: true });
     if (Object.keys(errs).length === 0) {
       onSubmit({
         ...formData,
+        guest_name: formData.guest_name.trim(),
+        guest_phone: formData.guest_phone?.trim() || undefined,
+        guest_email: formData.guest_email?.trim() || undefined,
+        customer_id: formData.customer_id || undefined,
         table_id: formData.table_id || undefined,
         special_requests: formData.special_requests?.trim() || undefined,
       });
-      if (showStatus && onStatusChange) {
-        onStatusChange(status);
-      }
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label>Customer *</Label>
+        <Label htmlFor="guest-name">Guest Name *</Label>
+        <Input
+          id="guest-name"
+          value={formData.guest_name}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, guest_name: e.target.value }))
+          }
+          onBlur={() => handleBlur("guest_name")}
+          placeholder="e.g. Juan Dela Cruz"
+          aria-invalid={touched.guest_name && !!errors.guest_name}
+        />
+        {touched.guest_name && errors.guest_name && (
+          <p className="text-xs text-destructive">{errors.guest_name}</p>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="guest-phone">Phone</Label>
+          <Input
+            id="guest-phone"
+            value={formData.guest_phone}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, guest_phone: e.target.value }))
+            }
+            placeholder="+63 917 123 4567"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="guest-email">Email</Label>
+          <Input
+            id="guest-email"
+            type="email"
+            value={formData.guest_email}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, guest_email: e.target.value }))
+            }
+            onBlur={() => handleBlur("guest_email")}
+            placeholder="juan@example.com"
+            aria-invalid={touched.guest_email && !!errors.guest_email}
+          />
+          {touched.guest_email && errors.guest_email && (
+            <p className="text-xs text-destructive">{errors.guest_email}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Customer (optional)</Label>
         <Select
           value={formData.customer_id}
           onValueChange={(val) =>
             setFormData((prev) => ({ ...prev, customer_id: val ?? "" }))
           }
         >
-          <SelectTrigger
-            className="w-full"
-            aria-invalid={touched.customer_id && !!errors.customer_id}
-          >
-            <SelectValue placeholder="Select a customer" />
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Link to existing customer" />
           </SelectTrigger>
           <SelectContent>
-            {customers.length === 0 ? (
-              <SelectItem value="none" disabled>
-                No customers available
-              </SelectItem>
-            ) : (
-              customers.map((c) =>
-                c ? (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                    {c.phone ? ` (${c.phone})` : ""}
-                  </SelectItem>
-                ) : null
-              )
+            <SelectItem value="">No customer</SelectItem>
+            {customers.map((c) =>
+              c ? (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                  {c.phone ? ` (${c.phone})` : ""}
+                </SelectItem>
+              ) : null
             )}
           </SelectContent>
         </Select>
-        {touched.customer_id && errors.customer_id && (
-          <p className="text-xs text-destructive">{errors.customer_id}</p>
-        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

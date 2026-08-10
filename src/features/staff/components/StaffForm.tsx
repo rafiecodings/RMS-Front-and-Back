@@ -27,9 +27,12 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
     first_name: initialData?.first_name ?? "",
     last_name: initialData?.last_name ?? "",
     email: initialData?.email ?? "",
+    password: "",
     phone: initialData?.phone ?? "",
     role: initialData?.role ?? "waiter",
     shift: initialData?.shift,
+    position: initialData?.position ?? "",
+    department: initialData?.department ?? "",
     hourly_rate: initialData?.hourly_rate,
     commission_rate: initialData?.commission_rate,
     hire_date: initialData?.hire_date ?? today,
@@ -88,6 +91,18 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
         </div>
+        {!initialData && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Password *</label>
+            <Input
+              type="password"
+              value={form.password ?? ""}
+              onChange={(e) => update("password", e.target.value)}
+              placeholder="Minimum 8 characters"
+              required
+            />
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card p-6 space-y-4">
@@ -107,6 +122,14 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             </Select>
           </div>
           <div className="space-y-2">
+            <label className="text-sm font-medium">Position *</label>
+            <Input
+              value={form.position ?? ""}
+              onChange={(e) => update("position", e.target.value)}
+              placeholder="e.g. Head Chef, Senior Waiter"
+            />
+          </div>
+          <div className="space-y-2">
             <label className="text-sm font-medium">Shift</label>
             <Select value={form.shift ?? "none"} onValueChange={(v) => update("shift", v === "none" || v === null ? undefined : v as StaffShift)}>
               <SelectTrigger>
@@ -119,6 +142,14 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Department</label>
+            <Input
+              value={form.department ?? ""}
+              onChange={(e) => update("department", e.target.value || undefined)}
+              placeholder="e.g. Kitchen, Front of House"
+            />
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-3">

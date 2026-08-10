@@ -21,7 +21,7 @@ interface IngredientFormProps {
 }
 
 const UNITS = ["kg", "g", "mg", "L", "mL", "oz", "lb", "pcs", "bunch", "pack"];
-const CATEGORIES = ["meat", "seafood", "vegetables", "fruits", "dairy", "grains", "spices", "beverages", "other"];
+const CATEGORIES = ["meat", "seafood", "vegetables", "fruits", "dairy", "grains", "spices", "condiments", "pantry", "beverages", "other"];
 
 export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientFormProps) {
   const router = useRouter();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,60 +10,28 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Bell, ShoppingCart, AlertTriangle, Clock } from "lucide-react";
+import { Bell, ShoppingCart, CreditCard, AlertTriangle, Info } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useNotifications } from "@/lib/hooks";
+import type { NotificationIcon } from "@/lib/types";
 
-interface Notification {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  read: boolean;
-  icon: React.ComponentType<{ className?: string }>;
+const ICON_MAP: Record<NotificationIcon, React.ComponentType<{ className?: string }>> = {
+  order: ShoppingCart,
+  payment: CreditCard,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+function formatRelativeTime(isoTime: string): string {
+  const date = new Date(isoTime);
+  if (Number.isNaN(date.getTime())) return "";
+  const distance = formatDistanceToNow(date, { addSuffix: true });
+  return distance.replace("less than a minute ago", "just now");
 }
 
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New order received",
-    description: "Order #1042 for Table 5 — 3x Grilled Salmon",
-    time: "2 min ago",
-    read: false,
-    icon: ShoppingCart,
-  },
-  {
-    id: "2",
-    title: "Low stock alert",
-    description: "Fresh Salmon is below minimum stock level",
-    time: "15 min ago",
-    read: false,
-    icon: AlertTriangle,
-  },
-  {
-    id: "3",
-    title: "Reservation reminder",
-    description: "VIP table for 8 at 7:30 PM tonight",
-    time: "1 hour ago",
-    read: true,
-    icon: Clock,
-  },
-];
-
 export function NotificationMenu() {
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, read: true }))
-    );
-  };
-
-  const markRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   return (
     <DropdownMenu>
@@ -103,46 +71,71 @@ export function NotificationMenu() {
             No notifications
           </div>
         ) : (
-          notifications.map((notification) => (
-            <DropdownMenuItem
-              key={notification.id}
-              onClick={() => markRead(notification.id)}
-              className={cn(
-                "flex items-start gap-3 p-3 cursor-pointer",
-                !notification.read && "bg-primary/5"
-              )}
-            >
-              <div
-                className={cn(
-                  "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                  notification.read
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-primary/10 text-primary"
-                )}
-              >
-                <notification.icon className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
+          notifications.map((notification) => {
+            const Icon = ICON_MAP[notification.icon] ?? Info;
+            const content = (
+              <div className="flex items-start gap-3 p-3">
+                <div
                   className={cn(
-                    "text-sm",
-                    !notification.read && "font-medium"
+                    "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+                    notification.read
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-primary/10 text-primary"
                   )}
                 >
-                  {notification.title}
-                </p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {notification.description}
-                </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">
-                  {notification.time}
-                </p>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={cn(
+                      "text-sm",
+                      !notification.read && "font-medium"
+                    )}
+                  >
+                    {notification.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {notification.description}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">
+                    {formatRelativeTime(notification.time)}
+                  </p>
+                </div>
+                {!notification.read && (
+                  <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                )}
               </div>
-              {!notification.read && (
-                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-              )}
-            </DropdownMenuItem>
-          ))
+            );
+
+            return notification.action ? (
+              <DropdownMenuItem
+                key={notification.id}
+                onClick={() => markRead(notification.id)}
+                className={cn(
+                  "cursor-pointer",
+                  !notification.read && "bg-primary/5"
+                )}
+              >
+                <Link
+                  href={notification.action.href}
+                  className="flex items-start gap-3 w-full"
+                >
+                  {content}
+                </Link>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                key={notification.id}
+                onClick={() => markRead(notification.id)}
+                className={cn(
+                  "cursor-pointer",
+                  !notification.read && "bg-primary/5"
+                )}
+              >
+                {content}
+              </DropdownMenuItem>
+            );
+          })
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="justify-center text-xs text-muted-foreground cursor-pointer">

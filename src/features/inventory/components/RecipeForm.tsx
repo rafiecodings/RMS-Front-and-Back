@@ -31,6 +31,9 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
 
   const [form, setForm] = useState<RecipeFormData>({
     menu_item_id: initialData?.menu_item_id ?? "",
+    instructions: initialData?.instructions ?? "",
+    yield_quantity: initialData?.yield_quantity ?? 1,
+    yield_unit: initialData?.yield_unit ?? "serving",
     ingredients: initialData?.ingredients ?? [],
   });
 
@@ -81,6 +84,48 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-card p-6 space-y-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Yield</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Yield Quantity *</label>
+            <Input
+              type="number"
+              min={0.01}
+              step={0.01}
+              value={form.yield_quantity}
+              onChange={(e) => setForm((prev) => ({ ...prev, yield_quantity: parseFloat(e.target.value) || 0 }))}
+              placeholder="e.g. 1"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Yield Unit *</label>
+            <select
+              value={form.yield_unit}
+              onChange={(e) => setForm((prev) => ({ ...prev, yield_unit: e.target.value }))}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="serving">Serving</option>
+              <option value="piece">Piece</option>
+              <option value="portion">Portion</option>
+              <option value="plate">Plate</option>
+              <option value="cup">Cup</option>
+              <option value="bowl">Bowl</option>
+            </select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Instructions</label>
+          <textarea
+            value={form.instructions}
+            onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
+            placeholder="Optional preparation instructions"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+          />
         </div>
       </div>
 

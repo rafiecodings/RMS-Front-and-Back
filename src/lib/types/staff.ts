@@ -5,13 +5,12 @@ export interface Staff {
   user_id: string;
   user?: User;
   employee_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
   phone?: string;
-  role: StaffRole;
-  shift?: StaffShift;
+  position?: string;
+  department?: string;
   hourly_rate?: number;
+  base_salary?: number;
+  employment_type?: string;
   commission_rate?: number;
   is_active: boolean;
   hire_date: string;
@@ -24,12 +23,11 @@ export interface Staff {
 }
 
 export type StaffRole =
+  | "admin"
   | "manager"
   | "cashier"
   | "waiter"
-  | "kitchen_staff"
-  | "host"
-  | "bartender";
+  | "kitchen_staff";
 
 export type StaffShift = "morning" | "afternoon" | "evening" | "night";
 
@@ -54,9 +52,12 @@ export interface StaffFormData {
   first_name: string;
   last_name: string;
   email: string;
+  password?: string;
   phone?: string;
   role: StaffRole;
   shift?: StaffShift;
+  position?: string;
+  department?: string;
   hourly_rate?: number;
   commission_rate?: number;
   hire_date: string;
@@ -81,10 +82,15 @@ export interface ShiftSchedule {
 export interface ShiftScheduleFormData {
   staff_id: string;
   date: string;
-  shift: StaffShift;
+  shift_id: string;
+  notes?: string;
+}
+
+export interface StaffShiftOption {
+  id: string;
+  name: string;
   start_time: string;
   end_time: string;
-  notes?: string;
 }
 
 export interface AttendanceRecord {

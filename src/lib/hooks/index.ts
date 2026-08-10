@@ -6,6 +6,7 @@ export { useFloorPlans, useTables } from "./useTables";
 export { useReservations } from "./useReservations";
 export { useMenuCategories, useMenuItems } from "./useMenu";
 export { useOrders, useOrder } from "./useOrders";
+export { useNotifications } from "./useNotifications";
 export { useKitchenOrders } from "./useKitchen";
 export {
   useIngredients,
@@ -29,3 +30,4 @@ export {
   useClockOut,
 } from "./useStaff";
 export { useDashboard } from "./useDashboard";
+export { useUsers } from "./useUsers";

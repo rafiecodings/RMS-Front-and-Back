@@ -18,14 +18,14 @@ export function useFloorPlans() {
     queryKey: ["floor-plans"],
     queryFn: () =>
       api
-        .get<ApiResponse<FloorPlan[]>>("/tables/floor-plans")
+        .get<ApiResponse<FloorPlan[]>>("/floor-plans")
         .then((res) => unwrapArray<FloorPlan>(res.data)),
     staleTime: 10 * 60 * 1000,
   });
 
   const create = useMutation({
     mutationFn: (data: FloorPlanFormData) =>
-      api.post<ApiResponse<FloorPlan>>("/tables/floor-plans", data),
+      api.post<ApiResponse<FloorPlan>>("/floor-plans", data),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
   });
@@ -38,13 +38,13 @@ export function useFloorPlans() {
       id: string;
       data: Partial<FloorPlanFormData>;
     }) =>
-      api.put<ApiResponse<FloorPlan>>(`/tables/floor-plans/${id}`, data),
+      api.put<ApiResponse<FloorPlan>>(`/floor-plans/${id}`, data),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/tables/floor-plans/${id}`),
+    mutationFn: (id: string) => api.delete(`/floor-plans/${id}`),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
   });

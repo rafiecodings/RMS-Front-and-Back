@@ -21,13 +21,12 @@ export function CategoryForm({
   isLoading,
   submitLabel = "Save Category",
 }: CategoryFormProps) {
-  const [formData, setFormData] = useState<MenuCategoryFormData>({
-    name: initialData?.name ?? "",
-    description: initialData?.description ?? "",
-    display_order: initialData?.display_order ?? 0,
-    is_active: initialData?.is_active ?? true,
-    parent_id: initialData?.parent_id,
-  });
+   const [formData, setFormData] = useState<MenuCategoryFormData>({
+     name: initialData?.name ?? "",
+     description: initialData?.description ?? "",
+     sort_order: initialData?.sort_order ?? 0,
+     is_active: initialData?.is_active ?? true,
+   });
 
   const [nameError, setNameError] = useState<string>();
   const [nameTouched, setNameTouched] = useState(false);
@@ -82,22 +81,22 @@ export function CategoryForm({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="cat-order">Display Order</Label>
-          <Input
-            id="cat-order"
-            type="number"
-            min={0}
-            value={formData.display_order}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                display_order: parseInt(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="cat-order">Sort Order</Label>
+            <Input
+              id="cat-order"
+              type="number"
+              min={0}
+              value={formData.sort_order}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  sort_order: parseInt(e.target.value) || 0,
+                }))
+              }
+            />
+          </div>
 
         <div className="flex items-end pb-1">
           <label className="flex items-center gap-2 cursor-pointer">

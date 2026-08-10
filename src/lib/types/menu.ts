@@ -2,7 +2,7 @@ export interface MenuCategory {
   id: string;
   name: string;
   description?: string;
-  display_order: number;
+  sort_order: number;
   is_active: boolean;
   image_url?: string;
   parent_id?: string;
@@ -60,7 +60,7 @@ export interface ModifierOption {
 export interface MenuCategoryFormData {
   name: string;
   description?: string;
-  display_order: number;
+  sort_order: number;
   is_active: boolean;
   parent_id?: string;
 }

@@ -215,8 +215,27 @@ export function useStockMovements(params?: QueryParams & { ingredient_id?: strin
 export function useStockAdjust() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: StockAdjustFormData) =>
-      api.post<ApiResponse<StockMovement>>("/inventory/stock/adjust", data),
+    mutationFn: (data: StockAdjustFormData) => {
+      if (data.type === "adjustment") {
+        return api.post<ApiResponse<StockMovement>>("/inventory/stock/adjust", {
+          ingredient_id: data.ingredient_id,
+          new_stock: data.new_stock,
+          notes: data.notes,
+        });
+      }
+      if (data.type === "out") {
+        return api.post<ApiResponse<StockMovement>>("/inventory/stock/outward", {
+          ingredient_id: data.ingredient_id,
+          quantity: data.quantity,
+          notes: data.notes,
+        });
+      }
+      return api.post<ApiResponse<StockMovement>>("/inventory/stock/inward", {
+        ingredient_id: data.ingredient_id,
+        quantity: data.quantity,
+        notes: data.notes,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       queryClient.invalidateQueries({ queryKey: ["ingredients"] });

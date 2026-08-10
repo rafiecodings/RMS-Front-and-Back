@@ -38,7 +38,7 @@ export default function PerformancePage() {
             <SelectContent>
               {staff.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.first_name} {s.last_name}
+                  {s.user?.name ?? s.employee_id}
                 </SelectItem>
               ))}
             </SelectContent>

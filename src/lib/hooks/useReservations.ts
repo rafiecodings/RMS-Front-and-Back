@@ -45,7 +45,8 @@ export function useReservations(params?: QueryParams) {
 
   const cancel = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      api.post<ApiResponse<Reservation>>(`/reservations/${id}/cancel`, {
+      api.patch<ApiResponse<Reservation>>(`/reservations/${id}/status`, {
+        status: "cancelled",
         cancellation_reason: reason,
       }),
     onSuccess: () => {

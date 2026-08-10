@@ -117,7 +117,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
           <tbody className="divide-y">
             {order.items.map((item) => (
               <tr key={item.id} className="hover:bg-muted/30">
-                <td className="px-4 py-2">{item.ingredient?.name ?? `Item ${item.ingredient_id.slice(0, 8)}`}</td>
+                 <td className="px-4 py-2">{item.ingredient?.name ?? `Item ${item.ingredient_id?.slice(0, 8) ?? "N/A"}`}</td>
                 <td className="px-4 py-2 text-right tabular-nums">{item.quantity}</td>
                 <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(item.unit_cost)}</td>
                 <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(item.total_cost)}</td>

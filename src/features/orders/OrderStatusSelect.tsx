@@ -16,23 +16,27 @@ interface OrderStatusSelectProps {
 }
 
 const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
-  placed: ["confirmed", "cancelled"],
+  pending: ["confirmed", "cancelled"],
+  on_hold: ["confirmed", "cancelled"],
   confirmed: ["preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
   ready: ["served"],
   served: ["completed"],
   completed: [],
   cancelled: [],
+  voided: [],
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  placed: "Placed",
+  pending: "Pending",
+  on_hold: "On Hold",
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready",
   served: "Served",
   completed: "Completed",
   cancelled: "Cancelled",
+  voided: "Voided",
 };
 
 export function OrderStatusSelect({

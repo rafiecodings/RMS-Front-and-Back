@@ -8,3 +8,4 @@ export * from "./kot";
 export * from "./inventory";
 export * from "./staff";
 export * from "./dashboard";
+export * from "./notification";

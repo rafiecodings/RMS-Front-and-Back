@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, ChevronLeft, ChevronRight, Mail, Phone } from "lucide-react";
+import { Search, Eye, Trash2, ChevronLeft, ChevronRight, Mail, Phone } from "lucide-react";
 import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import type { Supplier } from "@/lib/types";
 
@@ -16,6 +16,7 @@ interface SupplierTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onDelete?: (supplier: Supplier) => void;
 }
 
 export function SupplierTable({
@@ -26,6 +27,7 @@ export function SupplierTable({
   currentPage,
   totalPages,
   onPageChange,
+  onDelete,
 }: SupplierTableProps) {
   return (
     <div className="space-y-4">
@@ -88,11 +90,18 @@ export function SupplierTable({
                       {s.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <Button variant="ghost" size="icon-sm" render={<Link href={`/inventory/suppliers/${s.id}`} />}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </td>
+                   <td className="px-4 py-3 text-center">
+                     <div className="flex items-center justify-center gap-1">
+                       <Button variant="ghost" size="icon-sm" render={<Link href={`/inventory/suppliers/${s.id}`} />}>
+                         <Eye className="h-4 w-4" />
+                       </Button>
+                       {onDelete && (
+                         <Button variant="ghost" size="icon-sm" onClick={() => onDelete(s)}>
+                           <Trash2 className="h-4 w-4 text-destructive" />
+                         </Button>
+                       )}
+                     </div>
+                   </td>
                 </tr>
               ))
             )}

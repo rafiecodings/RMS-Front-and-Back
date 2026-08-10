@@ -20,6 +20,7 @@ Route::middleware(['auth:sanctum'])->prefix('menu')->group(function () {
         Route::post('/', [ItemController::class, 'store'])->middleware('role:admin,manager');
         Route::get('/{id}', [ItemController::class, 'show'])->whereUuid('id');
         Route::put('/{id}', [ItemController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
+        Route::delete('/{id}', [ItemController::class, 'destroy'])->middleware('role:admin,manager')->whereUuid('id');
         Route::patch('/{id}/availability', [ItemController::class, 'toggleAvailability'])->middleware('role:admin,manager')->whereUuid('id');
         Route::post('/{id}/images', [ItemController::class, 'uploadImage'])->middleware('role:admin,manager')->whereUuid('id');
     });

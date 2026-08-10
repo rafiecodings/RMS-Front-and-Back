@@ -32,6 +32,7 @@ class Recipe extends BaseModel
 
     public function ingredients(): BelongsToMany
     {
-        return $this->belongsToMany(Ingredient::class, 'recipe_ingredients');
+        return $this->belongsToMany(Ingredient::class, 'recipe_ingredients')
+            ->withPivot('quantity', 'unit');
     }
 }

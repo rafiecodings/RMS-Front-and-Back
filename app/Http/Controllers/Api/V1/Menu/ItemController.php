@@ -238,6 +238,20 @@ class ItemController extends Controller
         ], 'Menu item updated successfully.');
     }
 
+    public function destroy(string $id): JsonResponse
+    {
+        $item = MenuItem::find($id);
+
+        if (!$item) {
+            return $this->notFound('Menu item not found.');
+        }
+
+        $item->modifiers()->detach();
+        $item->delete();
+
+        return $this->success(['id' => $id], 'Menu item deleted successfully.');
+    }
+
     public function toggleAvailability(string $id): JsonResponse
     {
         $item = MenuItem::find($id);

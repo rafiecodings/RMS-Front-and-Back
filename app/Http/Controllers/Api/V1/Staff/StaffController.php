@@ -188,6 +188,37 @@ class StaffController extends Controller
         ], 'Staff profile updated successfully.');
     }
 
+    public function me(Request $request): JsonResponse
+    {
+        $staff = StaffProfile::with('user')->where('user_id', $request->user()->id)->first();
+
+        if (!$staff) {
+            return $this->success(null, 'No staff profile found for current user.');
+        }
+
+        return $this->success([
+            'id' => $staff->id,
+            'employee_id' => $staff->employee_id,
+            'position' => $staff->position,
+            'department' => $staff->department,
+            'hourly_rate' => (float) $staff->hourly_rate,
+            'base_salary' => (float) $staff->base_salary,
+            'hire_date' => $staff->hire_date?->toDateString(),
+            'employment_type' => $staff->employment_type,
+            'phone' => $staff->phone,
+            'address' => $staff->address,
+            'is_active' => $staff->is_active,
+            'user_id' => $staff->user_id,
+            'user' => $staff->user ? [
+                'id' => $staff->user->id,
+                'name' => $staff->user->name,
+                'email' => $staff->user->email,
+            ] : null,
+            'created_at' => $staff->created_at?->toISOString(),
+            'updated_at' => $staff->updated_at?->toISOString(),
+        ]);
+    }
+
     public function performance(Request $request, string $id): JsonResponse
     {
         $staff = StaffProfile::find($id);
@@ -196,30 +227,20 @@ class StaffController extends Controller
             return $this->notFound('Staff profile not found.');
         }
 
-        $performances = StaffPerformance::where('staff_id', $id)
-            ->orderBy('period_date', 'desc')
-            ->paginate($request->integer('per_page', 15));
+        $performances = StaffPerformance::where('staff_id', $id);
 
-        $data = $performances->getCollection()->map(fn (StaffPerformance $p) => [
-            'id' => $p->id,
-            'period_date' => $p->period_date?->toDateString(),
-            'orders_served' => $p->orders_served,
-            'total_sales' => (float) $p->total_sales,
-            'tips_earned' => (float) $p->tips_earned,
-            'rating' => (float) $p->rating,
-            'notes' => $p->notes,
-            'created_at' => $p->created_at?->toISOString(),
-        ]);
+        $summary = [
+            'orders_handled' => (int) $performances->sum('orders_served'),
+            'tables_served' => (int) $performances->sum('tables_served'),
+            'total_sales' => (float) $performances->sum('total_sales'),
+            'tips_earned' => (float) $performances->sum('tips_earned'),
+            'average_rating' => round((float) $performances->avg('rating'), 2),
+            'attendance_rate' => round((float) $performances->avg('attendance_rate'), 2),
+            'punctuality_score' => round((float) $performances->avg('punctuality_score'), 2),
+            'customer_feedback_count' => (int) $performances->sum('customer_feedback_count'),
+        ];
 
-        return $this->success([
-            'items' => $data,
-            'pagination' => [
-                'current_page' => $performances->currentPage(),
-                'last_page' => $performances->lastPage(),
-                'per_page' => $performances->perPage(),
-                'total' => $performances->total(),
-            ],
-        ]);
+        return $this->success($summary);
     }
 
     public function clockIn(Request $request): JsonResponse
@@ -340,6 +361,13 @@ class StaffController extends Controller
                 'total' => $schedules->total(),
             ],
         ]);
+    }
+
+    public function shifts(Request $request): JsonResponse
+    {
+        $shifts = \App\Models\StaffShift::all(['id', 'name', 'start_time', 'end_time']);
+
+        return $this->success($shifts->toArray());
     }
 
     public function createSchedule(Request $request): JsonResponse

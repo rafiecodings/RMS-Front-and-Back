@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Table;
+use App\Services\OrderWorkflowService;
 use App\Services\PricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -268,7 +269,7 @@ class OrderController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $order = Order::with(['customer', 'table', 'items.menuItem', 'items.modifiers', 'statusHistory.changer'])
+        $order = Order::with(['customer', 'table', 'items.menuItem', 'items.modifiers', 'statusHistory.changer', 'invoice.payments'])
             ->find($id);
 
         if (!$order) {
@@ -314,6 +315,13 @@ class OrderController extends Controller
                     'price' => (float) ($m->pivot->price ?? $m->price),
                 ]),
             ]),
+            'payments' => $order->invoice?->payments->map(fn ($p) => [
+                'id' => $p->id,
+                'amount' => (float) $p->amount,
+                'payment_method' => $p->payment_method,
+                'reference_number' => $p->reference_number,
+                'created_at' => $p->created_at?->toISOString(),
+            ]) ?? [],
             'created_at' => $order->created_at?->toISOString(),
             'updated_at' => $order->updated_at?->toISOString(),
         ]);
@@ -369,6 +377,16 @@ class OrderController extends Controller
             'notes' => $validated['notes'] ?? "Status changed to {$validated['status']}",
             'changed_by' => $request->user()->id,
         ]);
+
+        $workflow = app(OrderWorkflowService::class);
+
+        if ($validated['status'] === 'confirmed') {
+            $workflow->createKotForOrder($order);
+        }
+
+        if ($validated['status'] === 'completed') {
+            $workflow->deductInventoryForCompletedOrder($order, $request->user());
+        }
 
         if (in_array($validated['status'], ['completed', 'cancelled']) && $order->table_id) {
             Table::where('id', $order->table_id)->update(['status' => 'available']);
@@ -773,6 +791,8 @@ class OrderController extends Controller
             'status' => 'voided',
             'cancellation_reason' => $validated['reason'],
         ]);
+
+        app(OrderWorkflowService::class)->reverseInventoryForCancelledOrder($order, $request->user());
 
         if ($order->table_id) {
             Table::where('id', $order->table_id)->update(['status' => 'available']);

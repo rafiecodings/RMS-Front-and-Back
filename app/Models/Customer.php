@@ -7,7 +7,7 @@ namespace App\Models;
 class Customer extends BaseModel
 {
     protected $fillable = [
-        'name', 'email', 'phone', 'customer_type',
+        'name', 'email', 'phone', 'address', 'birthday', 'dietary_restrictions', 'customer_type',
         'loyalty_points', 'total_spent', 'visit_count', 'notes', 'is_active',
     ];
 

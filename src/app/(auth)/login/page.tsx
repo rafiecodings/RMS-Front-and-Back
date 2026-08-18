@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/shared";
 import { Eye, EyeOff, Store, AlertCircle } from "lucide-react";
 
@@ -31,7 +29,6 @@ export default function LoginPage() {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState("");
@@ -40,6 +37,8 @@ export default function LoginPage() {
     email: false,
     password: false,
   });
+
+  const year = new Date().getFullYear();
 
   const validate = (): boolean => {
     const emailErr = validateEmail(email);
@@ -64,7 +63,7 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(email, password, rememberMe);
+      await login(email, password);
     } catch (err: unknown) {
       const apiErr = err as {
         response?: {
@@ -85,12 +84,22 @@ export default function LoginPage() {
             "Too many login attempts. Please try again later."
         );
       } else {
-        setApiError(
-          apiErr.response?.data?.message ||
-            apiErr.response?.status === 422
-            ? "Invalid email or password"
-            : "Unable to connect. Please try again."
-        );
+        const status = apiErr.response?.status;
+
+        if (status === 401) {
+          setApiError("Invalid email or password");
+        } else if (status === 403) {
+          setApiError(apiErr.response?.data?.message || "Access denied.");
+        } else if (status && status >= 500) {
+          setApiError("Server error. Please try again later.");
+        } else if (!apiErr.response) {
+          setApiError("Unable to connect. Please try again.");
+        } else {
+          setApiError(
+            apiErr.response?.data?.message ||
+              "Something went wrong. Please try again."
+          );
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -196,39 +205,20 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Switch
-                  id="remember"
-                  size="sm"
-                  checked={rememberMe}
-                  onCheckedChange={setRememberMe}
-                  disabled={isSubmitting}
-                />
-                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
-                  Remember me
-                </Label>
-              </div>
-              <Link
-                href="/forgot-password"
-                className="text-sm font-medium text-primary hover:underline"
+              <Button
+                type="submit"
+                className="w-full h-11 text-base"
+                disabled={isSubmitting}
               >
-                Forgot password?
-              </Link>
+                {isSubmitting && <LoadingSpinner size="sm" className="mr-2" />}
+                {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
             </div>
-
-            <Button
-              type="submit"
-              className="w-full h-11 text-base"
-              disabled={isSubmitting}
-            >
-              {isSubmitting && <LoadingSpinner size="sm" className="mr-2" />}
-              {isSubmitting ? "Signing in..." : "Sign in"}
-            </Button>
           </form>
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} Restaurant Management System. All rights reserved.
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+          &copy; {year} Restaurant Management System. All rights reserved.
         </p>
       </div>
     </div>

@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
@@ -22,11 +21,11 @@ class LoginController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return $this->error('Invalid credentials.', 401);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return $this->error('Account is deactivated.', 403);
         }
 
@@ -34,7 +33,7 @@ class LoginController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return $this->success([
+        $response = $this->success([
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -48,7 +47,23 @@ class LoginController extends Controller
             ],
             'token' => $token,
             'token_type' => 'Bearer',
-            'expires_in' => (int) config('sanctum.expiration', 900),
+            'expires_in' => (int) (config('sanctum.expiration')
+                ? config('sanctum.expiration') * 60
+                : env('JWT_EXPIRY', 900)),
         ], 'Login successful.');
+
+        return $response->withCookie(
+            cookie(
+                'auth_token',
+                $token,
+                60 * 24 * 7,
+                '/',
+                null,
+                env('APP_ENV') === 'production',
+                true,
+                false,
+                'Lax',
+            )
+        );
     }
 }

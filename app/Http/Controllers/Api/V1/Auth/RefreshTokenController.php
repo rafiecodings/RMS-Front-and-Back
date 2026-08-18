@@ -31,7 +31,22 @@ class RefreshTokenController extends Controller
             ],
             'token' => $token,
             'token_type' => 'Bearer',
-            'expires_in' => (int) config('sanctum.expiration', 900),
-        ], 'Token refreshed successfully.');
+            'expires_in' => (int) (config('sanctum.expiration')
+                ? config('sanctum.expiration') * 60
+                : env('JWT_EXPIRY', 900)),
+        ], 'Token refreshed successfully.')
+            ->withCookie(
+                cookie(
+                    'auth_token',
+                    $token,
+                    60 * 24 * 7,
+                    '/',
+                    null,
+                    env('APP_ENV') === 'production',
+                    true,
+                    false,
+                    'Lax',
+                )
+            );
     }
 }

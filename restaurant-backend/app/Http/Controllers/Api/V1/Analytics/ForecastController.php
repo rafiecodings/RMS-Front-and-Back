@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Api\V1\Analytics;
 use App\Http\Controllers\Controller;
 use App\Models\MenuItem;
 use App\Models\OrderItem;
+use App\Services\AiInsightService;
+use App\Services\LowStockProjectionService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +53,46 @@ class ForecastController extends Controller
         $payload = $this->fallbackForecast($menuItemId, $horizon, $values);
 
         return $this->success($payload, 'Forecast generated successfully');
+    }
+
+    public function lowStockProjection(Request $request, LowStockProjectionService $service): JsonResponse
+    {
+        $validated = $request->validate([
+            'horizon' => ['sometimes', 'integer', 'in:7,14,30'],
+        ]);
+
+        $horizon = (int) ($validated['horizon'] ?? 7);
+
+        $items = $service->project($horizon);
+        $countBySeverity = fn (string $severity) => count(
+            array_filter($items, fn (array $item) => $item['severity'] === $severity)
+        );
+
+        return $this->success([
+            'horizon_days' => $horizon,
+            'summary' => [
+                'total' => count($items),
+                'out_of_stock' => $countBySeverity('out_of_stock'),
+                'low' => $countBySeverity('low'),
+                'critical' => $countBySeverity('critical'),
+                'high' => $countBySeverity('high'),
+                'medium' => $countBySeverity('medium'),
+            ],
+            'items' => $items,
+        ], 'Low stock projection generated successfully');
+    }
+
+    public function insights(Request $request, AiInsightService $service): JsonResponse
+    {
+        $validated = $request->validate([
+            'start_date' => ['required', 'date_format:Y-m-d'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+        ]);
+
+        return $this->success(
+            $service->generate($validated['start_date'], $validated['end_date']),
+            'AI insights generated successfully'
+        );
     }
 
     protected function fallbackForecast(string $menuItemId, int $horizon, string $values): array

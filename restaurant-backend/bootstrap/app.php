@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
+        $middleware->api(prepend: [
+            \App\Http\Middleware\ExtractTokenFromCookie::class,
+        ]);
+
         // API-only backend: the Next.js web client handles auth itself and no
         // server-side `login` route is defined. Laravel 12 defaults the auth
         // redirect target to route('login'); that throws a RouteNotFoundException

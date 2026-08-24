@@ -88,8 +88,8 @@ class DashboardController extends Controller
 
         $avgPrepTime = Order::whereDate('created_at', $today)
             ->where('status', 'completed')
-            ->selectRaw("avg(extract(epoch from (updated_at - created_at)) / 60) as avg_minutes")
-            ->value('avg_minutes');
+            ->get(['created_at', 'updated_at'])
+            ->avg(fn ($order) => $order->created_at->diffInSeconds($order->updated_at) / 60);
 
         $statusBreakdown = Order::whereDate('created_at', $today)
             ->selectRaw("status, count(*) as count")
@@ -109,8 +109,8 @@ class DashboardController extends Controller
         $pendingKOTs = KotTicket::whereNotIn('status', ['completed', 'voided'])->count();
         $kotAvgWait = KotTicket::where('status', 'in_progress')
             ->where('created_at', '>=', now()->subHours(2))
-            ->selectRaw("avg(extract(epoch from (now() - created_at)) / 60) as avg_minutes")
-            ->value('avg_minutes') ?? 0;
+            ->get(['created_at'])
+            ->avg(fn ($kot) => $kot->created_at->diffInSeconds(now()) / 60) ?? 0;
 
         $kitchenOrders = KotTicket::whereIn('status', ['received', 'in_progress', 'ready'])
             ->with(['order.table', 'items'])
@@ -146,15 +146,15 @@ class DashboardController extends Controller
 
         $peakHours = Order::whereDate('created_at', $today)
             ->where('status', 'completed')
-            ->selectRaw("extract(hour from created_at) as hour, count(*) as orders, sum(total) as revenue")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get()
-            ->map(fn ($row) => [
-                'hour' => (int) $row->hour,
-                'orders' => (int) $row->orders,
-                'revenue' => (float) $row->revenue,
-            ]);
+            ->get(['created_at', 'total'])
+            ->groupBy(fn ($order) => (int) $order->created_at->format('G'))
+            ->sortKeys()
+            ->map(fn ($rows, $hour) => [
+                'hour' => (int) $hour,
+                'orders' => $rows->count(),
+                'revenue' => (float) $rows->sum('total'),
+            ])
+            ->values();
 
         $lowStockIngredients = Ingredient::where('is_active', true)
             ->whereColumn('current_stock', '<=', 'minimum_stock')
@@ -300,22 +300,32 @@ class DashboardController extends Controller
         $query = Order::where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate]);
 
-        if ($period === 'daily') {
-            $data = $query->selectRaw("date(created_at) as date, sum(total) as revenue, count(*) as orders")
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get();
-        } elseif ($period === 'weekly') {
-            $data = $query->selectRaw("date_trunc('week', created_at) as date, sum(total) as revenue, count(*) as orders")
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get();
-        } else {
-            $data = $query->selectRaw("date_trunc('month', created_at) as date, sum(total) as revenue, count(*) as orders")
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get();
-        }
+        $rows = $query->get(['created_at', 'total']);
+
+        $groupFormat = match ($period) {
+            'weekly' => 'o-W',
+            'monthly' => 'Y-m',
+            default => 'Y-m-d',
+        };
+
+        $data = $rows
+            ->groupBy(fn ($order) => $order->created_at->format($groupFormat))
+            ->sortKeys()
+            ->map(function ($group) use ($period) {
+                $anchor = $group->first()->created_at->copy();
+                $label = match ($period) {
+                    'weekly' => $anchor->startOfWeek()->toDateString(),
+                    'monthly' => $anchor->startOfMonth()->toDateString(),
+                    default => $anchor->toDateString(),
+                };
+
+                return (object) [
+                    'date' => $label,
+                    'revenue' => (float) $group->sum('total'),
+                    'orders' => $group->count(),
+                ];
+            })
+            ->values();
 
         return $this->success([
             'period' => $period,

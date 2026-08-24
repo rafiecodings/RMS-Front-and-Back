@@ -20,7 +20,7 @@ class ProductionDataSeeder extends Seeder
         $this->now = Carbon::now();
         $this->sixMonthsAgo = (new Carbon($this->now))->subMonths(6);
 
-        DB::statement('SET session_replication_role = \'replica\'');
+        $this->setForeignKeyChecks(false);
 
         $this->truncateRelevantTables();
         $this->createOutlets();
@@ -43,7 +43,16 @@ class ProductionDataSeeder extends Seeder
         $this->createStockMovements();
         $this->createAuditLogs();
 
-        DB::statement('SET session_replication_role = \'origin\'');
+        $this->setForeignKeyChecks(true);
+    }
+
+    private function setForeignKeyChecks(bool $enabled): void
+    {
+        match (DB::getDriverName()) {
+            'pgsql' => DB::statement(sprintf("SET session_replication_role = '%s'", $enabled ? 'origin' : 'replica')),
+            'sqlite' => DB::statement('PRAGMA foreign_keys = ' . ($enabled ? 'ON' : 'OFF')),
+            default => DB::statement('SET FOREIGN_KEY_CHECKS = ' . ($enabled ? 1 : 0)),
+        };
     }
 
     private function truncateRelevantTables(): void

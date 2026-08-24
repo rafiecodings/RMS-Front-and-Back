@@ -79,10 +79,15 @@ class ReportController extends Controller
 
         $hourly = Order::where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw("extract(hour from created_at) as hour, sum(total) as revenue, count(*) as orders")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+            ->get(['created_at', 'total'])
+            ->groupBy(fn ($order) => (int) $order->created_at->format('G'))
+            ->sortKeys()
+            ->map(fn ($rows, $hour) => (object) [
+                'hour' => $hour,
+                'revenue' => (float) $rows->sum('total'),
+                'orders' => $rows->count(),
+            ])
+            ->values();
 
         return $this->success([
             'period' => ['start' => $startDate, 'end' => $endDate],
@@ -272,16 +277,32 @@ class ReportController extends Controller
             $query = Order::where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end]);
 
-            if ($groupBy === 'day') {
-                $data = $query->selectRaw("date(created_at) as period, sum(total) as value, count(*) as count")
-                    ->groupBy('period')->orderBy('period')->get();
-            } elseif ($groupBy === 'week') {
-                $data = $query->selectRaw("date_trunc('week', created_at) as period, sum(total) as value, count(*) as count")
-                    ->groupBy('period')->orderBy('period')->get();
-            } else {
-                $data = $query->selectRaw("date_trunc('month', created_at) as period, sum(total) as value, count(*) as count")
-                    ->groupBy('period')->orderBy('period')->get();
-            }
+            $rows = $query->get(['created_at', 'total']);
+
+            $groupFormat = match ($groupBy) {
+                'week' => 'o-W',
+                'month' => 'Y-m',
+                default => 'Y-m-d',
+            };
+
+            $data = $rows
+                ->groupBy(fn ($order) => $order->created_at->format($groupFormat))
+                ->sortKeys()
+                ->map(function ($group) use ($groupBy) {
+                    $anchor = $group->first()->created_at->copy();
+                    $label = match ($groupBy) {
+                        'week' => $anchor->startOfWeek()->toDateString(),
+                        'month' => $anchor->startOfMonth()->toDateString(),
+                        default => $anchor->toDateString(),
+                    };
+
+                    return (object) [
+                        'period' => $label,
+                        'value' => (float) $group->sum('total'),
+                        'count' => $group->count(),
+                    ];
+                })
+                ->values();
 
             return $this->success([
                 'metric' => 'revenue',

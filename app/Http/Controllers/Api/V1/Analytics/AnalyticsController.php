@@ -327,7 +327,7 @@ public function sales(Request $request): JsonResponse
         $end = $range['end'];
 
         $totalIngredients = (int) Ingredient::where('is_active', true)->count();
-        $totalUsageCost = (float) StockMovement::where('type', 'out')
+        $totalUsageCost = (float) StockMovement::where('type', 'outward')
             ->whereBetween('created_at', [$start, $end])
             ->sum('unit_cost');
 
@@ -337,7 +337,7 @@ public function sales(Request $request): JsonResponse
 
         $usageByCategoryRows = Ingredient::where('is_active', true)
             ->join('stock_movements', 'ingredients.id', '=', 'stock_movements.ingredient_id')
-            ->where('stock_movements.type', 'out')
+            ->where('stock_movements.type', 'outward')
             ->whereBetween('stock_movements.created_at', [$start, $end])
             ->selectRaw("ingredients.category, SUM(stock_movements.quantity * stock_movements.unit_cost) as usage_cost")
             ->groupBy('ingredients.category')
@@ -358,7 +358,7 @@ public function sales(Request $request): JsonResponse
 
         $topConsumed = Ingredient::where('is_active', true)
             ->join('stock_movements', 'ingredients.id', '=', 'stock_movements.ingredient_id')
-            ->where('stock_movements.type', 'out')
+            ->where('stock_movements.type', 'outward')
             ->whereBetween('stock_movements.created_at', [$start, $end])
             ->selectRaw("ingredients.id, ingredients.name, ingredients.category, SUM(stock_movements.quantity) as quantity_used, ingredients.unit, SUM(stock_movements.quantity * stock_movements.unit_cost) as cost")
             ->groupBy('ingredients.id', 'ingredients.name', 'ingredients.category', 'ingredients.unit')

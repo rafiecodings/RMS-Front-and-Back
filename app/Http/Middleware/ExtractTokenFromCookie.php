@@ -9,7 +9,7 @@ class ExtractTokenFromCookie
 {
     public function handle(Request $request, Closure $next)
     {
-        $token = $request->cookie('auth_token');
+        $token = rawurldecode((string) $request->cookie('auth_token'));
 
         if ($token && ! $request->header('Authorization')) {
             $request->headers->set('Authorization', 'Bearer ' . $token);

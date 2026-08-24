@@ -388,6 +388,10 @@ class OrderController extends Controller
             $workflow->deductInventoryForCompletedOrder($order, $request->user());
         }
 
+        if ($validated['status'] === 'cancelled') {
+            $workflow->reverseInventoryForCancelledOrder($order, $request->user());
+        }
+
         if (in_array($validated['status'], ['completed', 'cancelled']) && $order->table_id) {
             Table::where('id', $order->table_id)->update(['status' => 'available']);
         }

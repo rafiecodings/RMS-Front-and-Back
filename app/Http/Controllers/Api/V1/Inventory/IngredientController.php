@@ -84,7 +84,7 @@ class IngredientController extends Controller
             'minimum_stock' => 'sometimes|numeric|min:0',
             'maximum_stock' => 'nullable|numeric|min:0',
             'cost_per_unit' => 'required|numeric|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'supplier_id' => 'nullable|uuid|exists:suppliers,id',
             'storage_location' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -113,7 +113,7 @@ class IngredientController extends Controller
     {
         $ingredient = Ingredient::with('supplier')->find($id);
 
-        if (!$ingredient) {
+        if (! $ingredient) {
             return $this->notFound('Ingredient not found.');
         }
 
@@ -143,7 +143,7 @@ class IngredientController extends Controller
     {
         $ingredient = Ingredient::find($id);
 
-        if (!$ingredient) {
+        if (! $ingredient) {
             return $this->notFound('Ingredient not found.');
         }
 
@@ -155,7 +155,7 @@ class IngredientController extends Controller
             'minimum_stock' => 'sometimes|numeric|min:0',
             'maximum_stock' => 'nullable|numeric|min:0',
             'cost_per_unit' => 'sometimes|numeric|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'supplier_id' => 'nullable|uuid|exists:suppliers,id',
             'storage_location' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -184,7 +184,7 @@ class IngredientController extends Controller
     {
         $ingredient = Ingredient::find($id);
 
-        if (!$ingredient) {
+        if (! $ingredient) {
             return $this->notFound('Ingredient not found.');
         }
 

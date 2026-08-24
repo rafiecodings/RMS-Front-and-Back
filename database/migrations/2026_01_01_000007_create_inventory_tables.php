@@ -108,6 +108,7 @@ return new class extends Migration
             $table->decimal('total_cost', 10, 2);
             $table->decimal('received_quantity', 10, 3)->default(0);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('purchase_order_id')->references('id')->on('purchase_orders')->cascadeOnDelete();
             $table->foreign('ingredient_id')->references('id')->on('ingredients')->restrictOnDelete();
@@ -121,6 +122,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->uuid('reported_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('ingredient_id')->references('id')->on('ingredients')->restrictOnDelete();
             $table->foreign('reported_by')->references('id')->on('users')->nullOnDelete();

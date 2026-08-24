@@ -88,7 +88,7 @@ class ItemController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:menu_items,slug',
             'description' => 'nullable|string|max:2000',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|min:0.01',
             'cost_price' => 'nullable|numeric|min:0',
             'image_url' => 'nullable|string|max:500',
             'sku' => 'nullable|string|max:100|unique:menu_items,sku',
@@ -108,7 +108,7 @@ class ItemController extends Controller
 
         $item = MenuItem::create($validated);
 
-        if (!empty($modifierIds)) {
+        if (! empty($modifierIds)) {
             $item->modifiers()->sync($modifierIds);
         }
 
@@ -142,7 +142,7 @@ class ItemController extends Controller
     {
         $item = MenuItem::with(['category', 'modifiers'])->find($id);
 
-        if (!$item) {
+        if (! $item) {
             return $this->notFound('Menu item not found.');
         }
 
@@ -177,7 +177,7 @@ class ItemController extends Controller
     {
         $item = MenuItem::find($id);
 
-        if (!$item) {
+        if (! $item) {
             return $this->notFound('Menu item not found.');
         }
 
@@ -186,7 +186,7 @@ class ItemController extends Controller
             'name' => 'sometimes|string|max:255',
             'slug' => "sometimes|string|max:255|unique:menu_items,slug,{$id}",
             'description' => 'nullable|string|max:2000',
-            'price' => 'sometimes|numeric|min:0',
+            'price' => 'sometimes|numeric|min:0.01',
             'cost_price' => 'nullable|numeric|min:0',
             'image_url' => 'nullable|string|max:500',
             'sku' => "nullable|string|max:100|unique:menu_items,sku,{$id}",
@@ -199,7 +199,7 @@ class ItemController extends Controller
             'modifier_ids.*' => 'string|exists:menu_modifiers,id',
         ]);
 
-        if (isset($validated['name']) && !isset($validated['slug'])) {
+        if (isset($validated['name']) && ! isset($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
         }
 
@@ -242,7 +242,7 @@ class ItemController extends Controller
     {
         $item = MenuItem::find($id);
 
-        if (!$item) {
+        if (! $item) {
             return $this->notFound('Menu item not found.');
         }
 
@@ -256,11 +256,11 @@ class ItemController extends Controller
     {
         $item = MenuItem::find($id);
 
-        if (!$item) {
+        if (! $item) {
             return $this->notFound('Menu item not found.');
         }
 
-        $item->update(['is_available' => !$item->is_available]);
+        $item->update(['is_available' => ! $item->is_available]);
 
         return $this->success([
             'id' => $item->id,
@@ -273,7 +273,7 @@ class ItemController extends Controller
     {
         $item = MenuItem::find($id);
 
-        if (!$item) {
+        if (! $item) {
             return $this->notFound('Menu item not found.');
         }
 

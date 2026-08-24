@@ -25,7 +25,7 @@ class PricingService
      */
     public function buildLineItem(MenuItem $menuItem, int $quantity, array $modifierIds = []): array
     {
-        if (!$menuItem->is_available) {
+        if (! $menuItem->is_available) {
             return [
                 'error' => 'Menu item is not available.',
                 'unit_price' => 0.0,
@@ -100,7 +100,7 @@ class PricingService
         if ($discountId !== null) {
             $discount = Discount::where('id', $discountId)->first();
 
-            if (!$discount) {
+            if (! $discount) {
                 return ['discount' => null, 'amount' => 0.0, 'error' => 'Invalid discount.'];
             }
 
@@ -110,12 +110,12 @@ class PricingService
         } else {
             $discount = Discount::where('code', $code)->first();
 
-            if (!$discount) {
+            if (! $discount) {
                 return ['discount' => null, 'amount' => 0.0, 'error' => 'Invalid discount code.'];
             }
         }
 
-        if (!$discount->is_active) {
+        if (! $discount->is_active) {
             return ['discount' => null, 'amount' => 0.0, 'error' => 'Discount is not active.'];
         }
 

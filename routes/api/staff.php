@@ -10,11 +10,12 @@ Route::middleware(['auth:sanctum'])->prefix('staff')->group(function () {
     Route::get('/schedule', [StaffController::class, 'schedule']);
     Route::post('/schedule', [StaffController::class, 'createSchedule'])->middleware('role:admin,manager');
     Route::get('/shifts', [StaffController::class, 'shifts']);
+    Route::get('/attendance', [StaffController::class, 'attendance']);
     Route::get('/{id}', [StaffController::class, 'show'])->whereUuid('id');
     Route::put('/{id}', [StaffController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
     Route::get('/{id}/performance', [StaffController::class, 'performance'])->whereUuid('id');
     Route::post('/clock-in', [StaffController::class, 'clockIn']);
     Route::post('/clock-out', [StaffController::class, 'clockOut']);
     Route::get('/{id}/commissions', [StaffController::class, 'commissions'])->whereUuid('id');
-    Route::post('/{id}/leave', [StaffController::class, 'requestLeave'])->whereUuid('id');
+    Route::post('/{id}/leave', [StaffController::class, 'requestLeave'])->middleware('role:admin,manager')->whereUuid('id');
 });

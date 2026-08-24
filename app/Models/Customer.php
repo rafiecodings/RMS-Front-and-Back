@@ -30,4 +30,9 @@ class Customer extends BaseModel
     {
         return $this->hasMany(Order::class);
     }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
 }

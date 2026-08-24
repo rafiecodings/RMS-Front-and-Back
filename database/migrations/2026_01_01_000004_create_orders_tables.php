@@ -51,6 +51,10 @@ return new class extends Migration
             $table->foreign('menu_item_id')->references('id')->on('menu_items')->restrictOnDelete();
         });
 
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->index(['menu_item_id', 'created_at'], 'idx_order_items_menu_item_created_at');
+        });
+
         Schema::create('order_item_modifiers', function (Blueprint $table) {
             $table->uuid('order_item_id');
             $table->uuid('modifier_id');

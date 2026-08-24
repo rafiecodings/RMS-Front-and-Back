@@ -98,7 +98,6 @@ Model class names MUST be singular and in PascalCase.
 |-------|-------|-----------|
 | `Order` | `rms_orders` | `Orders` |
 | `MenuItem` | `rms_menu_items` | `MenuItems` |
-| `FloorPlan` | `rms_floor_plans` | `FloorPlans` |
 | `KotTicket` | `rms_kot_tickets` | `KotTickets` |
 | `PurchaseOrder` | `rms_purchase_orders` | `PurchaseOrders` |
 

@@ -6,9 +6,17 @@ namespace App\Models;
 
 class Table extends BaseModel
 {
+    public const STATUS_AVAILABLE = 'available';
+    public const STATUS_OCCUPIED = 'occupied';
+    public const STATUS_RESERVED = 'reserved';
+    public const STATUS_NEEDS_CLEANING = 'needs_cleaning';
+    public const STATUS_MAINTENANCE = 'maintenance';
+
     protected $fillable = [
-        'floor_plan_id', 'number', 'capacity', 'status', 'shape',
+        'number', 'capacity', 'status', 'shape',
         'pos_x', 'pos_y', 'width', 'height', 'is_active',
+        'name', 'zone', 'section', 'is_wheelchair_accessible',
+        'parent_table_id',
     ];
 
     protected function casts(): array
@@ -20,17 +28,13 @@ class Table extends BaseModel
             'width' => 'decimal:2',
             'height' => 'decimal:2',
             'is_active' => 'boolean',
+            'is_wheelchair_accessible' => 'boolean',
         ];
     }
 
     public function getTable(): string
     {
         return 'tables';
-    }
-
-    public function floorPlan()
-    {
-        return $this->belongsTo(FloorPlan::class);
     }
 
     public function reservations()
@@ -41,5 +45,45 @@ class Table extends BaseModel
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', self::STATUS_AVAILABLE);
+    }
+
+    public function scopeOccupied($query)
+    {
+        return $query->where('status', self::STATUS_OCCUPIED);
+    }
+
+    public function scopeReserved($query)
+    {
+        return $query->where('status', self::STATUS_RESERVED);
+    }
+
+    public function scopeNeedsCleaning($query)
+    {
+        return $query->where('status', self::STATUS_NEEDS_CLEANING);
+    }
+
+    public function scopeMaintenance($query)
+    {
+        return $query->where('status', self::STATUS_MAINTENANCE);
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->status === self::STATUS_AVAILABLE;
+    }
+
+    public function isOccupied(): bool
+    {
+        return $this->status === self::STATUS_OCCUPIED;
+    }
+
+    public function isReserved(): bool
+    {
+        return $this->status === self::STATUS_RESERVED;
     }
 }

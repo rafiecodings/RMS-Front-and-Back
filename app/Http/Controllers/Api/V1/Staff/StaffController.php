@@ -6,14 +6,13 @@ namespace App\Http\Controllers\Api\V1\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\ShiftSchedule;
 use App\Models\StaffCommission;
 use App\Models\StaffPerformance;
 use App\Models\StaffProfile;
 use App\Models\StaffShift;
-use App\Models\ShiftSchedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StaffController extends Controller
 {
@@ -123,7 +122,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::with('user')->find($id);
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->notFound('Staff profile not found.');
         }
 
@@ -155,7 +154,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::find($id);
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->notFound('Staff profile not found.');
         }
 
@@ -170,6 +169,15 @@ class StaffController extends Controller
             'address' => 'nullable|string|max:1000',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        // Prevent users from deactivating their own staff profile mid-shift.
+        if (
+            array_key_exists('is_active', $validated)
+            && $validated['is_active'] === false
+            && $staff->user_id === $request->user()->id
+        ) {
+            return $this->error('You cannot deactivate your own staff profile.', 409);
+        }
 
         $staff->update($validated);
 
@@ -192,7 +200,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::with('user')->where('user_id', $request->user()->id)->first();
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->success(null, 'No staff profile found for current user.');
         }
 
@@ -223,7 +231,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::find($id);
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->notFound('Staff profile not found.');
         }
 
@@ -248,6 +256,12 @@ class StaffController extends Controller
         $validated = $request->validate([
             'staff_id' => 'required|uuid|exists:staff_profiles,id',
         ]);
+
+        $staffProfile = StaffProfile::find($validated['staff_id']);
+
+        if (! $staffProfile || ! $staffProfile->is_active) {
+            return $this->error('Inactive staff cannot clock in.', 403);
+        }
 
         $existingClockIn = Attendance::where('staff_id', $validated['staff_id'])
             ->whereNull('clock_out')
@@ -281,7 +295,7 @@ class StaffController extends Controller
             ->whereNull('clock_out')
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             return $this->error('No active clock-in found for this staff.', 404);
         }
 
@@ -365,9 +379,78 @@ class StaffController extends Controller
 
     public function shifts(Request $request): JsonResponse
     {
-        $shifts = \App\Models\StaffShift::all(['id', 'name', 'start_time', 'end_time']);
+        $shifts = StaffShift::all(['id', 'name', 'start_time', 'end_time']);
 
         return $this->success($shifts->toArray());
+    }
+
+    public function attendance(Request $request): JsonResponse
+    {
+        $request->validate([
+            'staff_id' => 'nullable|uuid',
+            'status' => 'nullable|string|in:present,late,half_day,absent,on_leave',
+            'date' => 'nullable|date',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
+            'search' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $query = Attendance::with('staff.user');
+
+        if ($staffId = $request->input('staff_id')) {
+            $query->where('staff_id', $staffId);
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($date = $request->input('date')) {
+            $query->whereDate('clock_in', $date);
+        }
+
+        if ($from = $request->input('date_from')) {
+            $query->whereDate('clock_in', '>=', $from);
+        }
+
+        if ($to = $request->input('date_to')) {
+            $query->whereDate('clock_in', '<=', $to);
+        }
+
+        if ($search = $request->input('search')) {
+            $query->whereHas('staff.user', fn ($q) => $q->where('name', 'ilike', "%{$search}%"));
+        }
+
+        $records = $query->orderByDesc('clock_in')
+            ->paginate($request->integer('per_page', 15));
+
+        $data = $records->getCollection()->map(fn (Attendance $a) => [
+            'id' => $a->id,
+            'staff_id' => $a->staff_id,
+            'staff' => $a->staff ? [
+                'id' => $a->staff->id,
+                'employee_id' => $a->staff->employee_id,
+                'name' => $a->staff->user?->name,
+                'is_active' => $a->staff->is_active,
+            ] : null,
+            'date' => $a->clock_in?->toDateString(),
+            'clock_in' => $a->clock_in?->toISOString(),
+            'clock_out' => $a->clock_out?->toISOString(),
+            'total_hours' => $a->hours_worked !== null ? (float) $a->hours_worked : null,
+            'status' => $a->status,
+            'notes' => $a->notes,
+        ]);
+
+        return $this->success([
+            'items' => $data,
+            'pagination' => [
+                'current_page' => $records->currentPage(),
+                'last_page' => $records->lastPage(),
+                'per_page' => $records->perPage(),
+                'total' => $records->total(),
+            ],
+        ]);
     }
 
     public function createSchedule(Request $request): JsonResponse
@@ -386,6 +469,12 @@ class StaffController extends Controller
 
         if ($existing) {
             return $this->error('Staff already has a schedule for this date.', 409);
+        }
+
+        $staffProfile = StaffProfile::find($validated['staff_id']);
+
+        if (! $staffProfile || ! $staffProfile->is_active) {
+            return $this->error('Cannot schedule an inactive staff member.', 422);
         }
 
         $schedule = ShiftSchedule::create($validated);
@@ -415,7 +504,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::find($id);
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->notFound('Staff profile not found.');
         }
 
@@ -454,7 +543,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::find($id);
 
-        if (!$staff) {
+        if (! $staff) {
             return $this->notFound('Staff profile not found.');
         }
 
@@ -462,6 +551,15 @@ class StaffController extends Controller
             'date' => 'required|date',
             'reason' => 'required|string|max:1000',
         ]);
+
+        // Leave records are stored as shift_schedules rows, which require a
+        // shift_id. Fail explicitly instead of a 500 from a null insert when
+        // no shifts are configured.
+        $fallbackShiftId = StaffShift::query()->orderBy('start_time')->value('id');
+
+        if (! $fallbackShiftId) {
+            return $this->error('No shifts are configured; cannot record leave.', 422);
+        }
 
         $existing = ShiftSchedule::where('staff_id', $id)
             ->whereDate('date', $validated['date'])
@@ -472,7 +570,7 @@ class StaffController extends Controller
         } else {
             ShiftSchedule::create([
                 'staff_id' => $id,
-                'shift_id' => StaffShift::first()?->id,
+                'shift_id' => $fallbackShiftId,
                 'date' => $validated['date'],
                 'status' => 'absent',
                 'notes' => $validated['reason'],

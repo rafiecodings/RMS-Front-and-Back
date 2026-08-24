@@ -53,8 +53,8 @@ class OrderWorkflowService
 
     public function deductInventoryForCompletedOrder(Order $order, User $user): array
     {
-        if (in_array($order->status, ['cancelled', 'voided'], true)) {
-            return ['skipped' => true, 'reason' => 'Order is cancelled or voided.'];
+        if (in_array($order->status, ['cancelled'], true)) {
+            return ['skipped' => true, 'reason' => 'Order is cancelled.'];
         }
 
         if (! in_array($order->payment_status, ['paid', 'partial'], true)) {
@@ -85,7 +85,7 @@ class OrderWorkflowService
             $insufficient = [];
 
             foreach ($requirements as $ingredientId => $qty) {
-                $ingredient = Ingredient::lockForUpdate()->find($ingredientId);
+                $ingredient = Ingredient::lockForUpdate(10)->find($ingredientId);
                 if (! $ingredient) {
                     continue;
                 }
@@ -99,6 +99,7 @@ class OrderWorkflowService
                         'current_stock' => $currentStock,
                         'required' => round($qty, 3),
                     ];
+
                     continue;
                 }
 
@@ -156,7 +157,7 @@ class OrderWorkflowService
             $reversals = [];
 
             foreach ($outwardMovements as $movement) {
-                $ingredient = Ingredient::lockForUpdate()->find($movement->ingredient_id);
+                $ingredient = Ingredient::lockForUpdate(10)->find($movement->ingredient_id);
                 if (! $ingredient) {
                     continue;
                 }

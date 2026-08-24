@@ -10,7 +10,7 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -27,7 +27,7 @@ class RoleMiddleware
             }
         }
 
-        if (!$hasRole) {
+        if (! $hasRole) {
             return response()->json([
                 'success' => false,
                 'message' => 'Forbidden: Insufficient permissions',

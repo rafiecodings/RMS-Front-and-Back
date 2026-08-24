@@ -154,7 +154,8 @@ class LowStockProjectionTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.top_consumed.0.name', 'Beef');
 
-        $this->assertEquals(10, $response->json('data.total_usage_cost'));
+        // Usage cost = quantity x unit cost = 5 x 10 = 50.
+        $this->assertEquals(50, $response->json('data.total_usage_cost'));
         $this->assertEquals(5, $response->json('data.top_consumed.0.quantity_used'));
     }
 

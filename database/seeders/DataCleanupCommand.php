@@ -4,24 +4,50 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Attendance;
+use App\Models\AuditLog;
+use App\Models\CashRegisterSession;
 use App\Models\Customer;
 use App\Models\Discount;
+use App\Models\GiftCard;
 use App\Models\Ingredient;
 use App\Models\Inventory\Recipe;
+use App\Models\Invoice;
+use App\Models\KitchenTicket;
+use App\Models\KitchenTicketItem;
 use App\Models\Menu\Category;
+use App\Models\MenuCombo;
+use App\Models\MenuComboItem;
 use App\Models\MenuItem;
+use App\Models\MenuItemModifier;
+use App\Models\MenuModifier;
+use App\Models\ModelHasRole;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemModifier;
+use App\Models\OrderStatusHistory;
 use App\Models\Outlet;
 use App\Models\Payment;
 use App\Models\Permission;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\RecipeIngredient;
+use App\Models\Refund;
+use App\Models\Reservation;
 use App\Models\Role;
+use App\Models\RoleHasPermission;
+use App\Models\ShiftSchedule;
+use App\Models\StaffCommission;
+use App\Models\StaffPerformance;
+use App\Models\StaffProfile;
+use App\Models\StaffShift;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\Table;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\WaitList;
+use App\Models\Washtage;
+use App\Models\Wastage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -71,16 +97,16 @@ class DataCleanupCommand
 
         $this->keep(Table::query()->orderByDesc('created_at')->take(self::MAX)->get());
 
-        $this->keep(\App\Models\StaffProfile::query()->whereIn('user_id', $this->ids(User::class))
+        $this->keep(StaffProfile::query()->whereIn('user_id', $this->ids(User::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Staff shifts (only 3 exist — keep all)
-        $this->keep(\App\Models\StaffShift::query()->take(self::MAX)->get());
+        $this->keep(StaffShift::query()->take(self::MAX)->get());
 
         // Ingredients: keep 5 whose supplier (if any) is kept
         $this->keep(Ingredient::query()->where(function ($q) {
             $q->whereNull('supplier_id')
-              ->orWhereIn('supplier_id', $this->ids(Supplier::class));
+                ->orWhereIn('supplier_id', $this->ids(Supplier::class));
         })->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Purchase orders: keep 5 for kept suppliers
@@ -89,7 +115,7 @@ class DataCleanupCommand
 
         // Purchase order items: keep all that reference kept POs and ingredients
         // then limit to 5
-        $poItems = \App\Models\PurchaseOrderItem::query()
+        $poItems = PurchaseOrderItem::query()
             ->whereIn('purchase_order_id', $this->ids(PurchaseOrder::class))
             ->whereIn('ingredient_id', $this->ids(Ingredient::class))
             ->orderByDesc('created_at')->take(self::MAX)->get();
@@ -100,7 +126,7 @@ class DataCleanupCommand
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Recipe ingredients: keep up to 5 that reference kept recipes AND kept ingredients
-        $recipeIngredients = \App\Models\RecipeIngredient::query()
+        $recipeIngredients = RecipeIngredient::query()
             ->whereIn('recipe_id', $this->ids(Recipe::class))
             ->whereIn('ingredient_id', $this->ids(Ingredient::class))
             ->take(self::MAX)->get();
@@ -109,10 +135,10 @@ class DataCleanupCommand
         // Phase 4: Orders — keep 5 whose customer/table refs are valid
         $this->keep(Order::query()->where(function ($q) {
             $q->whereNull('customer_id')
-              ->orWhereIn('customer_id', $this->ids(Customer::class));
+                ->orWhereIn('customer_id', $this->ids(Customer::class));
         })->where(function ($q) {
             $q->whereNull('table_id')
-              ->orWhereIn('table_id', $this->ids(Table::class));
+                ->orWhereIn('table_id', $this->ids(Table::class));
         })->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Order items: keep up to 5 for kept orders AND kept menu_items
@@ -121,35 +147,35 @@ class DataCleanupCommand
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Invoices: keep for kept orders
-        $this->keep(\App\Models\Invoice::query()->whereIn('order_id', $this->ids(Order::class))
+        $this->keep(Invoice::query()->whereIn('order_id', $this->ids(Order::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Payments: keep for kept invoices
-        $this->keep(Payment::query()->whereIn('invoice_id', $this->ids(\App\Models\Invoice::class))
+        $this->keep(Payment::query()->whereIn('invoice_id', $this->ids(Invoice::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // KOT tickets: keep for kept orders
-        $this->keep(\App\Models\KitchenTicket::query()->whereIn('order_id', $this->ids(Order::class))
+        $this->keep(KitchenTicket::query()->whereIn('order_id', $this->ids(Order::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // KOT ticket items: keep for kept tickets and order items
-        $this->keep(\App\Models\KitchenTicketItem::query()
-            ->whereIn('kot_ticket_id', $this->ids(\App\Models\KitchenTicket::class))
+        $this->keep(KitchenTicketItem::query()
+            ->whereIn('kot_ticket_id', $this->ids(KitchenTicket::class))
             ->whereIn('order_item_id', $this->ids(OrderItem::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Order status history: keep for kept orders
-        $this->keep(\App\Models\OrderStatusHistory::query()
+        $this->keep(OrderStatusHistory::query()
             ->whereIn('order_id', $this->ids(Order::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Reservations: keep for kept customers/tables
-        $this->keep(\App\Models\Reservation::query()->where(function ($q) {
+        $this->keep(Reservation::query()->where(function ($q) {
             $q->whereNull('customer_id')
-              ->orWhereIn('customer_id', $this->ids(Customer::class));
+                ->orWhereIn('customer_id', $this->ids(Customer::class));
         })->where(function ($q) {
             $q->whereNull('table_id')
-              ->orWhereIn('table_id', $this->ids(Table::class));
+                ->orWhereIn('table_id', $this->ids(Table::class));
         })->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Stock movements: keep for kept ingredients
@@ -157,47 +183,47 @@ class DataCleanupCommand
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Wastage
-        $this->keep(\App\Models\Wastage::query()->whereIn('ingredient_id', $this->ids(Ingredient::class))
+        $this->keep(Wastage::query()->whereIn('ingredient_id', $this->ids(Ingredient::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Staff-related
-        $this->keep(\App\Models\ShiftSchedule::query()
-            ->whereIn('staff_id', $this->ids(\App\Models\StaffProfile::class))
-            ->whereIn('shift_id', $this->ids(\App\Models\StaffShift::class))
+        $this->keep(ShiftSchedule::query()
+            ->whereIn('staff_id', $this->ids(StaffProfile::class))
+            ->whereIn('shift_id', $this->ids(StaffShift::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
-        $this->keep(\App\Models\Attendance::query()
-            ->whereIn('staff_id', $this->ids(\App\Models\StaffProfile::class))
+        $this->keep(Attendance::query()
+            ->whereIn('staff_id', $this->ids(StaffProfile::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
-        $this->keep(\App\Models\StaffPerformance::query()
-            ->whereIn('staff_id', $this->ids(\App\Models\StaffProfile::class))
+        $this->keep(StaffPerformance::query()
+            ->whereIn('staff_id', $this->ids(StaffProfile::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
-        $this->keep(\App\Models\StaffCommission::query()
-            ->whereIn('staff_id', $this->ids(\App\Models\StaffProfile::class))
+        $this->keep(StaffCommission::query()
+            ->whereIn('staff_id', $this->ids(StaffProfile::class))
             ->whereIn('order_id', $this->ids(Order::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Audit logs
-        $this->keep(\App\Models\AuditLog::query()->orderByDesc('created_at')->take(self::MAX)->get());
+        $this->keep(AuditLog::query()->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Cash register sessions
-        $this->keep(\App\Models\CashRegisterSession::query()
+        $this->keep(CashRegisterSession::query()
             ->whereIn('user_id', $this->ids(User::class))
             ->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Menu modifiers / combos (seeder typically doesn't create these — keep 5 if exist)
-        $this->keep(\App\Models\MenuModifier::query()->orderByDesc('created_at')->take(self::MAX)->get());
-        $this->keep(\App\Models\MenuCombo::query()->orderByDesc('created_at')->take(self::MAX)->get());
+        $this->keep(MenuModifier::query()->orderByDesc('created_at')->take(self::MAX)->get());
+        $this->keep(MenuCombo::query()->orderByDesc('created_at')->take(self::MAX)->get());
 
         // Junction tables
-        $this->keep(\App\Models\RoleHasPermission::query()
+        $this->keep(RoleHasPermission::query()
             ->whereIn('role_id', $this->ids(Role::class))
             ->whereIn('permission_id', $this->ids(Permission::class))
             ->take(self::MAX)->get());
 
-        $this->keep(\App\Models\ModelHasRole::query()
+        $this->keep(ModelHasRole::query()
             ->whereIn('role_id', $this->ids(Role::class))
             ->take(self::MAX)->get());
 
@@ -209,49 +235,49 @@ class DataCleanupCommand
         DB::statement('SET session_replication_role = replica');
 
         $deletes = [
-            \App\Models\Refund::class,
-            \App\Models\MenuComboItem::class,
-            \App\Models\MenuItemModifier::class,
-            \App\Models\OrderItemModifier::class,
-            \App\Models\KitchenTicketItem::class,
-            \App\Models\KitchenTicket::class,
-            \App\Models\OrderStatusHistory::class,
-            \App\Models\StaffCommission::class,
-            \App\Models\StaffPerformance::class,
-            \App\Models\Attendance::class,
-            \App\Models\ShiftSchedule::class,
-            \App\Models\CashRegisterSession::class,
-            \App\Models\AuditLog::class,
-            \App\Models\Payment::class,
-            \App\Models\Invoice::class,
-            \App\Models\Reservation::class,
-            \App\Models\OrderItem::class,
-            \App\Models\Order::class,
-            \App\Models\Washtage::class,
-            \App\Models\StockMovement::class,
-            \App\Models\PurchaseOrderItem::class,
-            \App\Models\PurchaseOrder::class,
-            \App\Models\RecipeIngredient::class,
+            Refund::class,
+            MenuComboItem::class,
+            MenuItemModifier::class,
+            OrderItemModifier::class,
+            KitchenTicketItem::class,
+            KitchenTicket::class,
+            OrderStatusHistory::class,
+            StaffCommission::class,
+            StaffPerformance::class,
+            Attendance::class,
+            ShiftSchedule::class,
+            CashRegisterSession::class,
+            AuditLog::class,
+            Payment::class,
+            Invoice::class,
+            Reservation::class,
+            OrderItem::class,
+            Order::class,
+            Washtage::class,
+            StockMovement::class,
+            PurchaseOrderItem::class,
+            PurchaseOrder::class,
+            RecipeIngredient::class,
             \App\Models\Recipe::class,
-            \App\Models\MenuItem::class,
-            \App\Models\MenuModifier::class,
-            \App\Models\MenuCombo::class,
-            \App\Models\Ingredient::class,
-            \App\Models\StaffProfile::class,
-            \App\Models\Table::class,
-            \App\Models\Supplier::class,
-            \App\Models\Customer::class,
+            MenuItem::class,
+            MenuModifier::class,
+            MenuCombo::class,
+            Ingredient::class,
+            StaffProfile::class,
+            Table::class,
+            Supplier::class,
+            Customer::class,
             \App\Models\Category::class,
-            \App\Models\User::class,
-            \App\Models\Discount::class,
-            \App\Models\Outlet::class,
-            \App\Models\StaffShift::class,
-            \App\Models\Role::class,
-            \App\Models\Permission::class,
-            \App\Models\RoleHasPermission::class,
-            \App\Models\ModelHasRole::class,
-            \App\Models\WaitList::class,
-            \App\Models\GiftCard::class,
+            User::class,
+            Discount::class,
+            Outlet::class,
+            StaffShift::class,
+            Role::class,
+            Permission::class,
+            RoleHasPermission::class,
+            ModelHasRole::class,
+            WaitList::class,
+            GiftCard::class,
         ];
 
         foreach ($deletes as $modelClass) {
@@ -275,6 +301,7 @@ class DataCleanupCommand
     private function ids(string $modelClass): array
     {
         $table = (new $modelClass)->getTable();
+
         return $this->kept[$table]?->pluck('id')->toArray() ?? [];
     }
 
@@ -284,7 +311,7 @@ class DataCleanupCommand
             return;
         }
         $table = $records->first()->getTable();
-        if (!isset($this->kept[$table])) {
+        if (! isset($this->kept[$table])) {
             $this->kept[$table] = collect();
         }
         $this->kept[$table] = $this->kept[$table]->merge($records)->unique('id');
@@ -332,20 +359,20 @@ class DataCleanupCommand
         }
 
         // Nullable FKs
-        DB::statement("
+        DB::statement('
             DELETE FROM orders o
             WHERE (o.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM customers c WHERE c.id = o.customer_id))
                OR (o.table_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tables t WHERE t.id = o.table_id))
-        ");
-        DB::statement("
+        ');
+        DB::statement('
             DELETE FROM reservations r
             WHERE (r.customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM customers c WHERE c.id = r.customer_id))
                OR (r.table_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tables t WHERE t.id = r.table_id))
-        ");
-        DB::statement("
+        ');
+        DB::statement('
             DELETE FROM ingredients i
             WHERE i.supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM suppliers s WHERE s.id = i.supplier_id)
-        ");
+        ');
     }
 
     private function report(): void
@@ -356,7 +383,7 @@ class DataCleanupCommand
             'purchase_orders', 'purchase_order_items', 'stock_movements',
             'tables', 'reservations', 'orders', 'order_items',
             'payments', 'discounts', 'kot_tickets', 'staff_shifts',
-            'attendance', 'audit_logs', 'outlets', 'floor_plans',
+            'attendance', 'audit_logs', 'outlets',
             'refunds', 'invoices', 'order_status_history',
             'staff_profiles', 'shift_schedules',
         ];
@@ -364,7 +391,7 @@ class DataCleanupCommand
         echo "=== REMAINING RECORDS ===\n";
         foreach ($tables as $table) {
             $count = DB::table($table)->count();
-            echo str_pad($table, 30) . $count . "\n";
+            echo str_pad($table, 30).$count."\n";
         }
     }
 }

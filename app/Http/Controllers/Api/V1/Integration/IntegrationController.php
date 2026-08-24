@@ -37,7 +37,7 @@ class IntegrationController extends Controller
         ]);
 
         return $this->created([
-            'id' => 'wh_' . uniqid(),
+            'id' => 'wh_'.uniqid(),
             'url' => $validated['url'],
             'events' => $validated['events'],
             'description' => $validated['description'] ?? null,

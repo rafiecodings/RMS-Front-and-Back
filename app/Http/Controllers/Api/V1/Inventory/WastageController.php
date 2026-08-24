@@ -83,7 +83,7 @@ class WastageController extends Controller
 
             StockMovement::create([
                 'ingredient_id' => $validated['ingredient_id'],
-                'type' => 'outward',
+                'type' => 'wastage',
                 'quantity' => $validated['quantity'],
                 'unit_cost' => (float) $ingredient->cost_per_unit,
                 'notes' => "Wastage: {$validated['reason']}",

@@ -73,7 +73,7 @@ class WaitlistController extends Controller
     {
         $waitlist = Waitlist::find($id);
 
-        if (!$waitlist) {
+        if (! $waitlist) {
             return $this->notFound('Waitlist entry not found.');
         }
 

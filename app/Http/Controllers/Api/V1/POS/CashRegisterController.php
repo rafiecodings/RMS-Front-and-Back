@@ -10,7 +10,6 @@ use App\Models\Payment;
 use App\Models\Refund;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class CashRegisterController extends Controller
 {
@@ -130,7 +129,7 @@ class CashRegisterController extends Controller
             ->where('user_id', $request->user()->id)
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             return $this->error('No open cash register session found.', 404);
         }
 

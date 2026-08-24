@@ -6,7 +6,7 @@ namespace App\Models;
 
 class Role extends BaseModel
 {
-    protected $fillable = ['id','name', 'display_name', 'description', 'is_system'];
+    protected $fillable = ['id', 'name', 'display_name', 'description', 'is_system'];
 
     protected function casts(): array
     {

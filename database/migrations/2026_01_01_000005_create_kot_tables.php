@@ -33,6 +33,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('status')->default('pending');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('kot_ticket_id')->references('id')->on('kot_tickets')->cascadeOnDelete();
             $table->foreign('order_item_id')->references('id')->on('order_items')->cascadeOnDelete();

@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Dashboard;
 
+use App\Concerns\HandlesDateTrunc;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Ingredient;
+use App\Models\KotTicket;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Reservation;
 use App\Models\Table;
 use App\Models\Waitlist;
-use App\Models\KotTicket;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    use HandlesDateTrunc;
+
     public function summary(Request $request): JsonResponse
     {
         $today = now()->startOfDay();
@@ -48,7 +50,7 @@ class DashboardController extends Controller
 
         $dailyBreakdown = Order::where('created_at', '>=', now()->subDays(7))
             ->where('status', 'completed')
-            ->selectRaw("date(created_at) as date, sum(total) as amount")
+            ->selectRaw($this->dateColumn('created_at').' as date, sum(total) as amount')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -61,7 +63,7 @@ class DashboardController extends Controller
         $averageTicket = $transactionCount > 0 ? round((float) $todayRevenue / $transactionCount, 2) : 0;
 
         $salesByType = Order::whereDate('created_at', $today)
-            ->selectRaw("order_type, count(*) as count, sum(total) as revenue")
+            ->selectRaw('order_type, count(*) as count, sum(total) as revenue')
             ->groupBy('order_type')
             ->get()
             ->map(fn ($row) => [
@@ -73,7 +75,7 @@ class DashboardController extends Controller
         $salesByPayment = Order::whereDate('created_at', $today)
             ->where('status', 'completed')
             ->whereNotNull('payment_method')
-            ->selectRaw("payment_method, count(*) as count, sum(total) as revenue")
+            ->selectRaw('payment_method, count(*) as count, sum(total) as revenue')
             ->groupBy('payment_method')
             ->get()
             ->map(fn ($row) => [
@@ -82,17 +84,17 @@ class DashboardController extends Controller
                 'revenue' => (float) $row->revenue,
             ]);
 
-        $activeOrders = Order::whereIn('status', ['pending', 'confirmed', 'preparing', 'ready', 'served'])->count();
+        $activeOrders = Order::whereIn('status', ['pending', 'confirmed', 'preparing', 'ready'])->count();
         $completedToday = Order::whereDate('created_at', $today)->where('status', 'completed')->count();
         $cancelledToday = Order::whereDate('created_at', $today)->where('status', 'cancelled')->count();
 
         $avgPrepTime = Order::whereDate('created_at', $today)
             ->where('status', 'completed')
-            ->selectRaw("avg(extract(epoch from (updated_at - created_at)) / 60) as avg_minutes")
+            ->selectRaw($this->avgMinutesBetween('created_at', 'updated_at'))
             ->value('avg_minutes');
 
         $statusBreakdown = Order::whereDate('created_at', $today)
-            ->selectRaw("status, count(*) as count")
+            ->selectRaw('status, count(*) as count')
             ->groupBy('status')
             ->get()
             ->map(fn ($row) => ['status' => $row->status, 'count' => (int) $row->count]);
@@ -109,7 +111,7 @@ class DashboardController extends Controller
         $pendingKOTs = KotTicket::whereNotIn('status', ['completed', 'voided'])->count();
         $kotAvgWait = KotTicket::where('status', 'in_progress')
             ->where('created_at', '>=', now()->subHours(2))
-            ->selectRaw("avg(extract(epoch from (now() - created_at)) / 60) as avg_minutes")
+            ->selectRaw($this->avgMinutesAgo('created_at'))
             ->value('avg_minutes') ?? 0;
 
         $kitchenOrders = KotTicket::whereIn('status', ['received', 'in_progress', 'ready'])
@@ -119,7 +121,7 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($kot) => [
                 'id' => $kot->id,
-                'order_number' => $kot->order ? '#' . $kot->order->order_number : '#N/A',
+                'order_number' => $kot->order ? '#'.$kot->order->order_number : '#N/A',
                 'table_number' => $kot->order?->table?->number,
                 'order_type' => $kot->order?->order_type ?? 'dine_in',
                 'items' => $kot->items ?? [],
@@ -129,24 +131,24 @@ class DashboardController extends Controller
             ]);
 
         $topSellingItems = OrderItem::whereHas('order', function ($q) use ($today) {
-                $q->whereDate('created_at', $today)->where('status', 'completed');
-            })
-            ->selectRaw("menu_item_id, name, sum(quantity) as quantity_sold, sum(total_price) as revenue")
+            $q->whereDate('created_at', $today)->where('status', 'completed');
+        })
+            ->selectRaw('menu_item_id, name, sum(quantity) as quantity_sold, sum(total_price) as revenue')
             ->groupBy('menu_item_id', 'name')
             ->orderByDesc('quantity_sold')
             ->limit(10)
             ->get()
             ->map(fn ($item, $index) => [
-                'id' => $item->menu_item_id,
-                'name' => $item->name,
-                'quantity_sold' => (int) $item->quantity_sold,
-                'revenue' => (float) $item->revenue,
-                'category' => '',
-            ]);
+            'id' => $item->menu_item_id,
+            'name' => $item->name,
+            'quantity_sold' => (int) $item->quantity_sold,
+            'revenue' => (float) $item->revenue,
+            'category' => '',
+        ]);
 
         $peakHours = Order::whereDate('created_at', $today)
             ->where('status', 'completed')
-            ->selectRaw("extract(hour from created_at) as hour, count(*) as orders, sum(total) as revenue")
+            ->selectRaw($this->hourOf('created_at').', count(*) as orders, sum(total) as revenue')
             ->groupBy('hour')
             ->orderBy('hour')
             ->get()
@@ -174,7 +176,7 @@ class DashboardController extends Controller
             $dashboardAlerts[] = [
                 'id' => $alert['id'],
                 'type' => 'low_inventory',
-                'title' => 'Low Stock: ' . $alert['ingredient_name'],
+                'title' => 'Low Stock: '.$alert['ingredient_name'],
                 'message' => "{$alert['current_stock']} {$alert['unit']} remaining. Threshold is {$alert['min_threshold']} {$alert['unit']}.",
                 'severity' => $alert['severity'] === 'out_of_stock' ? 'critical' : $alert['severity'],
                 'created_at' => now()->toISOString(),
@@ -182,7 +184,7 @@ class DashboardController extends Controller
         }
 
         $upcomingReservations = Reservation::whereDate('reservation_date', today())
-            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->whereNotIn('status', ['cancelled'])
             ->orderBy('reservation_date')
             ->limit(3)
             ->get();
@@ -190,7 +192,7 @@ class DashboardController extends Controller
             $dashboardAlerts[] = [
                 'id' => $res->id,
                 'type' => 'reservation',
-                'title' => 'Reservation at ' . Carbon::parse($res->reservation_date)->format('g:i A'),
+                'title' => 'Reservation at '.Carbon::parse($res->reservation_date)->format('g:i A'),
                 'message' => "{$res->guest_name} - party of {$res->party_size}",
                 'severity' => 'info',
                 'created_at' => $res->created_at?->toISOString() ?? now()->toISOString(),
@@ -205,8 +207,8 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($o) => [
                 'id' => $o->id,
-                'order_number' => '#' . $o->order_number,
-                'customer_name' => $o->customer?->name ?? ($o->table ? 'Table ' . $o->table->number : null),
+                'order_number' => '#'.$o->order_number,
+                'customer_name' => $o->customer?->name ?? ($o->table ? 'Table '.$o->table->number : null),
                 'table_number' => $o->table?->number,
                 'order_type' => $o->order_type,
                 'status' => $o->status,
@@ -228,18 +230,18 @@ class DashboardController extends Controller
                     'cancelled' => 'order_cancelled',
                     default => 'order_placed',
                 },
-                'message' => 'Order #' . $o->order_number . ' ' . str_replace('_', ' ', $o->status),
-                'details' => ($o->table ? 'Table ' . $o->table->number . ' — ' : '') . '₱' . number_format((float) $o->total, 0),
+                'message' => 'Order #'.$o->order_number.' '.str_replace('_', ' ', $o->status),
+                'details' => ($o->table ? 'Table '.$o->table->number.' — ' : '').'₱'.number_format((float) $o->total, 0),
                 'created_at' => $o->created_at?->toISOString(),
             ]);
 
         $totalCustomers = Customer::where('is_active', true)->count();
         $todayReservations = Reservation::whereDate('reservation_date', $today)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->whereNotIn('status', ['cancelled'])
             ->count();
         $waitlistCount = Waitlist::where('status', 'waiting')->count();
 
-        return $this->success([
+        return $this->success($this->filterSummaryByRole($request->user(), [
             'revenue' => [
                 'today' => (float) $todayRevenue,
                 'yesterday' => (float) $yesterdayRevenue,
@@ -288,7 +290,48 @@ class DashboardController extends Controller
                 'today_reservations' => $todayReservations,
                 'waitlist_count' => $waitlistCount,
             ],
-        ]);
+        ]));
+    }
+
+    /**
+     * Server-side RBAC: financial/executive metrics are stripped from the
+     * payload for roles that must not see them — the frontend hiding cards
+     * alone is never the authorization boundary.
+     */
+    private function filterSummaryByRole($user, array $payload): array
+    {
+        $role = $user?->roles->first()?->name;
+
+        if (in_array($role, ['admin', 'manager'], true)) {
+            return $payload;
+        }
+
+        // Financial / executive sections removed entirely.
+        unset(
+            $payload['revenue'],
+            $payload['sales'],
+            $payload['top_selling_items'],
+            $payload['peak_hours']
+        );
+
+        switch ($role) {
+            case 'cashier':
+                // Settlement workflow data only.
+                unset($payload['kitchen']);
+                break;
+            case 'waiter':
+                // Floor operations only.
+                unset($payload['inventory_alerts'], $payload['meta']['total_customers']);
+                break;
+            case 'kitchen_staff':
+                unset($payload['tables'], $payload['inventory_alerts'], $payload['meta']);
+                break;
+            case 'inventory_staff':
+                unset($payload['meta']['today_reservations'], $payload['meta']['waitlist_count'], $payload['meta']['total_customers']);
+                break;
+        }
+
+        return $payload;
     }
 
     public function revenue(Request $request): JsonResponse
@@ -297,21 +340,24 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date', now()->subDays(30)->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
 
+        $startDt = Carbon::parse($startDate)->startOfDay()->toDateTimeString();
+        $endDt = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
+
         $query = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate]);
+            ->whereBetween('created_at', [$startDt, $endDt]);
 
         if ($period === 'daily') {
-            $data = $query->selectRaw("date(created_at) as date, sum(total) as revenue, count(*) as orders")
+            $data = $query->selectRaw($this->dateColumn('created_at').' as date, sum(total) as revenue, count(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
         } elseif ($period === 'weekly') {
-            $data = $query->selectRaw("date_trunc('week', created_at) as date, sum(total) as revenue, count(*) as orders")
+            $data = $query->selectRaw($this->dateTrunc('created_at', 'week', 'date').', sum(total) as revenue, count(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
         } else {
-            $data = $query->selectRaw("date_trunc('month', created_at) as date, sum(total) as revenue, count(*) as orders")
+            $data = $query->selectRaw($this->dateTrunc('created_at', 'month', 'date').', sum(total) as revenue, count(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
@@ -331,12 +377,12 @@ class DashboardController extends Controller
 
     public function orders(Request $request): JsonResponse
     {
-        $statusCounts = Order::selectRaw("status, count(*) as count")
+        $statusCounts = Order::selectRaw('status, count(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status');
 
         $typeCounts = Order::whereDate('created_at', now())
-            ->selectRaw("order_type, count(*) as count")
+            ->selectRaw('order_type, count(*) as count')
             ->groupBy('order_type')
             ->pluck('count', 'order_type');
 
@@ -353,13 +399,13 @@ class DashboardController extends Controller
 
     public function tables(Request $request): JsonResponse
     {
-        $tables = Table::with('floorPlan')
+        $tables = Table::query()
             ->where('is_active', true)
             ->orderBy('number')
             ->get();
 
         $byStatus = $tables->groupBy('status')->map(fn ($t) => $t->count());
-        $byFloor = $tables->groupBy('floorPlan.name')->map(function ($items) {
+        $byZone = $tables->groupBy(fn (Table $table) => $table->zone ?: 'Unassigned')->map(function ($items) {
             return [
                 'total' => $items->count(),
                 'available' => $items->where('status', 'available')->count(),
@@ -373,7 +419,7 @@ class DashboardController extends Controller
                 'total' => $tables->count(),
                 'by_status' => $byStatus,
             ],
-            'by_floor' => $byFloor,
+            'by_zone' => $byZone,
         ]);
     }
 

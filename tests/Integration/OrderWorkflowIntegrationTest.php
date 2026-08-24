@@ -36,19 +36,19 @@ class OrderWorkflowIntegrationTest extends TestCase
 
         $orderId = $this->createOrderViaApi($menuItem);
 
-        // Confirm → KOT generated
+        // Confirm → KOT generated, order auto-advances to preparing
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
             ->assertStatus(200);
 
         $this->assertEquals(1, KotTicket::where('order_id', $orderId)->count());
+        $this->assertEquals('preparing', Order::find($orderId)->status);
 
-        // Complete while unpaid → no inventory deduction yet
+        // Advance to ready (cannot complete directly from preparing)
         $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'ready'])
             ->assertStatus(200);
 
-        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
         $this->assertEquals(500, $ingredient->refresh()->current_stock);
 
         // Pay the order
@@ -63,7 +63,12 @@ class OrderWorkflowIntegrationTest extends TestCase
         $this->assertEquals('paid', $order->payment_status);
         $this->assertEquals(1, Payment::where('invoice_id', $order->invoice->id)->count());
 
-        // Re-complete → inventory now deducted
+        // Mark served (food delivered) before completion
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
+            ->assertStatus(200);
+
+        // Complete (paid) → inventory now deducted
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
             ->assertStatus(200);
@@ -96,11 +101,19 @@ class OrderWorkflowIntegrationTest extends TestCase
             ->assertStatus(200);
 
         $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'ready'])
+            ->assertStatus(200);
+
+        $this->actingAs($this->user)
             ->postJson("/api/v1/orders/{$orderId}/payments", [
                 'payment_method' => 'cash',
                 'amount' => 100,
             ])
             ->assertStatus(201);
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
+            ->assertStatus(200);
 
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])

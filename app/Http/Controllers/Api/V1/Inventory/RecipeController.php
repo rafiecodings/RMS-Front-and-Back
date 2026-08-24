@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Inventory;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ingredient;
 use App\Models\Recipe;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,11 +31,11 @@ class RecipeController extends Controller
             'yield_quantity' => (float) $r->yield_quantity,
             'yield_unit' => $r->yield_unit,
             'ingredients' => $r->ingredients->map(fn ($i) => [
-                'id' => $i->pivot->id ?? ($r->id . '-' . $i->id),
+                'id' => $i->pivot->id ?? ($r->id.'-'.$i->id),
                 'ingredient_id' => $i->id,
                 'name' => $i->name,
                 'quantity' => (float) $i->pivot->quantity,
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'cost' => (float) $i->pivot->quantity * (float) $i->cost_per_unit,
             ])->values()->toArray(),
             'ingredients_count' => $r->ingredients->count(),
@@ -56,23 +57,28 @@ class RecipeController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'menu_item_id' => 'required|string|exists:menu_items,id|unique:recipes,menu_item_id',
+            'menu_item_id' => 'required|uuid|exists:menu_items,id|unique:recipes,menu_item_id',
             'instructions' => 'nullable|string|max:5000',
             'yield_quantity' => 'required|numeric|min:0',
             'yield_unit' => 'required|string|max:50',
             'ingredients' => 'required|array|min:1',
-            'ingredients.*.ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredients.*.ingredient_id' => 'required|uuid|exists:ingredients,id|distinct',
             'ingredients.*.quantity' => 'required|numeric|min:0.001',
+            'ingredients.*.unit' => 'required|string|max:50',
         ]);
 
         $ingredientData = $validated['ingredients'];
         unset($validated['ingredients']);
+
+        $ingredientUnits = Ingredient::whereIn('id', collect($ingredientData)->pluck('ingredient_id'))
+            ->pluck('unit', 'id');
 
         $recipe = Recipe::create($validated);
 
         foreach ($ingredientData as $ing) {
             $recipe->ingredients()->attach($ing['ingredient_id'], [
                 'quantity' => $ing['quantity'],
+                'unit' => $ing['unit'] ?? $ingredientUnits->get($ing['ingredient_id']),
             ]);
         }
 
@@ -90,7 +96,7 @@ class RecipeController extends Controller
             'ingredients' => $recipe->ingredients->map(fn ($i) => [
                 'id' => $i->id,
                 'name' => $i->name,
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'quantity' => (float) $i->pivot->quantity,
             ]),
             'created_at' => $recipe->created_at?->toISOString(),
@@ -101,7 +107,7 @@ class RecipeController extends Controller
     {
         $recipe = Recipe::with(['menuItem', 'ingredients'])->find($id);
 
-        if (!$recipe) {
+        if (! $recipe) {
             return $this->notFound('Recipe not found.');
         }
 
@@ -121,10 +127,10 @@ class RecipeController extends Controller
                 'ingredient' => [
                     'id' => $i->id,
                     'name' => $i->name,
-                    'unit' => $i->unit,
+                    'unit' => $i->pivot->unit ?? $i->unit,
                     'category' => $i->category,
                 ],
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'quantity' => (float) $i->pivot->quantity,
                 'cost_per_unit' => (float) $i->cost_per_unit,
                 'cost' => (float) $i->pivot->quantity * (float) $i->cost_per_unit,
@@ -139,7 +145,7 @@ class RecipeController extends Controller
     {
         $recipe = Recipe::find($id);
 
-        if (!$recipe) {
+        if (! $recipe) {
             return $this->notFound('Recipe not found.');
         }
 
@@ -148,8 +154,9 @@ class RecipeController extends Controller
             'yield_quantity' => 'sometimes|numeric|min:0',
             'yield_unit' => 'sometimes|string|max:50',
             'ingredients' => 'sometimes|array|min:1',
-            'ingredients.*.ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredients.*.ingredient_id' => 'required|uuid|exists:ingredients,id|distinct',
             'ingredients.*.quantity' => 'required|numeric|min:0.001',
+            'ingredients.*.unit' => 'required|string|max:50',
         ]);
 
         $ingredientData = $validated['ingredients'] ?? null;
@@ -158,10 +165,14 @@ class RecipeController extends Controller
         $recipe->update($validated);
 
         if ($ingredientData !== null) {
+            $ingredientUnits = Ingredient::whereIn('id', collect($ingredientData)->pluck('ingredient_id'))
+                ->pluck('unit', 'id');
+
             $recipe->ingredients()->detach();
             foreach ($ingredientData as $ing) {
                 $recipe->ingredients()->attach($ing['ingredient_id'], [
                     'quantity' => $ing['quantity'],
+                    'unit' => $ing['unit'] ?? $ingredientUnits->get($ing['ingredient_id']),
                 ]);
             }
         }
@@ -176,7 +187,7 @@ class RecipeController extends Controller
             'ingredients' => $recipe->ingredients->map(fn ($i) => [
                 'id' => $i->id,
                 'name' => $i->name,
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'quantity' => (float) $i->pivot->quantity,
             ]),
             'created_at' => $recipe->created_at?->toISOString(),
@@ -188,7 +199,7 @@ class RecipeController extends Controller
     {
         $recipe = Recipe::find($id);
 
-        if (!$recipe) {
+        if (! $recipe) {
             return $this->notFound('Recipe not found.');
         }
 

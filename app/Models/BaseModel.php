@@ -10,9 +10,10 @@ use Illuminate\Support\Facades\Schema;
 
 abstract class BaseModel extends Model
 {
-    use HasFactory, SoftDeletes, HasUuid;
+    use HasFactory, HasUuid, SoftDeletes;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected static function booted(): void

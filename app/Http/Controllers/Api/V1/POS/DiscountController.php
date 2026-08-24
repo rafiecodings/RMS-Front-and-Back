@@ -108,7 +108,7 @@ class DiscountController extends Controller
     {
         $discount = Discount::find($id);
 
-        if (!$discount) {
+        if (! $discount) {
             return $this->notFound('Discount not found.');
         }
 
@@ -136,7 +136,7 @@ class DiscountController extends Controller
     {
         $discount = Discount::find($id);
 
-        if (!$discount) {
+        if (! $discount) {
             return $this->notFound('Discount not found.');
         }
 
@@ -181,7 +181,7 @@ class DiscountController extends Controller
     {
         $discount = Discount::find($id);
 
-        if (!$discount) {
+        if (! $discount) {
             return $this->notFound('Discount not found.');
         }
 

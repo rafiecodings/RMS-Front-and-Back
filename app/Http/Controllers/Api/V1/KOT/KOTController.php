@@ -7,8 +7,7 @@ namespace App\Http\Controllers\Api\V1\KOT;
 use App\Http\Controllers\Controller;
 use App\Models\KotTicket;
 use App\Models\KotTicketItem;
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\OrderStatusHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,8 +17,17 @@ class KOTController extends Controller
     {
         $query = KotTicket::with(['order.table', 'items']);
 
+        if ($request->boolean('archived')) {
+            $query->archived();
+        } else {
+            $query->notArchived();
+        }
+
         if ($status = $request->input('status')) {
-            $query->where('status', $status);
+            $statuses = array_values(array_filter(array_map('trim', explode(',', $status))));
+            if (! empty($statuses)) {
+                $query->whereIn('status', $statuses);
+            }
         }
 
         if ($station = $request->input('station')) {
@@ -33,23 +41,35 @@ class KOTController extends Controller
         $tickets = $query->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 15));
 
-        $data = $tickets->getCollection()->map(fn (KotTicket $t) => [
+         $data = $tickets->getCollection()->map(fn (KotTicket $t) => [
             'id' => $t->id,
             'kot_number' => $t->kot_number,
             'status' => $t->status,
             'priority' => $t->priority,
             'station' => $t->station,
             'estimated_minutes' => $t->estimated_minutes,
+            // Alias matching the frontend KotTicket type field name.
+            'estimated_time' => $t->estimated_minutes,
             'started_at' => $t->started_at?->toISOString(),
             'completed_at' => $t->completed_at?->toISOString(),
             'order' => $t->order ? [
                 'id' => $t->order->id,
                 'order_number' => $t->order->order_number,
+                'order_type' => $t->order->order_type,
+                'notes' => $t->order->notes,
                 'table' => $t->order->table ? [
                     'number' => $t->order->table->number,
                 ] : null,
             ] : null,
+            'items' => $t->items->map(fn (KotTicketItem $item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'quantity' => $item->quantity,
+                'status' => $item->status,
+                'notes' => $item->notes,
+            ]),
             'items_count' => $t->items->count(),
+            'archived_at' => $t->archived_at?->toISOString(),
             'created_at' => $t->created_at?->toISOString(),
             'updated_at' => $t->updated_at?->toISOString(),
         ]);
@@ -70,7 +90,7 @@ class KOTController extends Controller
         $ticket = KotTicket::with(['order.table', 'order.customer', 'items.orderItem.menuItem'])
             ->find($id);
 
-        if (!$ticket) {
+        if (! $ticket) {
             return $this->notFound('KOT ticket not found.');
         }
 
@@ -81,6 +101,8 @@ class KOTController extends Controller
             'priority' => $ticket->priority,
             'station' => $ticket->station,
             'estimated_minutes' => $ticket->estimated_minutes,
+            // Alias matching the frontend KotTicket type field name.
+            'estimated_time' => $ticket->estimated_minutes,
             'started_at' => $ticket->started_at?->toISOString(),
             'completed_at' => $ticket->completed_at?->toISOString(),
             'order' => $ticket->order ? [
@@ -104,6 +126,7 @@ class KOTController extends Controller
                     'name' => $item->orderItem->menuItem->name,
                 ] : null,
             ]),
+            'archived_at' => $ticket->archived_at?->toISOString(),
             'created_at' => $ticket->created_at?->toISOString(),
             'updated_at' => $ticket->updated_at?->toISOString(),
         ]);
@@ -113,13 +136,20 @@ class KOTController extends Controller
     {
         $ticket = KotTicket::find($id);
 
-        if (!$ticket) {
+        if (! $ticket) {
             return $this->notFound('KOT ticket not found.');
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,in_progress,ready,completed,voided',
+            'status' => 'required|string|in:received,in_progress,ready,completed,voided',
         ]);
+
+        if (! $ticket->canTransitionTo($validated['status'])) {
+            return $this->error(
+                "Invalid KOT status transition from {$ticket->status} to {$validated['status']}.",
+                409
+            );
+        }
 
         $data = ['status' => $validated['status']];
 
@@ -131,6 +161,28 @@ class KOTController extends Controller
 
         $ticket->update($data);
 
+        // When the kitchen finishes a ticket, reflect it on the parent order.
+        if (in_array($validated['status'], ['ready', 'completed'], true)) {
+            $ticket->items()->update(['status' => 'ready']);
+
+            $order = $ticket->order;
+            if ($order && in_array($order->status, ['confirmed', 'preparing'], true)) {
+                $allItemsDone = ! KotTicketItem::whereHas('kotTicket', function ($query) use ($order) {
+                    $query->where('order_id', $order->id);
+                })->whereNotIn('status', ['ready', 'completed', 'voided'])->exists();
+
+                if ($allItemsDone) {
+                    $order->update(['status' => 'ready']);
+                    OrderStatusHistory::create([
+                        'order_id' => $order->id,
+                        'status' => 'ready',
+                        'notes' => 'All KOT items ready',
+                        'changed_by' => $request->user()?->id,
+                    ]);
+                }
+            }
+        }
+
         return $this->success([
             'id' => $ticket->id,
             'kot_number' => $ticket->kot_number,
@@ -140,12 +192,46 @@ class KOTController extends Controller
         ], 'KOT status updated successfully.');
     }
 
+    public function archive(string $id): JsonResponse
+    {
+        $ticket = KotTicket::find($id);
+
+        if (! $ticket) {
+            return $this->notFound('KOT ticket not found.');
+        }
+
+        if (! in_array($ticket->status, ['ready', 'completed'], true)) {
+            return $this->error(
+                "Only ready or completed KOTs can be archived. Current status: {$ticket->status}.",
+                409
+            );
+        }
+
+        if ($ticket->archived_at) {
+            return $this->success([
+                'id' => $ticket->id,
+                'kot_number' => $ticket->kot_number,
+                'status' => $ticket->status,
+                'archived_at' => $ticket->archived_at?->toISOString(),
+            ], 'KOT already archived.');
+        }
+
+        $ticket->update(['archived_at' => now()]);
+
+        return $this->success([
+            'id' => $ticket->id,
+            'kot_number' => $ticket->kot_number,
+            'status' => $ticket->status,
+            'archived_at' => $ticket->archived_at?->toISOString(),
+        ], 'KOT archived successfully.');
+    }
+
     public function print(string $id): JsonResponse
     {
         $ticket = KotTicket::with(['order.table', 'items.orderItem.menuItem'])
             ->find($id);
 
-        if (!$ticket) {
+        if (! $ticket) {
             return $this->notFound('KOT ticket not found.');
         }
 
@@ -175,12 +261,12 @@ class KOTController extends Controller
     {
         $ticket = KotTicket::find($id);
 
-        if (!$ticket) {
+        if (! $ticket) {
             return $this->notFound('KOT ticket not found.');
         }
 
         if ($ticket->status === 'completed' || $ticket->status === 'voided') {
-            return $this->error('Cannot void a ' . $ticket->status . ' KOT.', 409);
+            return $this->error('Cannot void a '.$ticket->status.' KOT.', 409);
         }
 
         $validated = $request->validate([
@@ -202,7 +288,7 @@ class KOTController extends Controller
         $ticket = KotTicket::with(['order.table', 'items.orderItem.menuItem'])
             ->find($id);
 
-        if (!$ticket) {
+        if (! $ticket) {
             return $this->notFound('KOT ticket not found.');
         }
 

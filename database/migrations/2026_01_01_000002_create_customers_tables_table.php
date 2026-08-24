@@ -23,20 +23,13 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        Schema::create('floor_plans', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->integer('sort_order')->default(0);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
-        });
-
         Schema::create('tables', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('floor_plan_id');
             $table->string('number');
+            $table->string('name')->nullable()->after('number');
+            $table->string('zone')->nullable()->after('name');
+            $table->string('section')->nullable()->after('zone');
+            $table->boolean('is_wheelchair_accessible')->default(false)->after('section');
             $table->integer('capacity');
             $table->string('status')->default('available');
             $table->string('shape')->default('rectangle');
@@ -47,8 +40,6 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('floor_plan_id')->references('id')->on('floor_plans')->cascadeOnDelete();
         });
 
         Schema::create('reservations', function (Blueprint $table) {
@@ -90,7 +81,6 @@ return new class extends Migration
         Schema::dropIfExists('waitlist');
         Schema::dropIfExists('reservations');
         Schema::dropIfExists('tables');
-        Schema::dropIfExists('floor_plans');
         Schema::dropIfExists('customers');
     }
 };

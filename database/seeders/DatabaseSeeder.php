@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'cashier', 'display_name' => 'Cashier', 'description' => 'POS and billing operations', 'is_system' => true],
             ['name' => 'waiter', 'display_name' => 'Waiter', 'description' => 'Order taking and table management', 'is_system' => true],
             ['name' => 'kitchen_staff', 'display_name' => 'Kitchen Staff', 'description' => 'Kitchen operations and KOT management', 'is_system' => true],
+            ['name' => 'inventory_staff', 'display_name' => 'Inventory Staff', 'description' => 'Manages ingredient stock and purchase orders', 'is_system' => false],
         ];
 
         foreach ($roles as $role) {
@@ -56,7 +57,6 @@ class DatabaseSeeder extends Seeder
             // Table Management
             ['name' => 'view_tables', 'display_name' => 'View Tables', 'module' => 'tables', 'description' => 'View table layout'],
             ['name' => 'manage_tables', 'display_name' => 'Manage Tables', 'module' => 'tables', 'description' => 'Create, edit, delete tables'],
-            ['name' => 'manage_floor_plans', 'display_name' => 'Manage Floor Plans', 'module' => 'tables', 'description' => 'Create and edit floor plans'],
 
             // Reservations
             ['name' => 'view_reservations', 'display_name' => 'View Reservations', 'module' => 'reservations', 'description' => 'View reservations'],
@@ -185,6 +185,18 @@ class DatabaseSeeder extends Seeder
                 'view_orders',
             ])->pluck('id')
         );
+
+        // Inventory staff: inventory management
+        $inventoryStaff = Role::where('name', 'inventory_staff')->first();
+        if ($inventoryStaff) {
+            $inventoryStaff->permissions()->syncWithoutDetaching(
+                Permission::whereIn('name', [
+                    'view_dashboard',
+                    'view_inventory', 'create_inventory', 'edit_inventory', 'delete_inventory',
+                    'manage_stock_movements', 'manage_purchase_orders', 'manage_suppliers', 'manage_recipes',
+                ])->pluck('id')
+            );
+        }
     }
 
     private function adminSeedPassword(): string
@@ -194,7 +206,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $password = env('ADMIN_PASSWORD');
-        if (!$password) {
+        if (! $password) {
             $password = Str::random(24);
             $this->command?->warn('No ADMIN_PASSWORD env set. Generated admin password: '.$password);
         }
@@ -215,14 +227,16 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        if (!$admin->roles()->where('role_id', Role::where('name', 'admin')->first()->id)->exists()) {
+        if (! $admin->roles()->where('role_id', Role::where('name', 'admin')->first()->id)->exists()) {
             $admin->roles()->attach(Role::where('name', 'admin')->first());
         }
     }
 
     private function createRestaurantSettings(): void
     {
-        if (RestaurantSetting::count() > 0) return;
+        if (RestaurantSetting::count() > 0) {
+            return;
+        }
         RestaurantSetting::create([
             'name' => 'Demo Restaurant',
             'description' => 'A demo restaurant for the Restaurant Management System',

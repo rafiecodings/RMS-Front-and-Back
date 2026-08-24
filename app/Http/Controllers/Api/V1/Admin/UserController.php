@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -78,7 +78,7 @@ class UserController extends Controller
         ]);
 
         $user->roles()->attach(
-            \App\Models\Role::where('name', $validated['role'])->first()
+            Role::where('name', $validated['role'])->first()
         );
 
         $user->load('roles');
@@ -99,7 +99,7 @@ class UserController extends Controller
     {
         $user = User::with('roles')->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return $this->notFound('User not found.');
         }
 
@@ -120,7 +120,7 @@ class UserController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return $this->notFound('User not found.');
         }
 
@@ -135,15 +135,15 @@ class UserController extends Controller
 
         $data = collect($validated)->only(['name', 'email', 'avatar', 'is_active'])->toArray();
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $data['password'] = $validated['password'];
         }
 
         $user->update($data);
 
-        if (!empty($validated['role'])) {
+        if (! empty($validated['role'])) {
             $user->roles()->sync(
-                \App\Models\Role::where('name', $validated['role'])->first()
+                Role::where('name', $validated['role'])->first()
             );
         }
 
@@ -166,7 +166,7 @@ class UserController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return $this->notFound('User not found.');
         }
 

@@ -75,6 +75,7 @@ return new class extends Migration
             $table->decimal('rating', 3, 2)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('staff_id')->references('id')->on('staff_profiles')->cascadeOnDelete();
         });
@@ -86,6 +87,7 @@ return new class extends Migration
             $table->decimal('amount', 10, 2);
             $table->string('type')->default('sales');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('staff_id')->references('id')->on('staff_profiles')->cascadeOnDelete();
             $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();

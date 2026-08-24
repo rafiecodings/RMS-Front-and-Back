@@ -26,7 +26,7 @@ class OrderWorkflowServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new OrderWorkflowService();
+        $this->service = new OrderWorkflowService;
     }
 
     public function test_create_kot_is_idempotent(): void
@@ -85,7 +85,7 @@ class OrderWorkflowServiceTest extends TestCase
         $menuItem = MenuItem::create([
             'category_id' => $category->id,
             'name' => 'Bread',
-            'slug' => 'bread-' . uniqid(),
+            'slug' => 'bread-'.uniqid(),
             'price' => 50,
         ]);
 
@@ -224,8 +224,8 @@ class OrderWorkflowServiceTest extends TestCase
     private function createCategory(): MenuCategory
     {
         return MenuCategory::create([
-            'name' => 'Test Category ' . uniqid(),
-            'slug' => 'test-category-' . uniqid(),
+            'name' => 'Test Category '.uniqid(),
+            'slug' => 'test-category-'.uniqid(),
         ]);
     }
 
@@ -236,19 +236,19 @@ class OrderWorkflowServiceTest extends TestCase
         $menuItem1 = MenuItem::create([
             'category_id' => $category->id,
             'name' => 'Item 1',
-            'slug' => 'item-1-' . uniqid(),
+            'slug' => 'item-1-'.uniqid(),
             'price' => 50,
         ]);
 
         $menuItem2 = MenuItem::create([
             'category_id' => $category->id,
             'name' => 'Item 2',
-            'slug' => 'item-2-' . uniqid(),
+            'slug' => 'item-2-'.uniqid(),
             'price' => 100,
         ]);
 
         $order = Order::create([
-            'order_number' => 'ORD-' . uniqid(),
+            'order_number' => 'ORD-'.uniqid(),
             'order_type' => 'dine_in',
             'status' => 'confirmed',
             'payment_status' => 'unpaid',
@@ -300,14 +300,14 @@ class OrderWorkflowServiceTest extends TestCase
         $menuItem1 = MenuItem::create([
             'category_id' => $category->id,
             'name' => 'Chicken Rice',
-            'slug' => 'chicken-rice-' . uniqid(),
+            'slug' => 'chicken-rice-'.uniqid(),
             'price' => 150,
         ]);
 
         $menuItem2 = MenuItem::create([
             'category_id' => $category->id,
             'name' => 'Plain Rice',
-            'slug' => 'plain-rice-' . uniqid(),
+            'slug' => 'plain-rice-'.uniqid(),
             'price' => 50,
         ]);
 
@@ -334,7 +334,7 @@ class OrderWorkflowServiceTest extends TestCase
         ]);
 
         $order = Order::create([
-            'order_number' => 'ORD-' . uniqid(),
+            'order_number' => 'ORD-'.uniqid(),
             'order_type' => 'dine_in',
             'status' => 'completed',
             'payment_status' => $paymentStatus,

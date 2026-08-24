@@ -37,10 +37,10 @@ class SyncDemoRoles extends Command
             'queen.delacruz@kainanexpress.com' => 'kitchen_staff',
             'ramon.guerrero@kainanexpress.com' => 'inventory_staff',
             'sofia.mercado@kainanexpress.com' => 'inventory_staff',
-            'tomas.aguilar@kainanexpress.com' => 'accountant',
-            'ursula.navarro@kainanexpress.com' => 'accountant',
-            'victor.ramos@kainanexpress.com' => 'branch_manager',
-            'wendy.chua@kainanexpress.com' => 'branch_manager',
+            'tomas.aguilar@kainanexpress.com' => 'inventory_staff',
+            'ursula.navarro@kainanexpress.com' => 'inventory_staff',
+            'victor.ramos@kainanexpress.com' => 'manager',
+            'wendy.chua@kainanexpress.com' => 'manager',
             'xavier.lim@kainanexpress.com' => 'waiter',
             'yvonne.ong@kainanexpress.com' => 'cashier',
             'zandro.bautista@kainanexpress.com' => 'kitchen_staff',
@@ -50,7 +50,7 @@ class SyncDemoRoles extends Command
 
         foreach ($map as $email => $roleName) {
             $user = User::where('email', $email)->first();
-            if (!$user) {
+            if (! $user) {
                 continue;
             }
 
@@ -63,7 +63,7 @@ class SyncDemoRoles extends Command
                 ]
             );
 
-            if (!$user->roles()->where('role_id', $role->id)->exists()) {
+            if (! $user->roles()->where('role_id', $role->id)->exists()) {
                 $user->roles()->attach($role->id);
                 $attached++;
                 $this->info("Attached role [{$roleName}] to {$email}");

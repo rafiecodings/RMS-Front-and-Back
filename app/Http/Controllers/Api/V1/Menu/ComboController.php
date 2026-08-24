@@ -94,7 +94,7 @@ class ComboController extends Controller
     {
         $combo = MenuCombo::with('items')->find($id);
 
-        if (!$combo) {
+        if (! $combo) {
             return $this->notFound('Combo not found.');
         }
 
@@ -118,7 +118,7 @@ class ComboController extends Controller
     {
         $combo = MenuCombo::find($id);
 
-        if (!$combo) {
+        if (! $combo) {
             return $this->notFound('Combo not found.');
         }
 
@@ -162,7 +162,7 @@ class ComboController extends Controller
     {
         $combo = MenuCombo::find($id);
 
-        if (!$combo) {
+        if (! $combo) {
             return $this->notFound('Combo not found.');
         }
 

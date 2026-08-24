@@ -61,7 +61,7 @@ class ModifierController extends Controller
     {
         $modifier = MenuModifier::find($id);
 
-        if (!$modifier) {
+        if (! $modifier) {
             return $this->notFound('Modifier not found.');
         }
 
@@ -79,7 +79,7 @@ class ModifierController extends Controller
     {
         $modifier = MenuModifier::find($id);
 
-        if (!$modifier) {
+        if (! $modifier) {
             return $this->notFound('Modifier not found.');
         }
 
@@ -105,7 +105,7 @@ class ModifierController extends Controller
     {
         $modifier = MenuModifier::find($id);
 
-        if (!$modifier) {
+        if (! $modifier) {
             return $this->notFound('Modifier not found.');
         }
 

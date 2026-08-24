@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Repositories\BaseRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 abstract class BaseService
 {
@@ -14,7 +16,7 @@ abstract class BaseService
         $this->repository = $repository;
     }
 
-    public function getAll(array $columns = ['*']): \Illuminate\Database\Eloquent\Collection
+    public function getAll(array $columns = ['*']): Collection
     {
         return $this->repository->all($columns);
     }
@@ -24,17 +26,17 @@ abstract class BaseService
         return $this->repository->paginate($perPage, $columns);
     }
 
-    public function getById(string $id, array $columns = ['*']): ?\Illuminate\Database\Eloquent\Model
+    public function getById(string $id, array $columns = ['*']): ?Model
     {
         return $this->repository->find($id, $columns);
     }
 
-    public function getByIdOrFail(string $id, array $columns = ['*']): \Illuminate\Database\Eloquent\Model
+    public function getByIdOrFail(string $id, array $columns = ['*']): Model
     {
         return $this->repository->findOrFail($id, $columns);
     }
 
-    public function create(array $data): \Illuminate\Database\Eloquent\Model
+    public function create(array $data): Model
     {
         return $this->repository->create($data);
     }

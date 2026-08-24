@@ -9,6 +9,7 @@ use App\Models\MenuCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -46,9 +47,17 @@ class CategoryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Soft-deleted categories keep their name/slug in the table; exclude
+        // them so a deleted category's name can be reused.
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:menu_categories,slug',
+            'name' => [
+                'required', 'string', 'max:255',
+                Rule::unique('menu_categories', 'name')->whereNull('deleted_at'),
+            ],
+            'slug' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('menu_categories', 'slug')->whereNull('deleted_at'),
+            ],
             'description' => 'nullable|string|max:1000',
             'image_url' => 'nullable|string|max:500',
             'sort_order' => 'sometimes|integer|min:0',
@@ -77,7 +86,7 @@ class CategoryController extends Controller
     {
         $category = MenuCategory::with(['items' => fn ($q) => $q->orderBy('name')])->withCount('items')->find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->notFound('Category not found.');
         }
 
@@ -105,20 +114,26 @@ class CategoryController extends Controller
     {
         $category = MenuCategory::find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->notFound('Category not found.');
         }
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'slug' => "sometimes|string|max:255|unique:menu_categories,slug,{$id}",
+            'name' => [
+                'sometimes', 'string', 'max:255',
+                Rule::unique('menu_categories', 'name')->whereNull('deleted_at')->ignore($id),
+            ],
+            'slug' => [
+                'sometimes', 'string', 'max:255',
+                Rule::unique('menu_categories', 'slug')->whereNull('deleted_at')->ignore($id),
+            ],
             'description' => 'nullable|string|max:1000',
             'image_url' => 'nullable|string|max:500',
             'sort_order' => 'sometimes|integer|min:0',
             'is_active' => 'sometimes|boolean',
         ]);
 
-        if (isset($validated['name']) && !isset($validated['slug'])) {
+        if (isset($validated['name']) && ! isset($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
         }
 
@@ -141,7 +156,7 @@ class CategoryController extends Controller
     {
         $category = MenuCategory::find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->notFound('Category not found.');
         }
 

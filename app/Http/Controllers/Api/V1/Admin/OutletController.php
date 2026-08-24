@@ -67,7 +67,7 @@ class OutletController extends Controller
     {
         $outlet = Outlet::find($id);
 
-        if (!$outlet) {
+        if (! $outlet) {
             return $this->notFound('Outlet not found.');
         }
 
@@ -86,7 +86,7 @@ class OutletController extends Controller
     {
         $outlet = Outlet::find($id);
 
-        if (!$outlet) {
+        if (! $outlet) {
             return $this->notFound('Outlet not found.');
         }
 

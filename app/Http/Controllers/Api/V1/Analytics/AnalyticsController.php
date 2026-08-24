@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Analytics;
 
+use App\Concerns\HandlesDateTrunc;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Ingredient;
@@ -11,6 +12,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\StockMovement;
 use App\Models\Wastage;
+use App\Services\ForecastDemandService;
+use App\Services\LowStockProjectionService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +21,57 @@ use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
+    use HandlesDateTrunc;
+
+    /**
+     * Restaurant-local timezone used for hour bucketing so "peak hour 18:00"
+     * means restaurant time. Hour aggregation happens in PHP, which keeps
+     * every driver (SQLite dev / PostgreSQL prod) consistent and portable.
+     */
+    protected function restaurantTz(): string
+    {
+        return (string) config('app.restaurant_timezone', config('app.timezone', 'UTC'));
+    }
+
+    /**
+     * The equivalent preceding window of equal length with full-day
+     * boundaries: Aug 15–Aug 21 -> Aug 8–Aug 14 (NOT "previous day").
+     */
+    protected function previousPeriod(Carbon $start, Carbon $end): array
+    {
+        $lengthDays = (int) floor($start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay())) + 1;
+
+        $prevEnd = $start->copy()->subDay()->endOfDay();
+        $prevStart = $prevEnd->copy()->subDays($lengthDays - 1)->startOfDay();
+
+        return [$prevStart, $prevEnd];
+    }
+
+    /**
+     * Hour-of-day aggregation performed in PHP with the restaurant timezone.
+     * Returns only hours that have activity, sorted busiest-first.
+     */
+    protected function aggregateOrdersByHour(iterable $orders): array
+    {
+        $tz = $this->restaurantTz();
+        $buckets = [];
+        foreach ($orders as $o) {
+            $hour = (int) Carbon::parse($o->created_at)->timezone($tz)->format('G');
+            $buckets[$hour]['revenue'] = ($buckets[$hour]['revenue'] ?? 0) + (float) $o->total;
+            $buckets[$hour]['orders'] = ($buckets[$hour]['orders'] ?? 0) + 1;
+        }
+
+        return collect($buckets)
+            ->map(fn ($v, $h) => [
+                'hour' => (int) $h,
+                'revenue' => round((float) $v['revenue'], 2),
+                'orders' => (int) $v['orders'],
+            ])
+            ->sortByDesc('orders')
+            ->values()
+            ->toArray();
+    }
+
     protected function getDateRange(Request $request): array
     {
         $period = $request->input('period', 'this_month');
@@ -25,8 +79,8 @@ class AnalyticsController extends Controller
 
         if ($dateRange && isset($dateRange['from']) && isset($dateRange['to'])) {
             return [
-                'start' => $dateRange['from'],
-                'end' => $dateRange['to'],
+                'start' => Carbon::parse($dateRange['from'])->startOfDay()->toDateTimeString(),
+                'end' => Carbon::parse($dateRange['to'])->endOfDay()->toDateTimeString(),
             ];
         }
 
@@ -34,57 +88,69 @@ class AnalyticsController extends Controller
 
         $ranges = [
             'today' => [
-                'start' => $now->copy()->startOfDay()->toDateString(),
-                'end' => $now->copy()->endOfDay()->toDateString(),
+                'start' => $now->copy()->startOfDay()->toDateTimeString(),
+                'end' => $now->copy()->endOfDay()->toDateTimeString(),
             ],
             'yesterday' => [
-                'start' => $now->copy()->subDay()->startOfDay()->toDateString(),
-                'end' => $now->copy()->subDay()->endOfDay()->toDateString(),
+                'start' => $now->copy()->subDay()->startOfDay()->toDateTimeString(),
+                'end' => $now->copy()->subDay()->endOfDay()->toDateTimeString(),
             ],
             'this_week' => [
-                'start' => $now->copy()->startOfWeek()->toDateString(),
-                'end' => $now->copy()->endOfWeek()->toDateString(),
+                'start' => $now->copy()->startOfWeek()->toDateTimeString(),
+                'end' => $now->copy()->endOfWeek()->toDateTimeString(),
             ],
             'this_month' => [
-                'start' => $now->copy()->startOfMonth()->toDateString(),
-                'end' => $now->copy()->endOfMonth()->toDateString(),
+                'start' => $now->copy()->startOfMonth()->toDateTimeString(),
+                'end' => $now->copy()->endOfMonth()->toDateTimeString(),
             ],
             'last_month' => [
-                'start' => $now->copy()->subMonth()->startOfMonth()->toDateString(),
-                'end' => $now->copy()->subMonth()->endOfMonth()->toDateString(),
+                'start' => $now->copy()->subMonth()->startOfMonth()->toDateTimeString(),
+                'end' => $now->copy()->subMonth()->endOfMonth()->toDateTimeString(),
             ],
             'this_quarter' => [
-                'start' => $now->copy()->startOfQuarter()->toDateString(),
-                'end' => $now->copy()->endOfQuarter()->toDateString(),
+                'start' => $now->copy()->startOfQuarter()->toDateTimeString(),
+                'end' => $now->copy()->endOfQuarter()->toDateTimeString(),
             ],
             'this_year' => [
-                'start' => $now->copy()->startOfYear()->toDateString(),
-                'end' => $now->copy()->endOfYear()->toDateString(),
+                'start' => $now->copy()->startOfYear()->toDateTimeString(),
+                'end' => $now->copy()->endOfYear()->toDateTimeString(),
             ],
         ];
 
         return $ranges[$period] ?? $ranges['this_month'];
     }
 
-public function revenue(Request $request): JsonResponse
+    public function revenue(Request $request): JsonResponse
     {
         $range = $this->getDateRange($request);
-        $start = $range['start'];
-        $end = $range['end'];
+        $start = Carbon::parse($range['start']);
+        $end = Carbon::parse($range['end']);
 
-        $totalRevenue = (float) Order::where('status', 'completed')
+        $ordersInRange = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('total');
+            ->get(['id', 'order_type', 'total', 'created_at']);
 
-        $totalOrders = (int) Order::where('status', 'completed')
-            ->whereBetween('created_at', [$start, $end])
-            ->count();
-
+        $totalRevenue = (float) $ordersInRange->sum('total');
+        $totalOrders = $ordersInRange->count();
         $aov = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+
+        // Busiest hours first (TZ-aware, driver-independent).
+        $byHour = $this->aggregateOrdersByHour($ordersInRange);
+
+        $byType = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('order_type, SUM(total) as revenue, COUNT(*) as orders')
+            ->groupBy('order_type')
+            ->get()
+            ->map(fn ($row) => [
+                'type' => $row->order_type,
+                'revenue' => (float) $row->revenue,
+                'orders' => (int) $row->orders,
+            ]);
 
         $byDay = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("DATE(created_at) as date, SUM(total) as revenue, COUNT(*) as orders")
+            ->selectRaw('DATE(created_at) as date, SUM(total) as revenue, COUNT(*) as orders')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -94,47 +160,27 @@ public function revenue(Request $request): JsonResponse
                 'orders' => (int) $row->orders,
             ]);
 
-        $byHour = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("EXTRACT(HOUR FROM created_at) as hour, SUM(total) as revenue, COUNT(*) as orders")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get()
-            ->map(fn ($row) => [
-                'hour' => (int) $row->hour,
-                'revenue' => (float) $row->revenue,
-                'orders' => (int) $row->orders,
-            ]);
+        // Equivalent preceding window with full-day boundaries.
+        [$prevStart, $prevEnd] = $this->previousPeriod($start, $end);
 
-        $byType = Order::where('status', 'completed')
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("order_type, SUM(total) as revenue, COUNT(*) as orders")
-            ->groupBy('order_type')
-            ->get()
-            ->map(fn ($row) => [
-                'type' => $row->order_type,
-                'revenue' => (float) $row->revenue,
-                'orders' => (int) $row->orders,
-            ]);
-
-        $prevStart = Carbon::parse($start)->subDays(Carbon::parse($start)->diffInDays($end) + 1)->toDateString();
-        $prevEnd = Carbon::parse($start)->subDay()->toDateString();
         $prevTotal = (float) Order::where('status', 'completed')
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('total');
-        $revenueGrowth = $prevTotal > 0 ? (($totalRevenue - $prevTotal) / $prevTotal) * 100 : 0;
+        $revenueGrowth = $prevTotal > 0 ? (($totalRevenue - $prevTotal) / $prevTotal) * 100 : null;
 
+        // Align each current-period day to the same offset in the previous
+        // period (Aug 15 -> Aug 8, Aug 16 -> Aug 9, ...).
         $prevByDay = Order::where('status', 'completed')
             ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->selectRaw("DATE(created_at) as date, SUM(total) as revenue")
+            ->selectRaw('DATE(created_at) as date, SUM(total) as revenue')
             ->groupBy('date')
             ->pluck('revenue', 'date');
 
-        $trend = $byDay->map(function ($item) use ($prevByDay) {
-            $prevDate = Carbon::parse($item['date'])->subDays(
-                (int) Carbon::parse($item['date'])->diffInDays($item['date']) + 1
-            )->toDateString();
-            $prevRevenue = (float) ($prevByDay[$prevDate] ?? 0);
+        $prevStartDate = $prevStart->copy()->startOfDay();
+        $trend = $byDay->values()->map(function ($item, $i) use ($prevByDay, $prevStartDate) {
+            $offsetDate = $prevStartDate->copy()->addDays($i)->toDateString();
+            $prevRevenue = (float) ($prevByDay[$offsetDate] ?? 0);
+
             return [
                 'date' => $item['date'],
                 'revenue' => $item['revenue'],
@@ -144,7 +190,8 @@ public function revenue(Request $request): JsonResponse
 
         return $this->success([
             'total_revenue' => $totalRevenue,
-            'revenue_growth' => round($revenueGrowth, 2),
+            'revenue_growth' => $revenueGrowth !== null ? round($revenueGrowth, 2) : null,
+            'previous_period_revenue' => round($prevTotal, 2),
             'average_order_value' => round($aov, 2),
             'revenue_by_hour' => $byHour,
             'revenue_by_day' => $byDay,
@@ -153,7 +200,7 @@ public function revenue(Request $request): JsonResponse
         ]);
     }
 
-public function sales(Request $request): JsonResponse
+    public function sales(Request $request): JsonResponse
     {
         $range = $this->getDateRange($request);
         $start = $range['start'];
@@ -161,7 +208,7 @@ public function sales(Request $request): JsonResponse
 
         $byType = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("order_type, SUM(total) as revenue, COUNT(*) as orders")
+            ->selectRaw('order_type, SUM(total) as revenue, COUNT(*) as orders')
             ->groupBy('order_type')
             ->get();
 
@@ -169,26 +216,35 @@ public function sales(Request $request): JsonResponse
         $totalOrders = (int) $byType->sum('orders');
         $averageTicket = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
 
-        $prevStart = Carbon::parse($start)->subDays(Carbon::parse($start)->diffInDays($end) + 1)->toDateString();
-        $prevEnd = Carbon::parse($start)->subDay()->toDateString();
+        [$prevStart, $prevEnd] = $this->previousPeriod($start, $end);
         $prevSales = (float) Order::where('status', 'completed')
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('total');
-        $salesGrowth = $prevSales > 0 ? (($totalSales - $prevSales) / $prevSales) * 100 : 0;
+        $salesGrowth = $prevSales > 0 ? (($totalSales - $prevSales) / $prevSales) * 100 : null;
 
-        $byHour = OrderItem::whereHas('order', function ($q) use ($start, $end) {
-            $q->where('status', 'completed')
-                ->whereBetween('created_at', [$start, $end]);
-        })
-            ->selectRaw("EXTRACT(HOUR FROM order_items.created_at) as hour, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get()
-            ->map(fn ($row) => [
-                'hour' => (int) $row->hour,
-                'items_sold' => (int) $row->items_sold,
-                'revenue' => (float) $row->revenue,
-            ]);
+        // Items-per-hour: fetch joined rows once, bucket in PHP (TZ-aware).
+        $tz = $this->restaurantTz();
+        $itemRows = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', 'completed')
+            ->whereBetween('orders.created_at', [$start, $end])
+            ->get(['order_items.quantity', 'order_items.total_price', 'orders.created_at']);
+
+        $hourBuckets = [];
+        foreach ($itemRows as $row) {
+            $hour = (int) Carbon::parse($row->created_at)->timezone($tz)->format('G');
+            $hourBuckets[$hour]['items_sold'] = ($hourBuckets[$hour]['items_sold'] ?? 0) + (int) $row->quantity;
+            $hourBuckets[$hour]['revenue'] = ($hourBuckets[$hour]['revenue'] ?? 0) + (float) $row->total_price;
+        }
+        $byHour = collect($hourBuckets)
+            ->map(fn ($v, $h) => [
+                'hour' => (int) $h,
+                'items_sold' => (int) $v['items_sold'],
+                'revenue' => round((float) $v['revenue'], 2),
+            ])
+            ->sortByDesc('items_sold')
+            ->values()
+            ->toArray();
 
         $byCategoryRows = OrderItem::whereHas('order', function ($q) use ($start, $end) {
             $q->where('status', 'completed')
@@ -196,7 +252,7 @@ public function sales(Request $request): JsonResponse
         })
             ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
             ->join('menu_categories', 'menu_items.category_id', '=', 'menu_categories.id')
-            ->selectRaw("menu_categories.name as category, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue")
+            ->selectRaw('menu_categories.name as category, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue')
             ->groupBy('menu_categories.name')
             ->orderBy('revenue', 'desc')
             ->get();
@@ -211,6 +267,7 @@ public function sales(Request $request): JsonResponse
         $catTotal = max((float) $byCategory->sum('revenue'), 1);
         $byCategory = $byCategory->map(function ($item) use ($catTotal) {
             $item['percentage'] = ($item['revenue'] / $catTotal) * 100;
+
             return $item;
         });
 
@@ -218,7 +275,7 @@ public function sales(Request $request): JsonResponse
             $q->where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end]);
         })
-            ->selectRaw("DATE(order_items.created_at) as date, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue")
+            ->selectRaw('DATE(order_items.created_at) as date, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -228,34 +285,40 @@ public function sales(Request $request): JsonResponse
                 'revenue' => (float) $row->revenue,
             ]);
 
-        $topItems = OrderItem::whereHas('order', function ($q) use ($start, $end) {
+        $topItemsRows = OrderItem::whereHas('order', function ($q) use ($start, $end) {
             $q->where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end]);
         })
             ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
             ->join('menu_categories', 'menu_items.category_id', '=', 'menu_categories.id')
-            ->selectRaw("menu_items.id, menu_items.name, menu_categories.name as category, SUM(order_items.quantity) as quantity_sold, SUM(order_items.total_price) as revenue, AVG(order_items.unit_price) as average_price")
+            ->selectRaw('menu_items.id, menu_items.name, menu_categories.name as category, SUM(order_items.quantity) as quantity_sold, SUM(order_items.total_price) as revenue, AVG(order_items.unit_price) as average_price')
             ->groupBy('menu_items.id', 'menu_items.name', 'menu_categories.name')
             ->orderBy('revenue', 'desc')
             ->limit(20)
-            ->get()
-            ->map(fn ($row) => [
+            ->get();
+
+        $demandService = app(ForecastDemandService::class);
+        $demand = $demandService->dailyDemand($topItemsRows->pluck('id'));
+
+        $topItems = $topItemsRows->map(function ($row) use ($demandService, $demand) {
+            $item = $demand[$row->id] ?? ['forecast' => 0.0, 'historical' => 0.0];
+
+            return [
                 'id' => $row->id,
                 'name' => $row->name,
                 'category' => $row->category ?? 'Uncategorized',
                 'quantity_sold' => (int) $row->quantity_sold,
                 'revenue' => (float) $row->revenue,
                 'average_price' => round((float) $row->average_price ?? 0, 2),
-                'trend' => 'stable',
-            ]);
+                'forecast_daily_demand' => round((float) $item['forecast'], 2),
+                'trend' => $demandService->classifyTrend((float) $item['forecast'], (float) $item['historical']),
+            ];
+        });
 
         return $this->success([
             'total_sales' => $totalSales,
-            'sales_growth' => round($salesGrowth, 2),
-            'total_items_sold' => (int) OrderItem::whereHas('order', function ($q) use ($start, $end) {
-                $q->where('status', 'completed')
-                    ->whereBetween('created_at', [$start, $end]);
-            })->sum('quantity'),
+            'sales_growth' => $salesGrowth !== null ? round($salesGrowth, 2) : null,
+            'total_items_sold' => (int) $itemRows->sum('quantity'),
             'average_ticket' => round($averageTicket, 2),
             'sales_by_hour' => $byHour,
             'sales_by_category' => $byCategory,
@@ -267,25 +330,63 @@ public function sales(Request $request): JsonResponse
     public function peakHours(Request $request): JsonResponse
     {
         $range = $this->getDateRange($request);
-        $start = $range['start'];
-        $end = $range['end'];
+        $start = Carbon::parse($range['start']);
+        $end = Carbon::parse($range['end']);
 
-        $hourly = Order::where('status', 'completed')
+        $tz = $this->restaurantTz();
+
+        $rows = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("EXTRACT(HOUR FROM created_at) as hour, TO_CHAR(created_at, 'Day') as day_of_week, SUM(total) as revenue, COUNT(*) as orders")
-            ->groupBy('hour', 'day_of_week')
-            ->orderBy('hour')
-            ->get()
-            ->map(fn ($row) => [
-                'hour' => (int) $row->hour,
-                'day_of_week' => trim((string) $row->day_of_week),
-                'orders' => (int) $row->orders,
-                'revenue' => (float) $row->revenue,
-            ]);
+            ->get(['id', 'total', 'created_at']);
 
-        $busiestDay = $hourly->sortByDesc('orders')->first()?->day_of_week ?? 'today';
+        // Aggregate in PHP: "dayname|hour" => orders/revenue.
+        $cellTotals = [];
+        foreach ($rows as $o) {
+            $local = Carbon::parse($o->created_at)->timezone($tz);
+            $day = strtolower($local->format('l'));
+            $hour = (int) $local->format('G');
+            $key = $day.'|'.$hour;
+            $cellTotals[$key]['orders'] = ($cellTotals[$key]['orders'] ?? 0) + 1;
+            $cellTotals[$key]['revenue'] = ($cellTotals[$key]['revenue'] ?? 0) + (float) $o->total;
+        }
 
         $dayMap = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+        $flat = collect($cellTotals)->map(function ($v, $key) {
+            [$day, $hour] = explode('|', $key);
+
+            return [
+                'hour' => (int) $hour,
+                'day_of_week' => $day,
+                'orders' => (int) $v['orders'],
+                'revenue' => round((float) $v['revenue'], 2),
+            ];
+        })->values();
+
+        // Busiest cells first — consumers slice for "Busiest Hours".
+        $peakHours = $flat->sortByDesc('orders')->values()->toArray();
+
+        // Busiest / quietest weekday derived from actual activity totals.
+        $perDayOrders = [];
+        foreach ($dayMap as $d) {
+            $perDayOrders[$d] = (int) $flat->where('day_of_week', $d)->sum('orders');
+        }
+        arsort($perDayOrders);
+        $activeDays = array_filter($perDayOrders, fn ($c) => $c > 0);
+        $busiestDay = $activeDays !== [] ? array_key_first($activeDays) : null;
+        // Quietest = lowest-activity among days that actually had orders.
+        $quietestDay = null;
+        if ($activeDays !== []) {
+            $minCount = min($activeDays);
+            foreach ($dayMap as $d) {
+                if (($activeDays[$d] ?? 0) === $minCount) {
+                    $quietestDay = $d;
+                    break;
+                }
+            }
+        }
+
+        // Dense 24x7 heatmap for the chart.
         $distribution = [];
         for ($h = 0; $h < 24; $h++) {
             $hourData = [
@@ -296,25 +397,24 @@ public function sales(Request $request): JsonResponse
                 'average' => 0,
             ];
             foreach ($dayMap as $day) {
-                $dayData = $hourly->first(function ($item) use ($h, $day) {
-                    return $item['hour'] === $h && strtolower($item['day_of_week']) === $day;
-                });
-                if ($dayData) {
-                    $hourData[$day] = (int) $dayData['orders'];
+                $cell = $cellTotals[$day.'|'.$h] ?? null;
+                if ($cell !== null) {
+                    $hourData[$day] = (int) $cell['orders'];
                 }
             }
             $dayVals = array_map(fn ($d) => $hourData[$d], $dayMap);
-            $hourData['average'] = count($dayVals) > 0 ? array_sum($dayVals) / count($dayVals) : 0;
+            $hourData['average'] = count($dayVals) > 0 ? round(array_sum($dayVals) / count($dayVals), 2) : 0;
             $distribution[] = $hourData;
         }
 
-        $totalOrders = (int) $hourly->sum('orders');
-        $avgPerHour = count($distribution) > 0 ? $totalOrders / count($distribution) : 0;
+        $totalOrders = (int) $flat->sum('orders');
+        $activeHours = $flat->pluck('hour')->unique()->count();
+        $avgPerHour = $activeHours > 0 ? $totalOrders / $activeHours : 0;
 
         return $this->success([
-            'peak_hours' => $hourly,
+            'peak_hours' => $peakHours,
             'busiest_day' => $busiestDay,
-            'quietest_day' => 'today',
+            'quietest_day' => $quietestDay,
             'average_orders_per_hour' => round($avgPerHour, 2),
             'hourly_distribution' => $distribution,
         ]);
@@ -327,9 +427,11 @@ public function sales(Request $request): JsonResponse
         $end = $range['end'];
 
         $totalIngredients = (int) Ingredient::where('is_active', true)->count();
-        $totalUsageCost = (float) StockMovement::where('type', 'out')
+        // Actual usage cost = quantity moved out x unit cost.
+        $totalUsageCost = (float) StockMovement::where('type', 'outward')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('unit_cost');
+            ->selectRaw('SUM(quantity * unit_cost) as cost')
+            ->value('cost');
 
         $wastageCost = (float) Wastage::join('ingredients', 'wastage.ingredient_id', '=', 'ingredients.id')
             ->whereBetween('wastage.created_at', [$start, $end])
@@ -337,9 +439,9 @@ public function sales(Request $request): JsonResponse
 
         $usageByCategoryRows = Ingredient::where('is_active', true)
             ->join('stock_movements', 'ingredients.id', '=', 'stock_movements.ingredient_id')
-            ->where('stock_movements.type', 'out')
+            ->where('stock_movements.type', 'outward')
             ->whereBetween('stock_movements.created_at', [$start, $end])
-            ->selectRaw("ingredients.category, SUM(stock_movements.quantity * stock_movements.unit_cost) as usage_cost")
+            ->selectRaw('ingredients.category, SUM(stock_movements.quantity * stock_movements.unit_cost) as usage_cost')
             ->groupBy('ingredients.category')
             ->orderBy('usage_cost', 'desc')
             ->get();
@@ -353,14 +455,15 @@ public function sales(Request $request): JsonResponse
         $catUsageTotal = max((float) $usageByCategory->sum('usage_cost'), 1);
         $usageByCategory = $usageByCategory->map(function ($item) use ($catUsageTotal) {
             $item['percentage'] = ($item['usage_cost'] / $catUsageTotal) * 100;
+
             return $item;
         });
 
         $topConsumed = Ingredient::where('is_active', true)
             ->join('stock_movements', 'ingredients.id', '=', 'stock_movements.ingredient_id')
-            ->where('stock_movements.type', 'out')
+            ->where('stock_movements.type', 'outward')
             ->whereBetween('stock_movements.created_at', [$start, $end])
-            ->selectRaw("ingredients.id, ingredients.name, ingredients.category, SUM(stock_movements.quantity) as quantity_used, ingredients.unit, SUM(stock_movements.quantity * stock_movements.unit_cost) as cost")
+            ->selectRaw('ingredients.id, ingredients.name, ingredients.category, SUM(stock_movements.quantity) as quantity_used, ingredients.unit, SUM(stock_movements.quantity * stock_movements.unit_cost) as cost')
             ->groupBy('ingredients.id', 'ingredients.name', 'ingredients.category', 'ingredients.unit')
             ->orderBy('quantity_used', 'desc')
             ->limit(10)
@@ -376,7 +479,7 @@ public function sales(Request $request): JsonResponse
 
         $wastageTrend = Wastage::join('ingredients', 'wastage.ingredient_id', '=', 'ingredients.id')
             ->whereBetween('wastage.created_at', [$start, $end])
-            ->selectRaw("DATE(wastage.created_at) as date, SUM(wastage.quantity) as wastage_count, SUM(wastage.quantity * ingredients.cost_per_unit) as wastage_cost")
+            ->selectRaw('DATE(wastage.created_at) as date, SUM(wastage.quantity) as wastage_count, SUM(wastage.quantity * ingredients.cost_per_unit) as wastage_cost')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -409,27 +512,68 @@ public function sales(Request $request): JsonResponse
         ]);
     }
 
+    public function lowStockProjection(Request $request, LowStockProjectionService $projection): JsonResponse
+    {
+        $horizon = (int) $request->input('horizon', 7);
+
+        if (! in_array($horizon, [7, 14, 30], true)) {
+            $horizon = 7;
+        }
+
+        $items = $projection->project($horizon);
+
+        $summary = [
+            'out_of_stock' => 0,
+            'critical' => 0,
+            'high' => 0,
+            'medium' => 0,
+            'low' => 0,
+        ];
+
+        foreach ($items as $item) {
+            $summary[$item['severity']] = ($summary[$item['severity']] ?? 0) + 1;
+        }
+
+        return $this->success([
+            'generated_at' => now()->toISOString(),
+            'horizon_days' => $horizon,
+            'items' => $items,
+            'summary' => $summary,
+        ], 'Low stock projections generated');
+    }
+
     public function customers(Request $request): JsonResponse
     {
         $range = $this->getDateRange($request);
-        $start = $range['start'];
-        $end = $range['end'];
+        $start = Carbon::parse($range['start']);
+        $end = Carbon::parse($range['end']);
 
         $totalCustomers = (int) Customer::count();
         $newCustomers = (int) Customer::whereBetween('created_at', [$start, $end])->count();
 
-        $prevStart = Carbon::parse($start)->subDays(Carbon::parse($start)->diffInDays($end) + 1)->toDateString();
-        $prevEnd = Carbon::parse($start)->subDay()->toDateString();
+        [$prevStart, $prevEnd] = $this->previousPeriod($start, $end);
         $prevCustomers = (int) Customer::whereBetween('created_at', [$prevStart, $prevEnd])->count();
-        $prevReturning = (int) Customer::where('visit_count', '>', 0)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
-        $returningCustomers = (int) Customer::where('visit_count', '>', 0)
+
+        // Returning = customers with 2+ completed orders in the period —
+        // real repeat behaviour, not account-creation counts.
+        $returningCustomerIds = Order::where('status', 'completed')
+            ->whereNotNull('customer_id')
             ->whereBetween('created_at', [$start, $end])
-            ->count();
+            ->selectRaw('customer_id, COUNT(*) as c')
+            ->groupBy('customer_id')
+            ->havingRaw('COUNT(*) >= 2')
+            ->pluck('customer_id');
+        $returningCustomers = $returningCustomerIds->count();
 
         $avgLifetimeValue = (float) Customer::avg('total_spent');
         $avgVisitsPerCustomer = (float) Customer::where('visit_count', '>', 0)->avg('visit_count');
+
+        // Real last-visit from order history (not account creation).
+        $lastVisitByCustomer = Order::where('status', 'completed')
+            ->whereNotNull('customer_id')
+            ->selectRaw('customer_id, MAX(created_at) as last_visit')
+            ->groupBy('customer_id')
+            ->pluck('last_visit', 'customer_id');
 
         $topCustomers = Customer::orderBy('total_spent', 'desc')
             ->limit(10)
@@ -440,7 +584,9 @@ public function sales(Request $request): JsonResponse
                 'email' => $c->email ?? '',
                 'total_orders' => (int) $c->visit_count,
                 'total_spent' => (float) $c->total_spent,
-                'last_visit' => $c->created_at ? Carbon::parse($c->created_at)->toISOString() : null,
+                'last_visit' => isset($lastVisitByCustomer[$c->id])
+                    ? Carbon::parse($lastVisitByCustomer[$c->id])->toISOString()
+                    : null,
             ]);
 
         $segCounts = [
@@ -469,28 +615,49 @@ public function sales(Request $request): JsonResponse
         $totalVisitors = max(array_sum(array_column($visitFreqData, 'count')), 1);
         $visitFreqData = array_map(function ($item) use ($totalVisitors) {
             $item['percentage'] = ($item['count'] / $totalVisitors) * 100;
+
             return $item;
         }, $visitFreqData);
 
-        $visitTrends = [];
-        $period = Carbon::parse($start);
-        $endPeriod = Carbon::parse($end);
-        while ($period <= $endPeriod) {
-            $dayStart = $period->copy()->startOfDay();
-            $dayEnd = $period->copy()->endOfDay();
-            $newCount = (int) Customer::whereBetween('created_at', [$dayStart, $dayEnd])->count();
-            $visitTrends[] = [
-                'date' => $period->toDateString(),
-                'new_customers' => $newCount,
-                'returning_customers' => 0,
-                'total_visits' => $newCount,
-            ];
-            $period->addDay();
-        }
+        // Single grouped queries instead of a per-day N+1 loop.
+        $newPerDay = Customer::whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as c')
+            ->groupBy('date')
+            ->pluck('c', 'date');
+
+        $visitsPerDay = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as date, COUNT(DISTINCT customer_id) as visitors, COUNT(*) as orders')
+            ->groupBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $visitTrends = $visitsPerDay
+            ->sortBy('date')
+            ->map(function ($row, $date) use ($newPerDay) {
+                $day = Carbon::parse($date)->toDateString();
+                $new = (int) ($newPerDay[$day] ?? 0);
+                $visitors = (int) $row->visitors;
+
+                return [
+                    'date' => $day,
+                    'new_customers' => $new,
+                    // Visitors that day who were not first-time accounts.
+                    'returning_customers' => max(0, $visitors - $new),
+                    'total_visits' => (int) $row->orders,
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        $newGrowth = $prevCustomers > 0
+            ? round((($newCustomers - $prevCustomers) / $prevCustomers) * 100, 2)
+            : null;
 
         return $this->success([
             'total_customers' => $totalCustomers,
             'new_customers' => $newCustomers,
+            'new_customers_growth' => $newGrowth,
             'returning_customers' => $returningCustomers,
             'average_visit_frequency' => round($avgVisitsPerCustomer, 2),
             'average_lifetime_value' => round($avgLifetimeValue, 2),

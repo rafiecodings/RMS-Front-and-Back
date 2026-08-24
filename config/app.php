@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Restaurant Timezone (presentation)
+    |--------------------------------------------------------------------------
+    |
+    | Storage stays UTC; this timezone is used when bucketing hours/days for
+    | reports and analytics so "peak hour 18:00" reflects restaurant-local
+    | time. For the Philippine demo configuration: Asia/Manila.
+    |
+    */
+
+    'restaurant_timezone' => env('APP_RESTAURANT_TIMEZONE', 'Asia/Manila'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

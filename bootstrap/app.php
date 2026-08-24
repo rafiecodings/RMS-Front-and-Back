@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\ExtractTokenFromCookie;
+use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -20,8 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'role' => RoleMiddleware::class,
         ]);
+
+        $middleware->prependToGroup('api', ExtractTokenFromCookie::class);
 
         // API-only backend: the Next.js web client handles auth itself and no
         // server-side `login` route is defined. Laravel 12 defaults the auth
@@ -33,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (\Throwable $e, Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return;
             }

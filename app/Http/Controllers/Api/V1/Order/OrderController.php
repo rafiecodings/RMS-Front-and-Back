@@ -8,10 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Discount;
 use App\Models\Invoice;
 use App\Models\MenuItem;
-use App\Models\Payment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Models\Payment;
 use App\Models\Table;
 use App\Services\OrderWorkflowService;
 use App\Services\PricingService;
@@ -26,8 +26,14 @@ class OrderController extends Controller
     {
         $query = Order::with(['customer', 'table', 'items.menuItem']);
 
+        if ($request->boolean('archived')) {
+            $query->archived();
+        } else {
+            $query->notArchived();
+        }
+
         if ($status = $request->input('status')) {
-            $query->where('status', $status);
+            $query->whereIn('status', explode(',', $status));
         }
 
         if ($orderType = $request->input('order_type')) {
@@ -35,7 +41,7 @@ class OrderController extends Controller
         }
 
         if ($paymentStatus = $request->input('payment_status')) {
-            $query->where('payment_status', $paymentStatus);
+            $query->whereIn('payment_status', explode(',', $paymentStatus));
         }
 
         if ($date = $request->input('date')) {
@@ -43,7 +49,12 @@ class OrderController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('order_number', 'ilike', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'ilike', "%{$search}%")
+                    ->orWhereHas('customer', function ($cq) use ($search) {
+                        $cq->where('name', 'ilike', "%{$search}%");
+                    });
+            });
         }
 
         $orders = $query->orderBy('created_at', 'desc')
@@ -62,6 +73,7 @@ class OrderController extends Controller
             'payment_status' => $o->payment_status,
             'payment_method' => $o->payment_method,
             'notes' => $o->notes,
+            'placed_at' => $o->created_at?->toISOString(),
             'customer' => $o->customer ? [
                 'id' => $o->customer->id,
                 'name' => $o->customer->name,
@@ -73,6 +85,7 @@ class OrderController extends Controller
             'items_count' => $o->items->count(),
             'created_at' => $o->created_at?->toISOString(),
             'updated_at' => $o->updated_at?->toISOString(),
+            'archived_at' => $o->archived_at?->toISOString(),
         ]);
 
         return $this->success([
@@ -89,18 +102,18 @@ class OrderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'table_id' => 'nullable|exists:tables,id',
+            'customer_id' => 'nullable|uuid|exists:customers,id',
+            'table_id' => 'nullable|uuid|exists:tables,id',
             'order_type' => 'required|string|in:dine_in,takeaway,delivery',
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
-            'items.*.menu_item_id' => 'required|string|exists:menu_items,id',
+            'items.*.menu_item_id' => 'required|uuid|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1|max:9999',
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'items.*.notes' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'sometimes|array',
-            'items.*.modifier_ids.*' => 'string|exists:menu_modifiers,id',
-            'discount_id' => 'nullable|string|exists:discounts,id',
+            'items.*.modifier_ids.*' => 'uuid|exists:menu_modifiers,id',
+            'discount_id' => 'nullable|uuid|exists:discounts,id',
             'discount_code' => 'nullable|string|max:50',
         ]);
 
@@ -117,8 +130,12 @@ class OrderController extends Controller
         foreach ($validated['items'] as $itemData) {
             $menuItem = $menuItems->get($itemData['menu_item_id']);
 
-            if (!$menuItem) {
+            if (! $menuItem) {
                 return $this->error('One or more menu items were not found.', 422);
+            }
+
+            if (! $menuItem->is_available) {
+                return $this->error("Menu item '{$menuItem->name}' is not available for ordering.", 422);
             }
 
             $line = $pricing->buildLineItem(
@@ -157,14 +174,14 @@ class OrderController extends Controller
         $totals = $pricing->orderTotals($subtotal, $discountResolution['amount']);
 
         $result = DB::transaction(function () use ($validated, $request, $lineItems, $discountResolution, $totals) {
-            $orderNumber = 'ORD-' . strtoupper(uniqid());
+            $orderNumber = 'ORD-'.strtoupper(uniqid());
 
             $order = Order::create([
                 'order_number' => $orderNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
                 'table_id' => $validated['table_id'] ?? null,
                 'order_type' => $validated['order_type'],
-                'status' => 'pending',
+                'status' => Order::STATUS_DRAFT,
                 'subtotal' => $totals['subtotal'],
                 'tax_amount' => $totals['tax_amount'],
                 'discount_amount' => $totals['discount_amount'],
@@ -202,7 +219,7 @@ class OrderController extends Controller
                     $claim->where('used_count', '<', (int) $discount->max_uses);
                 }
 
-                if (!$claim->increment('used_count')) {
+                if (! $claim->increment('used_count')) {
                     throw ValidationException::withMessages([
                         'discount' => ['Discount usage limit reached.'],
                     ]);
@@ -217,7 +234,7 @@ class OrderController extends Controller
 
             OrderStatusHistory::create([
                 'order_id' => $order->id,
-                'status' => 'pending',
+                'status' => Order::STATUS_DRAFT,
                 'notes' => 'Order created',
                 'changed_by' => $request->user()->id,
             ]);
@@ -272,8 +289,22 @@ class OrderController extends Controller
         $order = Order::with(['customer', 'table', 'items.menuItem', 'items.modifiers', 'statusHistory.changer', 'invoice.payments'])
             ->find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
+        }
+
+        // Derive lifecycle timestamps (placed_at, confirmed_at, …) from the
+        // status history so the frontend timeline/placed column has real data.
+        $statusAt = $order->statusHistory()
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy('status')
+            ->map(fn ($group) => $group->first()->created_at?->toISOString())
+            ->toArray();
+
+        $lifecycle = [];
+        foreach (['confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled'] as $s) {
+            $lifecycle["{$s}_at"] = $statusAt[$s] ?? null;
         }
 
         return $this->success([
@@ -290,6 +321,8 @@ class OrderController extends Controller
             'payment_method' => $order->payment_method,
             'notes' => $order->notes,
             'cancellation_reason' => $order->cancellation_reason,
+            'placed_at' => $order->created_at?->toISOString(),
+            ...$lifecycle,
             'customer' => $order->customer ? [
                 'id' => $order->customer->id,
                 'name' => $order->customer->name,
@@ -303,6 +336,8 @@ class OrderController extends Controller
                 'id' => $item->id,
                 'menu_item_id' => $item->menu_item_id,
                 'name' => $item->name,
+                // Alias kept in sync with the frontend OrderItem type.
+                'menu_item_name' => $item->name,
                 'quantity' => $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'total_amount' => (float) $item->total_price,
@@ -324,6 +359,7 @@ class OrderController extends Controller
             ]) ?? [],
             'created_at' => $order->created_at?->toISOString(),
             'updated_at' => $order->updated_at?->toISOString(),
+            'archived_at' => $order->archived_at?->toISOString(),
         ]);
     }
 
@@ -331,17 +367,17 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
-        if (in_array($order->status, ['completed', 'cancelled', 'voided'])) {
-            return $this->error('Cannot modify a ' . $order->status . ' order.', 409);
+        if (in_array($order->status, ['completed', 'cancelled'])) {
+            return $this->error('Cannot modify a '.$order->status.' order.', 409);
         }
 
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'table_id' => 'nullable|exists:tables,id',
+            'customer_id' => 'nullable|uuid|exists:customers,id',
+            'table_id' => 'nullable|uuid|exists:tables,id',
             'notes' => 'nullable|string|max:2000',
         ]);
 
@@ -356,18 +392,69 @@ class OrderController extends Controller
         ], 'Order updated successfully.');
     }
 
+    public function archive(string $id): JsonResponse
+    {
+        $order = Order::find($id);
+
+        if (! $order) {
+            return $this->notFound('Order not found.');
+        }
+
+        if (! in_array($order->status, [
+            Order::STATUS_COMPLETED,
+            Order::STATUS_CANCELLED,
+        ])) {
+            return $this->error(
+                'Only completed or cancelled orders can be archived.',
+                422
+            );
+        }
+
+        if ($order->archived_at) {
+            return $this->success(
+                $this->formatArchive($order),
+                'Order is already archived.'
+            );
+        }
+
+        $order->update(['archived_at' => now()]);
+
+        return $this->success(
+            $this->formatArchive($order),
+            'Order archived successfully.'
+        );
+    }
+
+    protected function formatArchive(Order $order): array
+    {
+        return [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'status' => $order->status,
+            'archived_at' => $order->archived_at?->toISOString(),
+            'updated_at' => $order->updated_at?->toISOString(),
+        ];
+    }
+
     public function updateStatus(Request $request, string $id): JsonResponse
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,confirmed,preparing,ready,served,completed,cancelled',
+            'status' => 'required|string|in:draft,pending,confirmed,preparing,ready,served,completed,cancelled',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if (! $order->canTransitionTo($validated['status'])) {
+            return $this->error(
+                "Invalid status transition from {$order->status} to {$validated['status']}.",
+                409
+            );
+        }
 
         $order->update(['status' => $validated['status']]);
 
@@ -382,10 +469,23 @@ class OrderController extends Controller
 
         if ($validated['status'] === 'confirmed') {
             $workflow->createKotForOrder($order);
+
+            // Auto-advance: confirmation sends the order straight to the kitchen
+            $order->update(['status' => 'preparing']);
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => 'preparing',
+                'notes' => 'Order confirmed and sent to kitchen',
+                'changed_by' => $request->user()->id,
+            ]);
         }
 
         if ($validated['status'] === 'completed') {
             $workflow->deductInventoryForCompletedOrder($order, $request->user());
+        }
+
+        if ($validated['status'] === 'cancelled') {
+            $workflow->reverseInventoryForCancelledOrder($order, $request->user());
         }
 
         if (in_array($validated['status'], ['completed', 'cancelled']) && $order->table_id) {
@@ -403,29 +503,33 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
-        if (in_array($order->status, ['completed', 'cancelled', 'voided'])) {
-            return $this->error('Cannot add items to a ' . $order->status . ' order.', 409);
+        if (in_array($order->status, ['completed', 'cancelled'])) {
+            return $this->error('Cannot add items to a '.$order->status.' order.', 409);
         }
 
         $validated = $request->validate([
-            'menu_item_id' => 'required|string|exists:menu_items,id',
+            'menu_item_id' => 'required|uuid|exists:menu_items,id',
             'quantity' => 'required|integer|min:1|max:9999',
             'unit_price' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:500',
             'modifier_ids' => 'sometimes|array',
-            'modifier_ids.*' => 'string|exists:menu_modifiers,id',
+            'modifier_ids.*' => 'uuid|exists:menu_modifiers,id',
         ]);
 
         $pricing = app(PricingService::class);
 
         $menuItem = MenuItem::with('modifiers')->find($validated['menu_item_id']);
 
-        if (!$menuItem) {
+        if (! $menuItem) {
             return $this->error('Menu item not found.', 422);
+        }
+
+        if (! $menuItem->is_available) {
+            return $this->error("Menu item '{$menuItem->name}' is not available for ordering.", 422);
         }
 
         $line = $pricing->buildLineItem(
@@ -494,13 +598,13 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
         $orderItem = OrderItem::where('order_id', $id)->where('id', $itemId)->first();
 
-        if (!$orderItem) {
+        if (! $orderItem) {
             return $this->notFound('Order item not found.');
         }
 
@@ -508,7 +612,7 @@ class OrderController extends Controller
             'quantity' => 'sometimes|integer|min:1|max:9999',
             'notes' => 'nullable|string|max:500',
             'modifier_ids' => 'sometimes|array',
-            'modifier_ids.*' => 'string|exists:menu_modifiers,id',
+            'modifier_ids.*' => 'uuid|exists:menu_modifiers,id',
         ]);
 
         $pricing = app(PricingService::class);
@@ -528,7 +632,7 @@ class OrderController extends Controller
         if ($modifierChanged) {
             $menuItem = MenuItem::with('modifiers')->find($orderItem->menu_item_id);
 
-            if (!$menuItem) {
+            if (! $menuItem) {
                 return $this->error('Menu item not found.', 422);
             }
 
@@ -591,13 +695,13 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
         $orderItem = OrderItem::where('order_id', $id)->where('id', $itemId)->first();
 
-        if (!$orderItem) {
+        if (! $orderItem) {
             return $this->notFound('Order item not found.');
         }
 
@@ -627,200 +731,16 @@ class OrderController extends Controller
         ], 'Item removed from order.');
     }
 
-    public function hold(Request $request, string $id): JsonResponse
-    {
-        $order = Order::find($id);
-
-        if (!$order) {
-            return $this->notFound('Order not found.');
-        }
-
-        if ($order->status !== 'pending' && $order->status !== 'confirmed') {
-            return $this->error('Only pending or confirmed orders can be held.', 409);
-        }
-
-        $order->update(['status' => 'on_hold']);
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => 'on_hold',
-            'notes' => 'Order placed on hold',
-            'changed_by' => $request->user()->id,
-        ]);
-
-        return $this->success([
-            'id' => $order->id,
-            'status' => $order->status,
-        ], 'Order placed on hold.');
-    }
-
-    public function recall(Request $request, string $id): JsonResponse
-    {
-        $order = Order::find($id);
-
-        if (!$order) {
-            return $this->notFound('Order not found.');
-        }
-
-        if ($order->status !== 'on_hold') {
-            return $this->error('Only held orders can be recalled.', 409);
-        }
-
-        $order->update(['status' => 'pending']);
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => 'pending',
-            'notes' => 'Order recalled from hold',
-            'changed_by' => $request->user()->id,
-        ]);
-
-        return $this->success([
-            'id' => $order->id,
-            'status' => $order->status,
-        ], 'Order recalled successfully.');
-    }
-
-    public function split(Request $request, string $id): JsonResponse
-    {
-        $order = Order::find($id);
-
-        if (!$order) {
-            return $this->notFound('Order not found.');
-        }
-
-        $validated = $request->validate([
-            'item_ids' => 'required|array|min:1',
-            'item_ids.*' => 'string|exists:order_items,id',
-            'new_table_id' => 'nullable|exists:tables,id',
-        ]);
-
-        $newOrder = DB::transaction(function () use ($order, $validated, $request) {
-            $items = OrderItem::whereIn('id', $validated['item_ids'])
-                ->where('order_id', $order->id)
-                ->get();
-
-            if ($items->isEmpty()) {
-                return null;
-            }
-
-            $newSubtotal = 0;
-            foreach ($items as $item) {
-                $newSubtotal += (float) $item->total_price;
-            }
-
-            $pricing = app(PricingService::class);
-
-            $newTotals = $pricing->orderTotals($newSubtotal, 0.0);
-
-            $newOrder = Order::create([
-                'order_number' => 'ORD-' . strtoupper(uniqid()),
-                'customer_id' => $order->customer_id,
-                'table_id' => $validated['new_table_id'] ?? $order->table_id,
-                'order_type' => $order->order_type,
-                'status' => 'pending',
-                'subtotal' => $newTotals['subtotal'],
-                'tax_amount' => $newTotals['tax_amount'],
-                'discount_amount' => 0,
-                'service_charge' => $newTotals['service_charge'],
-                'total' => $newTotals['total'],
-                'payment_status' => 'unpaid',
-                'created_by' => $request->user()->id,
-            ]);
-
-            foreach ($items as $item) {
-                $item->update(['order_id' => $newOrder->id]);
-            }
-
-            $remainingSubtotal = 0;
-            $order->items()->each(function ($item) use (&$remainingSubtotal) {
-                $remainingSubtotal += (float) $item->total_price;
-            });
-
-            $remainingTotals = $pricing->orderTotals($remainingSubtotal, (float) $order->discount_amount);
-
-            $order->update([
-                'subtotal' => $remainingTotals['subtotal'],
-                'tax_amount' => $remainingTotals['tax_amount'],
-                'service_charge' => $remainingTotals['service_charge'],
-                'total' => $remainingTotals['total'],
-            ]);
-
-            return $newOrder;
-        });
-
-        if (!$newOrder) {
-            return $this->error('Invalid item IDs for splitting.', 422);
-        }
-
-        return $this->success([
-            'original_order' => [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'total' => (float) $order->total,
-            ],
-            'new_order' => [
-                'id' => $newOrder->id,
-                'order_number' => $newOrder->order_number,
-                'total' => (float) $newOrder->total,
-            ],
-        ], 'Order split successfully.');
-    }
-
-    public function void(Request $request, string $id): JsonResponse
-    {
-        $order = Order::find($id);
-
-        if (!$order) {
-            return $this->notFound('Order not found.');
-        }
-
-        if (in_array($order->status, ['completed', 'voided'])) {
-            return $this->error('Cannot void a ' . $order->status . ' order.', 409);
-        }
-
-        if ($order->payment_status === 'paid') {
-            return $this->error('Cannot void an order that is fully paid. Process a refund instead.', 409);
-        }
-
-        $validated = $request->validate([
-            'reason' => 'required|string|max:1000',
-        ]);
-
-        $order->update([
-            'status' => 'voided',
-            'cancellation_reason' => $validated['reason'],
-        ]);
-
-        app(OrderWorkflowService::class)->reverseInventoryForCancelledOrder($order, $request->user());
-
-        if ($order->table_id) {
-            Table::where('id', $order->table_id)->update(['status' => 'available']);
-        }
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => 'voided',
-            'notes' => "Order voided: {$validated['reason']}",
-            'changed_by' => $request->user()->id,
-        ]);
-
-        return $this->success([
-            'id' => $order->id,
-            'status' => $order->status,
-        ], 'Order voided successfully.');
-    }
-
     public function pay(Request $request, string $id): JsonResponse
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
-        if (in_array($order->status, ['voided', 'cancelled'])) {
-            return $this->error('Cannot process payment for a ' . $order->status . ' order.', 409);
+        if (in_array($order->status, ['cancelled'])) {
+            return $this->error('Cannot process payment for a '.$order->status.' order.', 409);
         }
 
         $validated = $request->validate([
@@ -831,9 +751,9 @@ class OrderController extends Controller
 
         $invoice = Invoice::where('order_id', $order->id)->first();
 
-        if (!$invoice) {
+        if (! $invoice) {
             $invoice = Invoice::create([
-                'invoice_number' => 'INV-' . strtoupper(uniqid()),
+                'invoice_number' => 'INV-'.strtoupper(uniqid()),
                 'order_id' => $order->id,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
@@ -854,7 +774,7 @@ class OrderController extends Controller
             return $this->error('Payment amount exceeds remaining balance.', 422);
         }
 
-        $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $order, $request) {
+        $payment = DB::transaction(function () use ($validated, $invoice, $order, $request) {
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'amount' => $validated['amount'],
@@ -912,7 +832,7 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
@@ -939,7 +859,7 @@ class OrderController extends Controller
     {
         $originalOrder = Order::with(['items.menuItem', 'items.modifiers'])->find($id);
 
-        if (!$originalOrder) {
+        if (! $originalOrder) {
             return $this->notFound('Order not found.');
         }
 

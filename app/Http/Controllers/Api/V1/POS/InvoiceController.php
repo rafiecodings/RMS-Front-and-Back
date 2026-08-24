@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\POS;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\RestaurantSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -75,7 +76,7 @@ class InvoiceController extends Controller
 
         $order = Order::with('items')->find($validated['order_id']);
 
-        if (!$order) {
+        if (! $order) {
             return $this->notFound('Order not found.');
         }
 
@@ -84,7 +85,7 @@ class InvoiceController extends Controller
             return $this->error('Invoice already exists for this order.', 409);
         }
 
-        $invoiceNumber = 'INV-' . strtoupper(uniqid());
+        $invoiceNumber = 'INV-'.strtoupper(uniqid());
 
         $invoice = Invoice::create([
             'invoice_number' => $invoiceNumber,
@@ -121,7 +122,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::with(['order.customer', 'order.table', 'order.items.menuItem', 'payments', 'refunds'])
             ->find($id);
 
-        if (!$invoice) {
+        if (! $invoice) {
             return $this->notFound('Invoice not found.');
         }
 
@@ -177,11 +178,11 @@ class InvoiceController extends Controller
         $invoice = Invoice::with(['order.customer', 'order.table', 'order.items.menuItem', 'payments'])
             ->find($id);
 
-        if (!$invoice) {
+        if (! $invoice) {
             return $this->notFound('Invoice not found.');
         }
 
-        $restaurantSettings = \App\Models\RestaurantSetting::first();
+        $restaurantSettings = RestaurantSetting::first();
 
         return $this->success([
             'restaurant' => $restaurantSettings ? [

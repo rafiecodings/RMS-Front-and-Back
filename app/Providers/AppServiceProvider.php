@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Repositories\BaseRepository;
+use App\Repositories\BaseRepositoryInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -12,8 +14,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(
-            \App\Repositories\BaseRepositoryInterface::class,
-            \App\Repositories\BaseRepository::class
+            BaseRepositoryInterface::class,
+            BaseRepository::class
         );
     }
 

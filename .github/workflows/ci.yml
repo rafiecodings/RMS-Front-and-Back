@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 name: Backend CI
+=======
+name: Frontend CI
+>>>>>>> 152eec87ad0cd85d3220a7cd52ebdf061d73f688
 
 on:
   push:
@@ -8,13 +12,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     strategy:
       matrix:
         php: ["8.2", "8.3"]
+=======
+>>>>>>> 152eec87ad0cd85d3220a7cd52ebdf061d73f688
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+<<<<<<< HEAD
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -39,3 +47,29 @@ jobs:
 
       - name: Run test suite
         run: composer test
+=======
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: "TypeScript type check (error budget: 31 pre-existing)"
+        run: |
+          npx tsc --noEmit 2>&1 | tee /tmp/tsc.log || true
+          count=$(grep -c "error TS" /tmp/tsc.log || true)
+          echo "TypeScript errors: ${count} (baseline: 31)"
+          if [ "$count" -gt 31 ]; then
+            echo "New TypeScript errors introduced (baseline exceeded)."
+            exit 1
+          fi
+>>>>>>> 152eec87ad0cd85d3220a7cd52ebdf061d73f688

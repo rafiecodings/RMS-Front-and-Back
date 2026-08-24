@@ -1,33 +1,37 @@
 <?php
 
+use App\Http\Controllers\Api\V1\POS\CashRegisterController;
 use App\Http\Controllers\Api\V1\POS\DiscountController;
 use App\Http\Controllers\Api\V1\POS\GiftCardController;
 use App\Http\Controllers\Api\V1\POS\InvoiceController;
 use App\Http\Controllers\Api\V1\POS\PaymentController;
-use App\Http\Controllers\Api\V1\POS\CashRegisterController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'role:admin,manager,cashier'])->group(function () {
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
         Route::post('/generate', [InvoiceController::class, 'generate']);
-        Route::get('/{id}', [InvoiceController::class, 'show']);
-        Route::get('/{id}/receipt', [InvoiceController::class, 'receipt']);
+        Route::get('/{id}', [InvoiceController::class, 'show'])->whereUuid('id');
+        Route::get('/{id}/receipt', [InvoiceController::class, 'receipt'])->whereUuid('id');
     });
 
     Route::prefix('payments')->group(function () {
-        Route::post('/{invoiceId}/pay', [PaymentController::class, 'pay']);
-        Route::post('/{invoiceId}/split', [PaymentController::class, 'splitPayment']);
-        Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund']);
+        // Read-only history/listings for the Billing module.
+        Route::get('/', [PaymentController::class, 'index']);
+        Route::get('/refunds', [PaymentController::class, 'refundsIndex']);
+        Route::get('/stats', [PaymentController::class, 'stats']);
+        Route::post('/{invoiceId}/pay', [PaymentController::class, 'pay'])->whereUuid('invoiceId');
+        Route::post('/{invoiceId}/split', [PaymentController::class, 'splitPayment'])->whereUuid('invoiceId');
+        Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund'])->whereUuid('invoiceId');
     });
 
     Route::middleware('role:admin,manager,cashier')->group(function () {
         Route::prefix('discounts')->group(function () {
             Route::get('/', [DiscountController::class, 'index']);
             Route::post('/', [DiscountController::class, 'store']);
-            Route::get('/{id}', [DiscountController::class, 'show']);
-            Route::put('/{id}', [DiscountController::class, 'update']);
-            Route::delete('/{id}', [DiscountController::class, 'destroy']);
+            Route::get('/{id}', [DiscountController::class, 'show'])->whereUuid('id');
+            Route::put('/{id}', [DiscountController::class, 'update'])->whereUuid('id');
+            Route::delete('/{id}', [DiscountController::class, 'destroy'])->whereUuid('id');
         });
     });
 

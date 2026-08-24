@@ -86,12 +86,13 @@ class GiftCardController extends Controller
             ->where('status', 'active')
             ->first();
 
-        if (!$giftCard) {
+        if (! $giftCard) {
             return $this->notFound('Gift card not found or inactive.');
         }
 
         if ($giftCard->expires_at && $giftCard->expires_at->isPast()) {
             $giftCard->update(['status' => 'expired']);
+
             return $this->error('Gift card has expired.', 410);
         }
 

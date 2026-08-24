@@ -90,7 +90,7 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::withCount('ingredients')->find($id);
 
-        if (!$supplier) {
+        if (! $supplier) {
             return $this->notFound('Supplier not found.');
         }
 
@@ -114,7 +114,7 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::find($id);
 
-        if (!$supplier) {
+        if (! $supplier) {
             return $this->notFound('Supplier not found.');
         }
 
@@ -150,7 +150,7 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::find($id);
 
-        if (!$supplier) {
+        if (! $supplier) {
             return $this->notFound('Supplier not found.');
         }
 

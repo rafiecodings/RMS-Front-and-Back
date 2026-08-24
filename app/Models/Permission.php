@@ -6,7 +6,7 @@ namespace App\Models;
 
 class Permission extends BaseModel
 {
-    protected $fillable = ['id','name', 'display_name', 'module', 'description'];
+    protected $fillable = ['id', 'name', 'display_name', 'module', 'description'];
 
     public function getTable(): string
     {

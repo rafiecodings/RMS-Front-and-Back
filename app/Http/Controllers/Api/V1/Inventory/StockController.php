@@ -61,14 +61,16 @@ class StockController extends Controller
     public function inward(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredient_id' => 'required|uuid|exists:ingredients,id',
             'quantity' => 'required|numeric|min:0.001',
             'unit_cost' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::where('id', $validated['ingredient_id'])
+                ->lockForUpdate()
+                ->first();
 
             $ingredient->increment('current_stock', $validated['quantity']);
 
@@ -102,13 +104,15 @@ class StockController extends Controller
     public function outward(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredient_id' => 'required|uuid|exists:ingredients,id',
             'quantity' => 'required|numeric|min:0.001',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::where('id', $validated['ingredient_id'])
+                ->lockForUpdate()
+                ->first();
 
             if ((float) $ingredient->current_stock < $validated['quantity']) {
                 return ['error' => 'Insufficient stock.'];
@@ -149,13 +153,15 @@ class StockController extends Controller
     public function adjust(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredient_id' => 'required|uuid|exists:ingredients,id',
             'new_stock' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::where('id', $validated['ingredient_id'])
+                ->lockForUpdate()
+                ->first();
             $previousStock = (float) $ingredient->current_stock;
             $adjustment = $validated['new_stock'] - $previousStock;
 
@@ -166,7 +172,7 @@ class StockController extends Controller
                 'type' => 'adjustment',
                 'quantity' => abs($adjustment),
                 'unit_cost' => (float) $ingredient->cost_per_unit,
-                'notes' => ($validated['notes'] ?? '') . " (From {$previousStock} to {$validated['new_stock']})",
+                'notes' => ($validated['notes'] ?? '')." (From {$previousStock} to {$validated['new_stock']})",
                 'created_by' => $request->user()->id,
             ]);
 
@@ -197,8 +203,12 @@ class StockController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $fromIngredient = Ingredient::find($validated['from_ingredient_id']);
-            $toIngredient = Ingredient::find($validated['to_ingredient_id']);
+            $fromIngredient = Ingredient::where('id', $validated['from_ingredient_id'])
+                ->lockForUpdate()
+                ->first();
+            $toIngredient = Ingredient::where('id', $validated['to_ingredient_id'])
+                ->lockForUpdate()
+                ->first();
 
             if ((float) $fromIngredient->current_stock < $validated['quantity']) {
                 return ['error' => 'Insufficient stock in source ingredient.'];
@@ -212,7 +222,7 @@ class StockController extends Controller
                 'type' => 'outward',
                 'quantity' => $validated['quantity'],
                 'unit_cost' => (float) $fromIngredient->cost_per_unit,
-                'notes' => "Transfer to {$toIngredient->name}" . ($validated['notes'] ?? ''),
+                'notes' => "Transfer to {$toIngredient->name}".($validated['notes'] ?? ''),
                 'created_by' => $request->user()->id,
             ]);
 
@@ -221,7 +231,7 @@ class StockController extends Controller
                 'type' => 'inward',
                 'quantity' => $validated['quantity'],
                 'unit_cost' => (float) $fromIngredient->cost_per_unit,
-                'notes' => "Transfer from {$fromIngredient->name}" . ($validated['notes'] ?? ''),
+                'notes' => "Transfer from {$fromIngredient->name}".($validated['notes'] ?? ''),
                 'created_by' => $request->user()->id,
             ]);
 
@@ -247,26 +257,6 @@ class StockController extends Controller
                 'current_stock' => (float) $result['to']->current_stock,
             ],
         ], 'Stock transferred successfully.');
-    }
-
-    public function expiringItems(Request $request): JsonResponse
-    {
-        $days = $request->integer('days', 7);
-
-        $ingredients = Ingredient::where('is_active', true)
-            ->orderBy('created_at', 'desc')
-            ->limit(50)
-            ->get();
-
-        return $this->success([
-            'items' => $ingredients->map(fn (Ingredient $i) => [
-                'id' => $i->id,
-                'name' => $i->name,
-                'current_stock' => (float) $i->current_stock,
-                'unit' => $i->unit,
-            ]),
-            'days_threshold' => $days,
-        ]);
     }
 
     public function reconciliation(Request $request): JsonResponse

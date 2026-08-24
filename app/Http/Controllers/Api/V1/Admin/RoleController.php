@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,8 +61,8 @@ class RoleController extends Controller
             'description' => $validated['description'] ?? null,
         ]);
 
-        if (!empty($validated['permissions'])) {
-            $permissionIds = \App\Models\Permission::whereIn('name', $validated['permissions'])->pluck('id');
+        if (! empty($validated['permissions'])) {
+            $permissionIds = Permission::whereIn('name', $validated['permissions'])->pluck('id');
             $role->permissions()->sync($permissionIds);
         }
 
@@ -88,7 +89,7 @@ class RoleController extends Controller
     {
         $role = Role::with('permissions')->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return $this->notFound('Role not found.');
         }
 
@@ -114,7 +115,7 @@ class RoleController extends Controller
     {
         $role = Role::find($id);
 
-        if (!$role) {
+        if (! $role) {
             return $this->notFound('Role not found.');
         }
 
@@ -133,7 +134,7 @@ class RoleController extends Controller
         $role->update(collect($validated)->only(['name', 'display_name', 'description'])->toArray());
 
         if (array_key_exists('permissions', $validated)) {
-            $permissionIds = \App\Models\Permission::whereIn('name', $validated['permissions'] ?? [])->pluck('id');
+            $permissionIds = Permission::whereIn('name', $validated['permissions'] ?? [])->pluck('id');
             $role->permissions()->sync($permissionIds);
         }
 
@@ -160,7 +161,7 @@ class RoleController extends Controller
     {
         $role = Role::find($id);
 
-        if (!$role) {
+        if (! $role) {
             return $this->notFound('Role not found.');
         }
 

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 abstract class BaseRepository implements BaseRepositoryInterface
 {
     protected Model $model;
+
     protected Builder $query;
 
     public function __construct(Model $model)
@@ -38,7 +39,7 @@ abstract class BaseRepository implements BaseRepositoryInterface
     {
         $model = $this->model->find($id, $columns);
 
-        if (!$model) {
+        if (! $model) {
             throw new ModelNotFoundException("Model not found with ID: {$id}");
         }
 
@@ -53,24 +54,28 @@ abstract class BaseRepository implements BaseRepositoryInterface
     public function update(string $id, array $data): bool
     {
         $model = $this->findOrFail($id);
+
         return $model->update($data);
     }
 
     public function delete(string $id): bool
     {
         $model = $this->findOrFail($id);
-        return $model->forceDelete();
+
+        return $model->delete();
     }
 
-    public function softDelete(string $id): bool
+    public function forceDelete(string $id): bool
     {
         $model = $this->findOrFail($id);
-        return $model->delete();
+
+        return $model->forceDelete();
     }
 
     public function restore(string $id): bool
     {
         $model = $this->model->withTrashed()->findOrFail($id);
+
         return $model->restore();
     }
 
@@ -87,24 +92,28 @@ abstract class BaseRepository implements BaseRepositoryInterface
     public function where(string $column, mixed $value): static
     {
         $this->query->where($column, $value);
+
         return $this;
     }
 
     public function whereIn(string $column, array $values): static
     {
         $this->query->whereIn($column, $values);
+
         return $this;
     }
 
     public function orderBy(string $column, string $direction = 'asc'): static
     {
         $this->query->orderBy($column, $direction);
+
         return $this;
     }
 
     public function with(array|string $relations): static
     {
         $this->query->with($relations);
+
         return $this;
     }
 

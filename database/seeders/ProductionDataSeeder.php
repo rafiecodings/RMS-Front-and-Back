@@ -11,8 +11,11 @@ use Illuminate\Support\Str;
 class ProductionDataSeeder extends Seeder
 {
     private array $ids = [];
+
     private Carbon $now;
+
     private Carbon $sixMonthsAgo;
+
     private ?string $userPassword = null;
 
     public function run(): void
@@ -20,36 +23,43 @@ class ProductionDataSeeder extends Seeder
         $this->now = Carbon::now();
         $this->sixMonthsAgo = (new Carbon($this->now))->subMonths(6);
 
-        DB::statement('SET session_replication_role = \'replica\'');
+        // session_replication_role is PostgreSQL-specific; skip it on SQLite
+        // (used for local dev) to avoid "General error: 1 near 'SET'" syntax errors.
+        if (! Str::contains(DB::getDriverName(), 'sqlite')) {
+            DB::statement('SET session_replication_role = \'replica\'');
+        }
 
         $this->truncateRelevantTables();
         $this->createOutlets();
         $this->createUsers();
-        $this->createCustomers();
+        // Operational data removed for clean production-ready initial state
+        // $this->createCustomers();
         $this->createMenuCategories();
         $this->createMenuItems();
         $this->createSuppliers();
         $this->createIngredients();
         $this->createRecipes();
-        $this->createFloorPlans();
-        $this->createTables();
+        // Operational data removed for clean production-ready initial state
+        // $this->createTables();
         $this->createDiscounts();
-        $this->createReservations();
-        $this->createOrders();
-        $this->createKitchenTickets();
+        // $this->createReservations();
+        // $this->createOrders();
+        // $this->createKitchenTickets();
         $this->createStaffShifts();
         $this->createStaffSchedules();
         $this->createPurchaseOrders();
         $this->createStockMovements();
         $this->createAuditLogs();
 
-        DB::statement('SET session_replication_role = \'origin\'');
+        if (! Str::contains(DB::getDriverName(), 'sqlite')) {
+            DB::statement('SET session_replication_role = \'origin\'');
+        }
     }
 
     private function truncateRelevantTables(): void
     {
         $tables = [
-            'audit_logs', 'customers', 'floor_plans', 'tables', 'reservations',
+            'audit_logs', 'customers', 'tables', 'reservations',
             'menu_categories', 'menu_items', 'menu_modifiers', 'menu_item_modifiers',
             'menu_combos', 'menu_combo_items', 'suppliers', 'ingredients',
             'recipes', 'recipe_ingredients', 'orders', 'order_items',
@@ -71,7 +81,7 @@ class ProductionDataSeeder extends Seeder
 
     private function uid(string $prefix, int $num): string
     {
-        return sprintf('00000000-0000-0000-0000-%s', substr(md5($prefix . $num), 0, 12));
+        return Str::uuid()->toString();
     }
 
     private function userSeedPassword(): string
@@ -81,7 +91,7 @@ class ProductionDataSeeder extends Seeder
         }
 
         $password = env('DEMO_USER_PASSWORD');
-        if (!$password) {
+        if (! $password) {
             $password = Str::random(16);
             $this->command?->warn('No DEMO_USER_PASSWORD env set. Generated demo user password: '.$password);
         }
@@ -109,6 +119,7 @@ class ProductionDataSeeder extends Seeder
         $end = $end ?? $this->now;
         $diff = $end->timestamp - $start->timestamp;
         $random = $start->timestamp + mt_rand(0, max(0, $diff));
+
         return Carbon::createFromTimestamp($random)->format('Y-m-d H:i:s');
     }
 
@@ -116,6 +127,7 @@ class ProductionDataSeeder extends Seeder
     {
         $end = $end ?? $this->now;
         $diff = $end->diffInDays($start);
+
         return (new Carbon($start))->addDays(mt_rand(0, max(0, $diff)))->format('Y-m-d');
     }
 
@@ -157,7 +169,7 @@ class ProductionDataSeeder extends Seeder
         $existingKitchenRoleId = DB::table('roles')->where('name', 'kitchen_staff')->value('id');
 
         // Only create new roles that don't already exist
-        $newRoles = ['branch_manager', 'inventory_staff', 'accountant'];
+        $newRoles = ['inventory_staff'];
         $roleIds = [];
         foreach ($newRoles as $roleName) {
             $existing = DB::table('roles')->where('name', $roleName)->first();
@@ -169,16 +181,8 @@ class ProductionDataSeeder extends Seeder
                 DB::table('roles')->insert([
                     'id' => $rid,
                     'name' => $roleName,
-                    'display_name' => match($roleName) {
-                        'branch_manager' => 'Branch Manager',
-                        'inventory_staff' => 'Inventory Staff',
-                        'accountant' => 'Accountant',
-                    },
-                    'description' => match($roleName) {
-                        'branch_manager' => 'Manages day-to-day branch operations',
-                        'inventory_staff' => 'Manages ingredient stock and purchase orders',
-                        'accountant' => 'Handles financial reports and reconciliation',
-                    },
+                    'display_name' => 'Inventory Staff',
+                    'description' => 'Manages ingredient stock and purchase orders',
                     'is_system' => false,
                     'created_at' => $this->sixMonthsAgo,
                     'updated_at' => $this->sixMonthsAgo,
@@ -186,47 +190,14 @@ class ProductionDataSeeder extends Seeder
             }
         }
 
-        $users = [
-            // Branch Managers
-            ['name' => 'Ricardo Santos', 'email' => 'ricardo.santos@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 0],
-            ['name' => 'Maria Lopez', 'email' => 'maria.lopez@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 1],
-
-            // Cashiers
-            ['name' => 'Angela Cruz', 'email' => 'angela.cruz@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 0],
-            ['name' => 'Brian Tan', 'email' => 'brian.tan@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 0],
-            ['name' => 'Catherine Reyes', 'email' => 'catherine.reyes@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
-            ['name' => 'Dennis Villanueva', 'email' => 'dennis.villanueva@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
-
-            // Waiters
-            ['name' => 'Elena Garcia', 'email' => 'elena.garcia@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Francisco Diaz', 'email' => 'francisco.diaz@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Gloria Mendoza', 'email' => 'gloria.mendoza@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Henry Ramirez', 'email' => 'henry.ramirez@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Isabel Torres', 'email' => 'isabel.torres@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-            ['name' => 'Jose Gonzales', 'email' => 'jose.gonzales@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-            ['name' => 'Katherine Sanches', 'email' => 'katherine.sanches@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-
-            // Kitchen Staff
-            ['name' => 'Luis Fernandez', 'email' => 'luis.fernandez@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Martha Rivera', 'email' => 'martha.rivera@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Nicolas Castillo', 'email' => 'nicolas.castillo@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Olivia Santiago', 'email' => 'olivia.santiago@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-            ['name' => 'Pedro Alvarez', 'email' => 'pedro.alvarez@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-            ['name' => 'Queen Dela Cruz', 'email' => 'queen.delacruz@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-
+$users = [
             // Inventory Staff
             ['name' => 'Ramon Guerrero', 'email' => 'ramon.guerrero@kainanexpress.com', 'role' => $roleIds['inventory_staff'], 'outlet' => 0],
             ['name' => 'Sofia Mercado', 'email' => 'sofia.mercado@kainanexpress.com', 'role' => $roleIds['inventory_staff'], 'outlet' => 1],
 
-            // Accountants
-            ['name' => 'Tomas Aguilar', 'email' => 'tomas.aguilar@kainanexpress.com', 'role' => $roleIds['accountant'], 'outlet' => 0],
-            ['name' => 'Ursula Navarro', 'email' => 'ursula.navarro@kainanexpress.com', 'role' => $roleIds['accountant'], 'outlet' => 1],
-
-            // Branch Managers (additional)
-            ['name' => 'Victor Ramos', 'email' => 'victor.ramos@kainanexpress.com', 'role' => $roleIds['branch_manager'], 'outlet' => 0],
-            ['name' => 'Wendy Chua', 'email' => 'wendy.chua@kainanexpress.com', 'role' => $roleIds['branch_manager'], 'outlet' => 1],
-
             // Additional staff
+            ['name' => 'Victor Ramos', 'email' => 'victor.ramos@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 0],
+            ['name' => 'Wendy Chua', 'email' => 'wendy.chua@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 1],
             ['name' => 'Xavier Lim', 'email' => 'xavier.lim@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
             ['name' => 'Yvonne Ong', 'email' => 'yvonne.ong@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
             ['name' => 'Zandro Bautista', 'email' => 'zandro.bautista@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
@@ -258,7 +229,9 @@ class ProductionDataSeeder extends Seeder
                 'model_id' => $id,
             ]);
 
-            $employeeId = sprintf('KE-%s-%04d', match($userData['outlet']) { 0 => 'MNL', 1 => 'BLG' }, $i + 1);
+            $employeeId = sprintf('KE-%s-%04d', match ($userData['outlet']) {
+                0 => 'MNL', 1 => 'BLG'
+            }, $i + 1);
             $staffProfileId = $this->uid('staff', $i + 2);
             $this->ids['staff_profiles'][] = $staffProfileId;
 
@@ -266,31 +239,27 @@ class ProductionDataSeeder extends Seeder
                 'id' => $staffProfileId,
                 'user_id' => $id,
                 'employee_id' => $employeeId,
-                'position' => match($userData['role']) {
-                    $existingManagerRoleId => 'Branch Manager',
+                'position' => match ($userData['role']) {
+                    $existingManagerRoleId => 'Manager',
                     $existingCashierRoleId => 'Cashier',
                     $existingWaiterRoleId => 'Waiter',
                     $existingKitchenRoleId => 'Kitchen Staff',
                     $roleIds['inventory_staff'] => 'Inventory Staff',
-                    $roleIds['accountant'] => 'Accountant',
-                    $roleIds['branch_manager'] => 'Branch Manager',
                     default => 'Staff',
                 },
-                'department' => match($userData['role']) {
+                'department' => match ($userData['role']) {
                     $existingManagerRoleId => 'Management',
                     $existingCashierRoleId => 'Front of House',
                     $existingWaiterRoleId => 'Service',
                     $existingKitchenRoleId => 'Kitchen',
                     $roleIds['inventory_staff'] => 'Inventory',
-                    $roleIds['accountant'] => 'Finance',
-                    $roleIds['branch_manager'] => 'Management',
                     default => 'Operations',
                 },
                 'hourly_rate' => $this->randomFloat(60, 180),
                 'base_salary' => $this->randomFloat(15000, 45000),
                 'hire_date' => $this->randomDate($this->sixMonthsAgo),
                 'employment_type' => $this->randomFrom(['full_time', 'full_time', 'full_time', 'part_time']),
-                'phone' => $this->randomFrom($phonePrefixes) . sprintf('%07d', mt_rand(0, 9999999)),
+                'phone' => $this->randomFrom($phonePrefixes).sprintf('%07d', mt_rand(0, 9999999)),
                 'address' => sprintf('%d %s St., Barangay %d, %s',
                     mt_rand(1, 999),
                     $this->randomFrom(['Rizal', 'Bonifacio', 'Mabini', 'Luna', 'Aquino', 'Del Pilar', 'Jacinto', 'Silang']),
@@ -339,7 +308,7 @@ class ProductionDataSeeder extends Seeder
 
         $customerTypes = ['regular', 'regular', 'regular', 'walk_in', 'walk_in', 'vip'];
 
-        for ($i = 1; $i <= 300; $i++) {
+        for ($i = 1; $i <= 30; $i++) {
             $id = $this->uid('customer', $i);
             $this->ids['customers'][] = $id;
             $firstName = $this->randomFrom($firstNames);
@@ -350,8 +319,8 @@ class ProductionDataSeeder extends Seeder
             DB::table('customers')->insert([
                 'id' => $id,
                 'name' => "$firstName $lastName",
-                'email' => strtolower($firstName . '.' . $lastName . $i . '@email.com'),
-                'phone' => $this->randomFrom(['0917', '0920', '0927', '0932', '0939']) . sprintf('%07d', mt_rand(0, 9999999)),
+                'email' => strtolower($firstName.'.'.$lastName.$i.'@email.com'),
+                'phone' => $this->randomFrom(['0917', '0920', '0927', '0932', '0939']).sprintf('%07d', mt_rand(0, 9999999)),
                 'customer_type' => $customerType,
                 'loyalty_points' => $customerType === 'vip' ? $this->randomInt(500, 5000) : $this->randomInt(0, 500),
                 'total_spent' => $this->randomFloat(0, 50000),
@@ -566,7 +535,10 @@ class ProductionDataSeeder extends Seeder
             $cumulative = 0;
             $catSizes = [8, 8, 8, 6, 6, 6, 6, 6, 8, 8, 6, 7, 6, 6, 8];
             foreach ($catSizes as $ci => $size) {
-                if ($i < $cumulative + $size) { $catIdx = $ci; break; }
+                if ($i < $cumulative + $size) {
+                    $catIdx = $ci;
+                    break;
+                }
                 $cumulative += $size;
             }
 
@@ -574,15 +546,15 @@ class ProductionDataSeeder extends Seeder
                 'id' => $id,
                 'category_id' => $this->ids['categories'][$catIdx],
                 'name' => $item[0],
-                'slug' => Str::slug($item[0]) . '-' . ($i + 1),
+                'slug' => Str::slug($item[0]).'-'.($i + 1),
                 'description' => $item[4],
                 'price' => $item[1],
-                'sku' => 'KE-' . str_pad((string)($i + 1), 4, '0', STR_PAD_LEFT),
+                'sku' => 'KE-'.str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
                 'is_available' => $item[6],
                 'is_featured' => false,
                 'cost_price' => $item[2],
                 'prep_time_minutes' => $item[3],
-                'tags' => json_encode([match(true) {
+                'tags' => json_encode([match (true) {
                     $item[1] < 100 => 'budget',
                     $item[1] < 200 => 'affordable',
                     $item[1] < 300 => 'premium',
@@ -730,7 +702,7 @@ class ProductionDataSeeder extends Seeder
             DB::table('ingredients')->insert([
                 'id' => $id,
                 'name' => $ing[0],
-                'sku' => 'ING-' . str_pad((string)($i + 1), 3, '0', STR_PAD_LEFT),
+                'sku' => 'ING-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'category' => $ing[1],
                 'unit' => $ing[2],
                 'current_stock' => $ing[3],
@@ -764,123 +736,123 @@ class ProductionDataSeeder extends Seeder
     private function createRecipes(): void
     {
         $recipeData = [
-            [0, [[0,0.250, 0,0.015, 28,0.010, 63,0.005, 29,0.010]]],  // Lumpiang Shanghai
-            [1, [[16,0.200, 32,0.030, 34,0.010, 36,0.010, 64,0.005]]], // Kinilaw
-            [2, [[1,0.200, 59,0.100, 34,0.010, 29,0.020, 62,0.005]]],  // Tokwa\'t Baboy
-            [3, [[15,0.200, 59,0.100, 64,0.005, 69,0.010, 27,0.050]]], // Calamares
-            [4, [[3,0.150, 59,0.080, 34,0.010, 36,0.005, 60,0.020]]],  // Siomai Pork
-            [5, [[3,0.100, 17,0.100, 60,0.020, 34,0.010, 63,0.005]]],  // Siomai Shanghai
-            [6, [[1,0.250, 27,0.100, 29,0.015, 34,0.010, 64,0.005]]],  // Chicharon Bulaklak
-            [7, [[15,0.100, 59,0.100, 27,0.050, 64,0.005, 19,1.000]]], // Okoy
+            [0, [[0, 0.250, 0, 0.015, 28, 0.010, 63, 0.005, 29, 0.010]]],  // Lumpiang Shanghai
+            [1, [[16, 0.200, 32, 0.030, 34, 0.010, 36, 0.010, 64, 0.005]]], // Kinilaw
+            [2, [[1, 0.200, 59, 0.100, 34, 0.010, 29, 0.020, 62, 0.005]]],  // Tokwa\'t Baboy
+            [3, [[15, 0.200, 59, 0.100, 64, 0.005, 69, 0.010, 27, 0.050]]], // Calamares
+            [4, [[3, 0.150, 59, 0.080, 34, 0.010, 36, 0.005, 60, 0.020]]],  // Siomai Pork
+            [5, [[3, 0.100, 17, 0.100, 60, 0.020, 34, 0.010, 63, 0.005]]],  // Siomai Shanghai
+            [6, [[1, 0.250, 27, 0.100, 29, 0.015, 34, 0.010, 64, 0.005]]],  // Chicharon Bulaklak
+            [7, [[15, 0.100, 59, 0.100, 27, 0.050, 64, 0.005, 19, 1.000]]], // Okoy
 
-            [8, [[0,0.400, 28,0.060, 29,0.060, 34,0.010, 65,0.003, 63,0.003]]], // Chicken Adobo
-            [9, [[1,0.400, 28,0.060, 29,0.060, 34,0.010, 65,0.003, 63,0.003]]], // Pork Adobo
-            [10, [[2,0.350, 38,0.150, 39,0.100, 40,0.080, 31,0.040, 34,0.010]]], // Beef Kaldereta
-            [11, [[0,0.350, 36,0.020, 43,0.200, 34,0.010, 31,0.020, 44,0.100]]], // Chicken Tinola
-            [12, [[1,0.350, 38,0.100, 41,0.080, 44,0.080, 36,0.010, 42,0.100]]], // Pork Sinigang
-            [13, [[2,0.400, 8,0.300, 49,0.150, 39,0.100, 41,0.080, 42,0.100]]], // Beef Bulalo
-            [14, [[1,0.350, 27,0.100, 34,0.010, 64,0.005, 29,0.020]]], // Lechon Kawali
-            [15, [[0,0.350, 21,0.200, 39,0.100, 40,0.080, 34,0.010, 69,0.005]]], // Chicken Curry
+            [8, [[0, 0.400, 28, 0.060, 29, 0.060, 34, 0.010, 65, 0.003, 63, 0.003]]], // Chicken Adobo
+            [9, [[1, 0.400, 28, 0.060, 29, 0.060, 34, 0.010, 65, 0.003, 63, 0.003]]], // Pork Adobo
+            [10, [[2, 0.350, 38, 0.150, 39, 0.100, 40, 0.080, 31, 0.040, 34, 0.010]]], // Beef Kaldereta
+            [11, [[0, 0.350, 36, 0.020, 43, 0.200, 34, 0.010, 31, 0.020, 44, 0.100]]], // Chicken Tinola
+            [12, [[1, 0.350, 38, 0.100, 41, 0.080, 44, 0.080, 36, 0.010, 42, 0.100]]], // Pork Sinigang
+            [13, [[2, 0.400, 8, 0.300, 49, 0.150, 39, 0.100, 41, 0.080, 42, 0.100]]], // Beef Bulalo
+            [14, [[1, 0.350, 27, 0.100, 34, 0.010, 64, 0.005, 29, 0.020]]], // Lechon Kawali
+            [15, [[0, 0.350, 21, 0.200, 39, 0.100, 40, 0.080, 34, 0.010, 69, 0.005]]], // Chicken Curry
 
-            [16, [[57,0.200, 34,0.010, 27,0.020]]], // Garlic Rice
-            [17, [[57,0.200, 68,0.005, 27,0.020, 64,0.003]]], // Java Rice
-            [18, [[0,0.250, 32,0.020, 27,0.030, 68,0.005, 64,0.003]]], // Chicken Inasal
-            [19, [[1,0.200, 28,0.030, 32,0.020, 34,0.010, 27,0.020]]], // Pork BBQ
-            [20, [[12,0.250, 27,0.050, 57,0.200, 34,0.010, 19,1.000]]], // Bangsilog
-            [21, [[6,0.200, 28,0.020, 34,0.010, 57,0.200, 19,1.000]]],  // Tapsilog
-            [22, [[9,0.200, 27,0.020, 57,0.200, 19,1.000]]], // Longsilog
-            [23, [[10,0.200, 57,0.200, 19,1.000, 27,0.020]]], // Tosilog
+            [16, [[57, 0.200, 34, 0.010, 27, 0.020]]], // Garlic Rice
+            [17, [[57, 0.200, 68, 0.005, 27, 0.020, 64, 0.003]]], // Java Rice
+            [18, [[0, 0.250, 32, 0.020, 27, 0.030, 68, 0.005, 64, 0.003]]], // Chicken Inasal
+            [19, [[1, 0.200, 28, 0.030, 32, 0.020, 34, 0.010, 27, 0.020]]], // Pork BBQ
+            [20, [[12, 0.250, 27, 0.050, 57, 0.200, 34, 0.010, 19, 1.000]]], // Bangsilog
+            [21, [[6, 0.200, 28, 0.020, 34, 0.010, 57, 0.200, 19, 1.000]]],  // Tapsilog
+            [22, [[9, 0.200, 27, 0.020, 57, 0.200, 19, 1.000]]], // Longsilog
+            [23, [[10, 0.200, 57, 0.200, 19, 1.000, 27, 0.020]]], // Tosilog
 
-            [24, [[58,0.250, 23,0.100, 26,0.050, 19,0.020, 34,0.005]]], // Carbonara
-            [25, [[58,0.250, 3,0.150, 38,0.080, 39,0.060, 28,0.020, 34,0.010]]], // Spag Bol
-            [26, [[58,0.250, 0,0.150, 26,0.030, 34,0.005, 38,0.050]]], // Pesto Chicken
-            [27, [[58,0.250, 3,0.150, 23,0.100, 26,0.020, 24,0.050]]], // Baked Mac
-            [28, [[58,0.250, 14,0.100, 15,0.080, 18,0.100, 38,0.080]]], // Seafood Marinara
-            [29, [[59,0.200, 3,0.150, 23,0.100, 24,0.080, 38,0.080]]], // Lasagna
+            [24, [[58, 0.250, 23, 0.100, 26, 0.050, 19, 0.020, 34, 0.005]]], // Carbonara
+            [25, [[58, 0.250, 3, 0.150, 38, 0.080, 39, 0.060, 28, 0.020, 34, 0.010]]], // Spag Bol
+            [26, [[58, 0.250, 0, 0.150, 26, 0.030, 34, 0.005, 38, 0.050]]], // Pesto Chicken
+            [27, [[58, 0.250, 3, 0.150, 23, 0.100, 26, 0.020, 24, 0.050]]], // Baked Mac
+            [28, [[58, 0.250, 14, 0.100, 15, 0.080, 18, 0.100, 38, 0.080]]], // Seafood Marinara
+            [29, [[59, 0.200, 3, 0.150, 23, 0.100, 24, 0.080, 38, 0.080]]], // Lasagna
 
-            [30, [[13,0.300, 32,0.030, 27,0.050, 34,0.010, 64,0.005]]], // Grilled Tanigue
-            [31, [[17,0.250, 27,0.080, 28,0.030, 37,0.080, 38,0.050]]], // Sweet & Sour Fish
-            [32, [[14,0.250, 26,0.050, 34,0.010, 32,0.020, 63,0.003]]], // Buttered Shrimp
-            [33, [[14,0.250, 38,0.080, 44,0.080, 36,0.010, 42,0.080]]], // Sinigang na Hipon
-            [34, [[12,0.350, 29,0.060, 36,0.010, 34,0.010, 63,0.003]]], // Paksiw na Bangus
-            [35, [[15,0.300, 38,0.100, 35,0.080, 27,0.030, 63,0.003]]], // Inihaw na Pusit
+            [30, [[13, 0.300, 32, 0.030, 27, 0.050, 34, 0.010, 64, 0.005]]], // Grilled Tanigue
+            [31, [[17, 0.250, 27, 0.080, 28, 0.030, 37, 0.080, 38, 0.050]]], // Sweet & Sour Fish
+            [32, [[14, 0.250, 26, 0.050, 34, 0.010, 32, 0.020, 63, 0.003]]], // Buttered Shrimp
+            [33, [[14, 0.250, 38, 0.080, 44, 0.080, 36, 0.010, 42, 0.080]]], // Sinigang na Hipon
+            [34, [[12, 0.350, 29, 0.060, 36, 0.010, 34, 0.010, 63, 0.003]]], // Paksiw na Bangus
+            [35, [[15, 0.300, 38, 0.100, 35, 0.080, 27, 0.030, 63, 0.003]]], // Inihaw na Pusit
 
-            [36, [[0,0.600, 59,0.200, 64,0.010, 63,0.005, 27,0.200]]], // Fried Chicken
-            [37, [[7,0.600, 28,0.050, 34,0.010, 63,0.005, 27,0.200]]], // Chicken Wings
-            [38, [[0,0.350, 28,0.040, 32,0.020, 34,0.010, 69,0.005]]], // Grilled Chicken BBQ
-            [39, [[0,0.300, 35,0.080, 32,0.020, 69,0.010, 26,0.030]]], // Chicken Sisig
-            [40, [[0,0.250, 22,0.100, 40,0.060, 38,0.060, 26,0.020]]], // Chicken Ala King
-            [41, [[0,0.300, 27,0.080, 50,0.080, 40,0.060, 28,0.030]]], // Sweet & Sour Chicken
+            [36, [[0, 0.600, 59, 0.200, 64, 0.010, 63, 0.005, 27, 0.200]]], // Fried Chicken
+            [37, [[7, 0.600, 28, 0.050, 34, 0.010, 63, 0.005, 27, 0.200]]], // Chicken Wings
+            [38, [[0, 0.350, 28, 0.040, 32, 0.020, 34, 0.010, 69, 0.005]]], // Grilled Chicken BBQ
+            [39, [[0, 0.300, 35, 0.080, 32, 0.020, 69, 0.010, 26, 0.030]]], // Chicken Sisig
+            [40, [[0, 0.250, 22, 0.100, 40, 0.060, 38, 0.060, 26, 0.020]]], // Chicken Ala King
+            [41, [[0, 0.300, 27, 0.080, 50, 0.080, 40, 0.060, 28, 0.030]]], // Sweet & Sour Chicken
 
-            [42, [[6,0.250, 28,0.020, 34,0.010, 27,0.030, 63,0.003]]], // Beef Tapa
-            [43, [[8,0.350, 26,0.020, 27,0.050, 34,0.010, 63,0.003]]], // Beef Bulalo Steak
-            [44, [[2,0.300, 24,0.050, 39,0.060, 40,0.050, 38,0.080]]], // Beef Morcon
-            [45, [[2,0.350, 38,0.100, 39,0.080, 40,0.060, 28,0.020]]], // Beef Mechado
-            [46, [[2,0.300, 26,0.030, 34,0.010, 27,0.020, 31,0.020]]], // Beef Salpicao
-            [47, [[2,0.250, 1,0.200, 42,0.100, 39,0.080, 31,0.030]]],  // Kare-Kare
+            [42, [[6, 0.250, 28, 0.020, 34, 0.010, 27, 0.030, 63, 0.003]]], // Beef Tapa
+            [43, [[8, 0.350, 26, 0.020, 27, 0.050, 34, 0.010, 63, 0.003]]], // Beef Bulalo Steak
+            [44, [[2, 0.300, 24, 0.050, 39, 0.060, 40, 0.050, 38, 0.080]]], // Beef Morcon
+            [45, [[2, 0.350, 38, 0.100, 39, 0.080, 40, 0.060, 28, 0.020]]], // Beef Mechado
+            [46, [[2, 0.300, 26, 0.030, 34, 0.010, 27, 0.020, 31, 0.020]]], // Beef Salpicao
+            [47, [[2, 0.250, 1, 0.200, 42, 0.100, 39, 0.080, 31, 0.030]]],  // Kare-Kare
 
-            [48, [[4,1.200, 27,0.300, 34,0.020, 63,0.005, 65,0.003]]], // Crispy Pata
-            [49, [[1,0.350, 27,0.080, 34,0.010, 64,0.005, 29,0.015]]], // Lechon Kawali
-            [50, [[5,0.300, 35,0.080, 69,0.010, 32,0.020, 26,0.020]]], // Pork Sisig
-            [51, [[1,0.300, 21,0.200, 69,0.020, 36,0.010, 34,0.005]]], // Bicol Express
-            [52, [[1,0.350, 28,0.040, 29,0.030, 50,0.080, 34,0.010]]], // Humba
-            [53, [[1,0.300, 28,0.030, 32,0.020, 35,0.080, 63,0.003]]], // Pork Steak
+            [48, [[4, 1.200, 27, 0.300, 34, 0.020, 63, 0.005, 65, 0.003]]], // Crispy Pata
+            [49, [[1, 0.350, 27, 0.080, 34, 0.010, 64, 0.005, 29, 0.015]]], // Lechon Kawali
+            [50, [[5, 0.300, 35, 0.080, 69, 0.010, 32, 0.020, 26, 0.020]]], // Pork Sisig
+            [51, [[1, 0.300, 21, 0.200, 69, 0.020, 36, 0.010, 34, 0.005]]], // Bicol Express
+            [52, [[1, 0.350, 28, 0.040, 29, 0.030, 50, 0.080, 34, 0.010]]], // Humba
+            [53, [[1, 0.300, 28, 0.030, 32, 0.020, 35, 0.080, 63, 0.003]]], // Pork Steak
 
-            [54, [[52,0.100, 22,0.050, 23,0.050, 55,0.050, 21,0.050, 50,0.030, 46,0.020]]], // Halo-Halo
-            [55, [[22,0.200, 19,0.100, 62,0.100, 21,0.050]]], // Leche Flan
-            [56, [[21,0.100, 53,0.100, 62,0.050, 22,0.050]]], // Buko Pandan
-            [57, [[51,0.150, 21,0.100, 62,0.050, 19,0.020]]], // Mango Sago
-            [58, [[55,0.200, 59,0.050, 62,0.030, 27,0.050]]], // Turon
-            [59, [[57,0.200, 62,0.030, 53,0.050, 19,0.020]]], // Puto Bumbong
-            [60, [[57,0.200, 19,0.050, 24,0.050, 62,0.030, 26,0.020]]], // Bibingka
-            [61, [[57,0.200, 54,0.100, 62,0.050, 64,0.003]]], // Suman
+            [54, [[52, 0.100, 22, 0.050, 23, 0.050, 55, 0.050, 21, 0.050, 50, 0.030, 46, 0.020]]], // Halo-Halo
+            [55, [[22, 0.200, 19, 0.100, 62, 0.100, 21, 0.050]]], // Leche Flan
+            [56, [[21, 0.100, 53, 0.100, 62, 0.050, 22, 0.050]]], // Buko Pandan
+            [57, [[51, 0.150, 21, 0.100, 62, 0.050, 19, 0.020]]], // Mango Sago
+            [58, [[55, 0.200, 59, 0.050, 62, 0.030, 27, 0.050]]], // Turon
+            [59, [[57, 0.200, 62, 0.030, 53, 0.050, 19, 0.020]]], // Puto Bumbong
+            [60, [[57, 0.200, 19, 0.050, 24, 0.050, 62, 0.030, 26, 0.020]]], // Bibingka
+            [61, [[57, 0.200, 54, 0.100, 62, 0.050, 64, 0.003]]], // Suman
 
-            [62, [[70,0.020]]], // Brewed Coffee
-            [63, [[70,0.018, 21,0.150]]], // Cafe Latte
-            [64, [[70,0.018, 21,0.150]]], // Cappuccino
-            [65, [[70,0.018, 23,0.050, 21,0.100]]], // Spanish Latte
-            [66, [[70,0.018, 73,0.030, 21,0.150]]], // Caramel Macchiato
-            [67, [[70,0.018, 74,0.030, 21,0.100, 63,0.020]]], // Mocha Frappe
-            [68, [[70,0.021]]], // Americano
-            [69, [[71,0.020, 21,0.150]]], // Matcha Latte
+            [62, [[70, 0.020]]], // Brewed Coffee
+            [63, [[70, 0.018, 21, 0.150]]], // Cafe Latte
+            [64, [[70, 0.018, 21, 0.150]]], // Cappuccino
+            [65, [[70, 0.018, 23, 0.050, 21, 0.100]]], // Spanish Latte
+            [66, [[70, 0.018, 73, 0.030, 21, 0.150]]], // Caramel Macchiato
+            [67, [[70, 0.018, 74, 0.030, 21, 0.100, 63, 0.020]]], // Mocha Frappe
+            [68, [[70, 0.021]]], // Americano
+            [69, [[71, 0.020, 21, 0.150]]], // Matcha Latte
 
-            [70, [[72,0.030, 69,0.050, 21,0.100, 62,0.030]]], // Classic Milk Tea
-            [71, [[73,0.030, 69,0.050, 21,0.100, 62,0.030]]], // Taro Milk Tea
-            [72, [[72,0.030, 69,0.050, 21,0.100, 62,0.030]]], // Wintermelon
-            [73, [[72,0.030, 69,0.050, 21,0.100, 62,0.030, 63,0.020]]], // Okinawa
-            [74, [[71,0.020, 69,0.050, 21,0.100]]], // Matcha Milk Tea
-            [75, [[72,0.030, 69,0.050, 21,0.100, 76,0.020]]], // Strawberry MT
+            [70, [[72, 0.030, 69, 0.050, 21, 0.100, 62, 0.030]]], // Classic Milk Tea
+            [71, [[73, 0.030, 69, 0.050, 21, 0.100, 62, 0.030]]], // Taro Milk Tea
+            [72, [[72, 0.030, 69, 0.050, 21, 0.100, 62, 0.030]]], // Wintermelon
+            [73, [[72, 0.030, 69, 0.050, 21, 0.100, 62, 0.030, 63, 0.020]]], // Okinawa
+            [74, [[71, 0.020, 69, 0.050, 21, 0.100]]], // Matcha Milk Tea
+            [75, [[72, 0.030, 69, 0.050, 21, 0.100, 76, 0.020]]], // Strawberry MT
 
-            [76, [[75,0.330]]], // Coke Can
-            [77, [[75,0.330]]], // Sprite Can
-            [78, [[75,0.330]]], // Royal Can
-            [79, [[75,0.330]]], // Root Beer
-            [80, [[72,0.020, 62,0.020]]], // Iced Tea
-            [81, [[75,0.500]]], // Coke Bottle
-            [82, [[75,0.500]]], // Water
+            [76, [[75, 0.330]]], // Coke Can
+            [77, [[75, 0.330]]], // Sprite Can
+            [78, [[75, 0.330]]], // Royal Can
+            [79, [[75, 0.330]]], // Root Beer
+            [80, [[72, 0.020, 62, 0.020]]], // Iced Tea
+            [81, [[75, 0.500]]], // Coke Bottle
+            [82, [[75, 0.500]]], // Water
 
-            [83, [[32,0.100, 62,0.030, 27,0.010]]], // Calamansi Juice
-            [84, [[53,0.200, 62,0.020]]], // Buko Juice
-            [85, [[51,0.200, 21,0.100, 62,0.030]]], // Mango Shake
-            [86, [[52,0.200, 62,0.020]]], // Watermelon Shake
-            [87, [[50,0.200, 62,0.020]]], // Pineapple Juice
-            [88, [[32,0.050, 50,0.050, 51,0.050, 62,0.020]]], // Four Seasons
+            [83, [[32, 0.100, 62, 0.030, 27, 0.010]]], // Calamansi Juice
+            [84, [[53, 0.200, 62, 0.020]]], // Buko Juice
+            [85, [[51, 0.200, 21, 0.100, 62, 0.030]]], // Mango Shake
+            [86, [[52, 0.200, 62, 0.020]]], // Watermelon Shake
+            [87, [[50, 0.200, 62, 0.020]]], // Pineapple Juice
+            [88, [[32, 0.050, 50, 0.050, 51, 0.050, 62, 0.020]]], // Four Seasons
 
-            [89, [[57,0.150, 27,0.010]]], // Extra Rice
-            [90, [[28,0.050]]], // Extra Sauce
-            [91, [[19,1.000, 27,0.020]]], // Fried Egg
-            [92, [[24,0.050]]], // Extra Cheese
-            [93, [[21,0.050]]], // Sour Cream
-            [94, [[1,0.050, 27,0.010]]], // Bacon Bits
+            [89, [[57, 0.150, 27, 0.010]]], // Extra Rice
+            [90, [[28, 0.050]]], // Extra Sauce
+            [91, [[19, 1.000, 27, 0.020]]], // Fried Egg
+            [92, [[24, 0.050]]], // Extra Cheese
+            [93, [[21, 0.050]]], // Sour Cream
+            [94, [[1, 0.050, 27, 0.010]]], // Bacon Bits
 
-            [95, [[6,0.200, 57,0.200, 19,1.000]]], // Tapsilog Bfast
-            [96, [[9,0.200, 57,0.200, 19,1.000]]], // Longsilog Bfast
-            [97, [[10,0.200, 57,0.200, 19,1.000]]], // Tosilog Bfast
-            [98, [[12,0.200, 57,0.200, 19,1.000]]], // Daing Bfast
-            [99, [[11,0.200, 57,0.200, 19,1.000]]], // Corned Bfast
-            [100, [[59,0.200, 21,0.100, 26,0.020, 19,1.000]]], // Pancake
-            [101, [[59,0.100, 19,0.100, 21,0.100, 26,0.020]], 0.100], // French Toast
-            [102, [[56,0.100, 51,0.050, 55,0.050, 21,0.100]]], // Oatmeal
+            [95, [[6, 0.200, 57, 0.200, 19, 1.000]]], // Tapsilog Bfast
+            [96, [[9, 0.200, 57, 0.200, 19, 1.000]]], // Longsilog Bfast
+            [97, [[10, 0.200, 57, 0.200, 19, 1.000]]], // Tosilog Bfast
+            [98, [[12, 0.200, 57, 0.200, 19, 1.000]]], // Daing Bfast
+            [99, [[11, 0.200, 57, 0.200, 19, 1.000]]], // Corned Bfast
+            [100, [[59, 0.200, 21, 0.100, 26, 0.020, 19, 1.000]]], // Pancake
+            [101, [[59, 0.100, 19, 0.100, 21, 0.100, 26, 0.020]], 0.100], // French Toast
+            [102, [[56, 0.100, 51, 0.050, 55, 0.050, 21, 0.100]]], // Oatmeal
         ];
 
         foreach ($recipeData as $i => $recipe) {
@@ -919,26 +891,6 @@ class ProductionDataSeeder extends Seeder
         }
     }
 
-    // ==================== FLOOR PLANS ====================
-
-    private function createFloorPlans(): void
-    {
-        foreach ([0, 1] as $outletIdx) {
-            $id = $this->uid('floorplan', $outletIdx + 1);
-            $this->ids['floor_plans'][] = $id;
-            $outletName = $outletIdx === 0 ? 'Main Branch' : 'SM Baliwag';
-            DB::table('floor_plans')->insert([
-                'id' => $id,
-                'name' => "{$outletName} Floor Plan",
-                'description' => "Dining floor layout for {$outletName}",
-                'sort_order' => $outletIdx,
-                'is_active' => true,
-                'created_at' => $this->sixMonthsAgo,
-                'updated_at' => $this->sixMonthsAgo,
-            ]);
-        }
-    }
-
     // ==================== TABLES ====================
 
     private function createTables(): void
@@ -952,7 +904,6 @@ class ProductionDataSeeder extends Seeder
         $tableNum = 0;
 
         foreach ([0, 1] as $outletIdx) {
-            $floorPlanId = $this->ids['floor_plans'][$outletIdx];
             foreach ($outletTables[$outletIdx] as $capIdx => $count) {
                 $capacity = [8, 4, 2, 6, 10][$capIdx];
                 for ($j = 0; $j < $count; $j++) {
@@ -961,7 +912,6 @@ class ProductionDataSeeder extends Seeder
                     $this->ids['tables'][] = $id;
                     DB::table('tables')->insert([
                         'id' => $id,
-                        'floor_plan_id' => $floorPlanId,
                         'number' => "T{$tableNum}",
                         'capacity' => $capacity,
                         'status' => $this->randomFrom($statuses),
@@ -1024,7 +974,7 @@ class ProductionDataSeeder extends Seeder
 
     private function createReservations(): void
     {
-        $statuses = ['confirmed', 'confirmed', 'confirmed', 'completed', 'completed', 'cancelled', 'no_show', 'pending'];
+        $statuses = ['confirmed', 'confirmed', 'confirmed', 'completed', 'completed', 'cancelled', 'pending'];
         $sources = ['phone', 'phone', 'phone', 'walk_in', 'online', 'facebook'];
         $guestFirstNames = ['Juan', 'Maria', 'Jose', 'Ana', 'Pedro', 'Rosa', 'Antonio', 'Luz', 'Carlo', 'Megan',
             'Danny', 'Eliza', 'Ferdie', 'Grace', 'Henry', 'Iris', 'Joel', 'Karen', 'Levi', 'Nena'];
@@ -1050,11 +1000,11 @@ class ProductionDataSeeder extends Seeder
                 'id' => $id,
                 'customer_id' => $customerId,
                 'table_id' => ($tableCap >= $partySize) ? $tableId : null,
-                'reservation_number' => 'RES-' . str_pad((string)$i, 5, '0', STR_PAD_LEFT),
-                'guest_name' => $this->randomFrom($guestFirstNames) . ' ' . $this->randomFrom([
+                'reservation_number' => 'RES-'.str_pad((string) $i, 5, '0', STR_PAD_LEFT),
+                'guest_name' => $this->randomFrom($guestFirstNames).' '.$this->randomFrom([
                     'Santos', 'Cruz', 'Reyes', 'Garcia', 'Mendoza', 'Torres']),
-                'guest_phone' => '0917' . sprintf('%07d', mt_rand(0, 9999999)),
-                'guest_email' => 'guest' . $i . '@email.com',
+                'guest_phone' => '0917'.sprintf('%07d', mt_rand(0, 9999999)),
+                'guest_email' => 'guest'.$i.'@email.com',
                 'party_size' => $partySize,
                 'reservation_date' => $resDatetime,
                 'reservation_time' => sprintf('%02d:%02d:00', $hour, $minute),
@@ -1075,12 +1025,12 @@ class ProductionDataSeeder extends Seeder
     private function createOrders(): void
     {
         $orderTypes = ['dine_in', 'dine_in', 'dine_in', 'dine_in', 'takeaway', 'delivery'];
-        $itemStatuses = ['pending', 'preparing', 'preparing', 'ready', 'served', 'served', 'cancelled'];
-        $hours = [7,8,8,9,10,11,11,12,12,13,13,14,15,17,17,18,18,19,19,20,20,21,21,22,22,23];
+        $itemStatuses = ['pending', 'preparing', 'preparing', 'ready', 'cancelled'];
+        $hours = [7, 8, 8, 9, 10, 11, 11, 12, 12, 13, 13, 14, 15, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23];
 
         $orderData = [];
 
-        for ($i = 1; $i <= 1000; $i++) {
+        for ($i = 1; $i <= 50; $i++) {
             $orderId = $this->uid('order', $i);
             $customerId = $this->randomFrom($this->ids['customers']);
             $tableId = $this->randomFrom($this->ids['tables']);
@@ -1113,7 +1063,7 @@ class ProductionDataSeeder extends Seeder
                 'customer_id' => $customerId,
                 'table_id' => $orderType === 'dine_in' ? $tableId : null,
                 'order_type' => $orderType,
-                'order_number' => 'ORD-' . str_pad((string)$i, 5, '0', STR_PAD_LEFT),
+                'order_number' => 'ORD-'.str_pad((string) $i, 5, '0', STR_PAD_LEFT),
                 'order_status' => $orderStatus,
                 'order_datetime' => $orderDatetime,
                 'num_items' => $numItems,
@@ -1134,14 +1084,14 @@ class ProductionDataSeeder extends Seeder
                 $itemSubtotal = $unitPrice * $qty;
                 $subtotal += $itemSubtotal;
 
-                $itemStatus = ($orderStatus === 'completed') ? 'served' :
+                $itemStatus = ($orderStatus === 'completed') ? 'ready' :
                     ($orderStatus === 'cancelled' ? 'cancelled' : $itemStatuses[array_rand($itemStatuses)]);
 
                 $selectedItems[] = [
                     'id' => $this->uid('orderitem', $i * 10 + $j),
                     'order_id' => $orderId,
                     'menu_item_id' => $menuItemId,
-                    'name' => $menuItem ? $menuItem->name : 'Menu Item ' . ($j + 1),
+                    'name' => $menuItem ? $menuItem->name : 'Menu Item '.($j + 1),
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'total_price' => $itemSubtotal,
@@ -1196,7 +1146,7 @@ class ProductionDataSeeder extends Seeder
                 $invoiceId = $this->uid('invoice', $i);
                 DB::table('invoices')->insert([
                     'id' => $invoiceId,
-                    'invoice_number' => 'INV-' . str_pad((string)$i, 5, '0', STR_PAD_LEFT),
+                    'invoice_number' => 'INV-'.str_pad((string) $i, 5, '0', STR_PAD_LEFT),
                     'order_id' => $orderId,
                     'subtotal' => $subtotal,
                     'tax_amount' => $taxAmount,
@@ -1217,10 +1167,10 @@ class ProductionDataSeeder extends Seeder
                     'invoice_id' => $invoiceId,
                     'amount' => $total,
                     'payment_method' => $this->randomFrom($paymentMethods),
-                    'reference_number' => match($pm = $this->randomFrom($paymentMethods)) {
-                        'GCash' => 'GC-' . strtoupper(Str::random(10)),
-                        'Maya' => 'MY-' . strtoupper(Str::random(10)),
-                        'credit_card', 'debit_card' => 'CC-' . strtoupper(Str::random(8)),
+                    'reference_number' => match ($pm = $this->randomFrom($paymentMethods)) {
+                        'GCash' => 'GC-'.strtoupper(Str::random(10)),
+                        'Maya' => 'MY-'.strtoupper(Str::random(10)),
+                        'credit_card', 'debit_card' => 'CC-'.strtoupper(Str::random(8)),
                         default => null,
                     },
                     'processed_by' => $this->randomFrom(array_slice($this->ids['users'], 1)),
@@ -1232,19 +1182,16 @@ class ProductionDataSeeder extends Seeder
             // Order status history
             $statusFlow = [];
             if ($orderStatus === 'completed') {
-                $statusFlow = ['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed'];
+                $statusFlow = ['pending', 'confirmed', 'preparing', 'ready', 'completed'];
             } elseif ($orderStatus === 'cancelled') {
                 $statusFlow = ['pending', 'cancelled'];
             } else {
                 $statusFlow = ['pending', 'confirmed'];
-                if (in_array($orderStatus, ['preparing', 'ready', 'served'])) {
+                if (in_array($orderStatus, ['preparing', 'ready'])) {
                     $statusFlow[] = 'preparing';
                 }
-                if (in_array($orderStatus, ['ready', 'served'])) {
+                if ($orderStatus === 'ready') {
                     $statusFlow[] = 'ready';
-                }
-                if ($orderStatus === 'served') {
-                    $statusFlow[] = 'served';
                 }
             }
 
@@ -1267,7 +1214,7 @@ class ProductionDataSeeder extends Seeder
     private function createKitchenTickets(): void
     {
         $completedOrders = DB::table('orders')
-            ->whereIn('status', ['completed', 'served', 'ready'])
+            ->whereIn('status', ['completed', 'ready'])
             ->orderBy('created_at')
             ->get();
 
@@ -1276,13 +1223,17 @@ class ProductionDataSeeder extends Seeder
         foreach ($completedOrders as $order) {
             $orderItems = DB::table('order_items')
                 ->where('order_id', $order->id)
-                ->whereIn('status', ['served', 'ready'])
+                ->whereIn('status', ['ready'])
                 ->get();
 
-            if ($orderItems->isEmpty()) continue;
+            if ($orderItems->isEmpty()) {
+                continue;
+            }
 
             $ticketCount++;
-            if ($ticketCount > 1000) break;
+            if ($ticketCount > 1000) {
+                break;
+            }
 
             $ticketId = $this->uid('kot', $ticketCount);
             $priority = $order->order_type === 'delivery' ? 'high' : 'normal';
@@ -1291,9 +1242,9 @@ class ProductionDataSeeder extends Seeder
 
             DB::table('kot_tickets')->insert([
                 'id' => $ticketId,
-                'kot_number' => 'KOT-' . str_pad((string)$ticketCount, 5, '0', STR_PAD_LEFT),
+                'kot_number' => 'KOT-'.str_pad((string) $ticketCount, 5, '0', STR_PAD_LEFT),
                 'order_id' => $order->id,
-                'status' => $order->status === 'completed' ? 'served' : $order->status,
+                'status' => $order->status === 'completed' ? 'ready' : $order->status,
                 'priority' => $priority,
                 'station' => $this->randomFrom(['Main Kitchen', 'Grill Station', 'Beverage Station', 'Dessert Station']),
                 'estimated_minutes' => $this->randomInt(10, 30),
@@ -1349,8 +1300,7 @@ class ProductionDataSeeder extends Seeder
 
     private function createStaffSchedules(): void
     {
-        $schedulesPerMonth = 15;
-        for ($i = 0; $i < 90; $i++) {
+        for ($i = 0; $i < 15; $i++) {
             $staffId = $this->randomFrom($this->ids['staff_profiles']);
             $shiftId = $this->randomFrom($this->ids['staff_shifts']);
             $scheduleDate = $this->randomDate(
@@ -1378,7 +1328,7 @@ class ProductionDataSeeder extends Seeder
     {
         $poStatuses = ['draft', 'pending', 'approved', 'delivered', 'cancelled'];
 
-        for ($i = 1; $i <= 200; $i++) {
+        for ($i = 1; $i <= 20; $i++) {
             $poId = $this->uid('purchaseorder', $i);
             $supplierId = $this->randomFrom($this->ids['suppliers']);
             $status = $this->randomFrom($poStatuses);
@@ -1392,7 +1342,9 @@ class ProductionDataSeeder extends Seeder
             for ($j = 0; $j < $numItems; $j++) {
                 $ingId = $this->randomFrom($this->ids['ingredients']);
                 $ingredient = DB::table('ingredients')->where('id', $ingId)->first();
-                if (!$ingredient) continue;
+                if (! $ingredient) {
+                    continue;
+                }
 
                 $qty = $this->randomInt(1, 50);
                 $unitCost = $ingredient->cost_per_unit;
@@ -1413,7 +1365,7 @@ class ProductionDataSeeder extends Seeder
 
             DB::table('purchase_orders')->insert([
                 'id' => $poId,
-                'po_number' => 'PO-' . str_pad((string)$i, 5, '0', STR_PAD_LEFT),
+                'po_number' => 'PO-'.str_pad((string) $i, 5, '0', STR_PAD_LEFT),
                 'supplier_id' => $supplierId,
                 'total_amount' => round($totalAmount, 2),
                 'status' => $status,
@@ -1443,10 +1395,12 @@ class ProductionDataSeeder extends Seeder
             'wastage' => ['Spoilage', 'Expired stock', 'Damaged packaging', 'Prep waste'],
         ];
 
-        for ($i = 1; $i <= 500; $i++) {
+        for ($i = 1; $i <= 50; $i++) {
             $ingId = $this->randomFrom($this->ids['ingredients']);
             $ingredient = DB::table('ingredients')->where('id', $ingId)->first();
-            if (!$ingredient) continue;
+            if (! $ingredient) {
+                continue;
+            }
 
             $type = $this->randomFrom($types);
             $qty = $type === 'in'
@@ -1493,7 +1447,7 @@ class ProductionDataSeeder extends Seeder
             'App\Models\Supplier' => ['Supplier created', 'Supplier updated'],
         ];
 
-        for ($i = 1; $i <= 5000; $i++) {
+        for ($i = 1; $i <= 100; $i++) {
             $modelType = $this->randomFrom(array_keys($models));
             $actionDesc = $this->randomFrom($models[$modelType]);
             $action = $this->randomFrom($actions);
@@ -1506,7 +1460,7 @@ class ProductionDataSeeder extends Seeder
                 'action' => $action,
                 'old_values' => json_encode($action === 'updated' ? ['name' => 'Old Value'] : null),
                 'new_values' => json_encode(['name' => $actionDesc]),
-                'ip_address' => mt_rand(10, 200) . '.' . mt_rand(0, 255) . '.' . mt_rand(0, 255) . '.' . mt_rand(1, 254),
+                'ip_address' => mt_rand(10, 200).'.'.mt_rand(0, 255).'.'.mt_rand(0, 255).'.'.mt_rand(1, 254),
                 'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'created_at' => $createdAt = $this->randomTimestamp($this->sixMonthsAgo),
                 'updated_at' => $createdAt,

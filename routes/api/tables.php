@@ -1,0 +1,26 @@
+<?php
+
+use App\Http\Controllers\Api\V1\Table\FloorPlanController;
+use App\Http\Controllers\Api\V1\Table\TableController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('floor-plans')->group(function () {
+        Route::get('/', [FloorPlanController::class, 'index']);
+        Route::post('/', [FloorPlanController::class, 'store'])->middleware('role:admin,manager');
+        Route::get('/{id}', [FloorPlanController::class, 'show'])->whereUuid('id');
+        Route::put('/{id}', [FloorPlanController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
+        Route::delete('/{id}', [FloorPlanController::class, 'destroy'])->middleware('role:admin,manager')->whereUuid('id');
+    });
+
+    Route::prefix('tables')->group(function () {
+        Route::get('/', [TableController::class, 'index']);
+        Route::post('/', [TableController::class, 'store']);
+        Route::get('/{id}', [TableController::class, 'show'])->whereUuid('id');
+        Route::put('/{id}', [TableController::class, 'update'])->whereUuid('id');
+        Route::patch('/{id}/status', [TableController::class, 'updateStatus'])->whereUuid('id');
+        Route::post('/merge', [TableController::class, 'merge']);
+        Route::post('/split', [TableController::class, 'split']);
+        Route::post('/transfer', [TableController::class, 'transfer']);
+    });
+});

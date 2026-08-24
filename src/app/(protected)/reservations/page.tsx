@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import Link from "next/link";
-import { PageHeader, ConfirmDialog, SearchInput, ErrorBoundary } from "@/components/shared";
+import { PageHeader, ConfirmDialog, SearchInput, ErrorBoundary, TablePagination, ErrorState } from "@/components/shared";
 import {
   ReservationTable,
   ReservationStats,
   CalendarView,
+  ReservationForm,
+  ReservationDetail,
 } from "@/features/reservations";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,30 +18,86 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, CalendarDays, List } from "lucide-react";
-import { useReservations } from "@/lib/hooks";
+import { useReservationCalendar, useReservations } from "@/lib/hooks";
 import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { Reservation } from "@/lib/types";
 import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 
 export default function ReservationsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Backend defaults to non-archived; "archived" flips the scope param.
+  const [viewScope, setViewScope] = useState<"active" | "archived">("active");
   const [page, setPage] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
+  const [checkInTarget, setCheckInTarget] = useState<Reservation | null>(null);
+  const [completeTarget, setCompleteTarget] = useState<Reservation | null>(null);
+  const [viewTarget, setViewTarget] = useState<Reservation | null>(null);
+  const [editTarget, setEditTarget] = useState<Reservation | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Reservation | null>(null);
+  const [showNewDialog, setShowNewDialog] = useState(false);
+  const { user } = useAuth();
+  const canCreate = canEdit(user?.role, "reservations");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const params = useMemo(() => ({
-    page,
-    per_page: ITEMS_PER_PAGE,
-    ...(debouncedSearch && { search: debouncedSearch }),
-    ...(statusFilter !== "all" && { status: statusFilter }),
-  }), [page, debouncedSearch, statusFilter]);
+  const params = useMemo(
+    () => ({
+      page,
+      per_page: ITEMS_PER_PAGE,
+      ...(debouncedSearch && { search: debouncedSearch }),
+      ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(viewScope === "archived" && { archived: true }),
+    }),
+    [page, debouncedSearch, statusFilter, viewScope]
+  );
 
-  const { list, cancel } = useReservations(params);
+  const { list, create, update, cancel, checkIn, complete, archive } =
+    useReservations(params);
 
+  // Calendar tab: dedicated month-range endpoint so results are never
+  // limited by the list's pagination.
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const calRange = useMemo(() => {
+    const first = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth(),
+      1
+    );
+    // Pad to full visible weeks (Mon-start grid).
+    const start = new Date(first);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const last = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth() + 1,
+      0
+    );
+    const end = new Date(last);
+    end.setDate(end.getDate() + (6 - ((end.getDay() + 6) % 7)));
+    return {
+      start_date: start.toISOString().split("T")[0],
+      end_date: end.toISOString().split("T")[0],
+    };
+  }, [calendarMonth]);
+
+  const {
+    data: calendarData = [],
+    isLoading: calendarLoading,
+  } = useReservationCalendar(calRange);
+  const calendarReservations = calendarData;
+
+  // Filter out completed and cancelled from the "active" view,
+  // but include them when status filter is explicitly set
   const reservations = list.data?.data?.data ?? [];
   const meta = list.data?.data?.meta;
 
@@ -59,148 +116,304 @@ export default function ReservationsPage() {
       { id: cancelTarget.id, reason: "Cancelled by staff" },
       {
         onSuccess: () => {
-          toast.success(`Reservation ${cancelTarget.reservation_number} cancelled`);
+          toast.success(
+            `Reservation ${cancelTarget.reservation_number} cancelled`
+          );
           setCancelTarget(null);
+          setViewTarget(null);
         },
         onError: () => toast.error("Failed to cancel reservation"),
       }
     );
   }
 
+  function handleCheckInConfirm() {
+    if (!checkInTarget) return;
+    checkIn.mutate(checkInTarget.id, {
+      onSuccess: () => {
+        toast.success(
+          `Reservation ${checkInTarget.reservation_number} checked in`
+        );
+        setCheckInTarget(null);
+        setViewTarget(null);
+      },
+      onError: () => toast.error("Failed to check in"),
+    });
+  }
+
+  function handleCompleteConfirm() {
+    if (!completeTarget) return;
+    complete.mutate(completeTarget.id, {
+      onSuccess: () => {
+        toast.success(
+          `Reservation ${completeTarget.reservation_number} completed`
+        );
+        setCompleteTarget(null);
+        setViewTarget(null);
+      },
+      onError: () => toast.error("Failed to complete reservation"),
+    });
+  }
+
+  function handleArchiveConfirm() {
+    if (!archiveTarget) return;
+    archive.mutate(archiveTarget.id, {
+      onSuccess: () => {
+        toast.success(
+          `Reservation ${archiveTarget.reservation_number} archived`
+        );
+        setArchiveTarget(null);
+      },
+      onError: () => toast.error("Failed to archive reservation"),
+    });
+  }
+
+
   return (
-    <div>
-      <ErrorBoundary>
-      <PageHeader
-        title="Reservations"
-        description="Manage table reservations"
-        action={
-          <Button size="sm" render={<Link href="/reservations/new" />}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Reservation
-          </Button>
-        }
-      />
-
-      <div className="space-y-6">
-        <ReservationStats reservations={reservations} />
-
-        <Tabs defaultValue="list">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList>
-              <TabsTrigger value="list">
-                <List className="h-4 w-4 mr-1.5" />
-                List
-              </TabsTrigger>
-              <TabsTrigger value="calendar">
-                <CalendarDays className="h-4 w-4 mr-1.5" />
-                Calendar
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex items-center gap-2">
-              <SearchInput
-                value={search}
-                onChange={handleSearchChange}
-                placeholder="Search reservations..."
-              />
-              <Select
-                value={statusFilter}
-                onValueChange={(val) => {
-                  setStatusFilter(val ?? "all");
-                  setPage(1);
-                }}
+    <ErrorBoundary>
+      <div>
+        <PageHeader
+          title="Reservations"
+          description="Manage table reservations"
+          action={
+            canCreate && (
+              <Button
+                size="sm"
+                onClick={() => setShowNewDialog(true)}
               >
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="seated">Seated</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="no_show">No Show</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Reservation
+              </Button>
+            )
+          }
+        />
 
-          <TabsContent value="list" className="mt-4">
-            <ReservationTable
-              reservations={reservations}
-              isLoading={list.isLoading}
-              onCancel={(r) => setCancelTarget(r)}
-            />
+        <div className="space-y-6">
+          <ReservationStats reservations={reservations} total={meta?.total} />
 
-            {meta && meta.last_page > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {(meta.current_page - 1) * meta.per_page + 1}–
-                  {Math.min(meta.current_page * meta.per_page, meta.total)} of{" "}
-                  {meta.total}
-                </p>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    Previous
-                  </Button>
-                  {Array.from({ length: Math.min(meta.last_page, 5) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={page === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                  {meta.last_page > 5 && (
-                    <span className="flex items-center px-1 text-muted-foreground">
-                      …
-                    </span>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= meta.last_page}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
+          <Tabs defaultValue="list">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList>
+                <TabsTrigger value="list">
+                  <List className="h-4 w-4 mr-1.5" />
+                  List
+                </TabsTrigger>
+                <TabsTrigger value="calendar">
+                  <CalendarDays className="h-4 w-4 mr-1.5" />
+                  Calendar
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="flex items-center gap-2">
+                <SearchInput
+                  value={search}
+                  onChange={handleSearchChange}
+                  placeholder="Search reservations..."
+                />
+                <Select
+                  value={viewScope}
+                  onValueChange={(v) => {
+                    setViewScope((v ?? "active") as "active" | "archived");
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val) => {
+                    setStatusFilter(val ?? "all");
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    {/* "confirmed" is a valid workflow status but intentionally
+                        excluded from the user-facing filter. */}
+                    <SelectItem value="seated">Seated</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="no_show">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </TabsContent>
+            </div>
 
-          <TabsContent value="calendar" className="mt-4">
-            <CalendarView
-              reservations={reservations}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
+            <TabsContent value="list" className="mt-4">
+              {list.isError && (
+                <ErrorState
+                  message="Failed to load reservations. Please try again."
+                  onRetry={() => list.refetch()}
+                  className="mb-4"
+                />
+              )}
+
+              <ReservationTable
+                reservations={reservations}
+                isLoading={list.isLoading}
+                onView={(r) => setViewTarget(r)}
+                onEdit={(r) => setEditTarget(r)}
+                onCancel={(r) => setCancelTarget(r)}
+                onCheckIn={(r) => setCheckInTarget(r)}
+                onComplete={(r) => setCompleteTarget(r)}
+                onArchive={(r) => setArchiveTarget(r)}
+                canManage={canCreate}
+              />
+
+              {meta && meta.last_page > 1 && (
+                <div className="mt-4">
+                  <TablePagination
+                    currentPage={meta.current_page}
+                    totalPages={meta.last_page}
+                    onPageChange={setPage}
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-4">
+              <CalendarView
+                reservations={calendarReservations}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onMonthChange={setCalendarMonth}
+                isLoading={calendarLoading}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <ConfirmDialog
+          open={!!cancelTarget}
+          onOpenChange={(open) => !open && setCancelTarget(null)}
+          title="Cancel Reservation"
+          description={`Are you sure you want to cancel reservation ${cancelTarget?.reservation_number} for ${cancelTarget?.guest_name}?`}
+          confirmText="Cancel Reservation"
+          variant="destructive"
+          onConfirm={handleCancelConfirm}
+          isLoading={cancel.isPending}
+        />
+
+        <ConfirmDialog
+          open={!!checkInTarget}
+          onOpenChange={(open) => !open && setCheckInTarget(null)}
+          title="Check In"
+          description={`Mark reservation ${checkInTarget?.reservation_number} as seated and occupy the table?`}
+          confirmText="Check In"
+          onConfirm={handleCheckInConfirm}
+          isLoading={checkIn.isPending}
+        />
+
+        <ConfirmDialog
+          open={!!completeTarget}
+          onOpenChange={(open) => !open && setCompleteTarget(null)}
+          title="Complete Reservation"
+          description={`Mark reservation ${completeTarget?.reservation_number} as completed and free the table?`}
+          confirmText="Complete"
+          onConfirm={handleCompleteConfirm}
+          isLoading={complete.isPending}
+        />
+
+        <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>New Reservation</DialogTitle>
+            </DialogHeader>
+            <ReservationForm
+              onSubmit={(data) => {
+                create.mutate(
+                  {
+                    ...data,
+                    reservation_date: `${data.reservation_date}T${data.reservation_time}`,
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success("Reservation created successfully");
+                      setShowNewDialog(false);
+                    },
+                    onError: () =>
+                      toast.error("Failed to create reservation"),
+                  }
+                );
+              }}
+              isLoading={create.isPending}
+              submitLabel="Create Reservation"
             />
-          </TabsContent>
-        </Tabs>
-      </div>
+          </DialogContent>
+        </Dialog>
 
-      <ConfirmDialog
-        open={!!cancelTarget}
-        onOpenChange={(open) => !open && setCancelTarget(null)}
-        title="Cancel Reservation"
-        description={`Are you sure you want to cancel reservation ${cancelTarget?.reservation_number} for ${cancelTarget?.customer?.name ?? cancelTarget?.guest_name}?`}
-        confirmText="Cancel Reservation"
-        variant="destructive"
-        onConfirm={handleCancelConfirm}
-        isLoading={cancel.isPending}
-      />
-      </ErrorBoundary>
-    </div>
+        <Dialog
+          open={!!viewTarget}
+          onOpenChange={(open) => !open && setViewTarget(null)}
+        >
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Reservation Details</DialogTitle>
+            </DialogHeader>
+            {viewTarget && (
+              <ReservationDetail
+                reservation={viewTarget}
+                onEdit={() => setEditTarget(viewTarget)}
+                onCancel={() => setCancelTarget(viewTarget)}
+                onCheckIn={() => setCheckInTarget(viewTarget)}
+                onComplete={() => setCompleteTarget(viewTarget)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={!!editTarget}
+          onOpenChange={(open) => !open && setEditTarget(null)}
+        >
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Reservation</DialogTitle>
+            </DialogHeader>
+            {editTarget && (
+              <ReservationForm
+                initialData={editTarget}
+                onSubmit={(data) => {
+                  update.mutate(
+                    { id: editTarget.id, data },
+                    {
+                      onSuccess: () => {
+                        toast.success("Reservation updated successfully");
+                        setEditTarget(null);
+                        setViewTarget(null);
+                      },
+                      onError: () =>
+                        toast.error("Failed to update reservation"),
+                    }
+                  );
+                }}
+                isLoading={update.isPending}
+                submitLabel="Update Reservation"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <ConfirmDialog
+          open={!!archiveTarget}
+          onOpenChange={(open) => !open && setArchiveTarget(null)}
+          title="Archive Reservation"
+          description={`Archive reservation ${archiveTarget?.reservation_number} for ${archiveTarget?.guest_name}? Archived reservations are hidden from the active list.`}
+          confirmText="Archive"
+          onConfirm={handleArchiveConfirm}
+          isLoading={archive.isPending}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }

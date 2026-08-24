@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +24,7 @@ interface PurchaseOrderTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onView?: (order: PurchaseOrder) => void;
 }
 
 const STATUSES: { value: string; label: string }[] = [
@@ -48,6 +48,7 @@ export function PurchaseOrderTable({
   currentPage,
   totalPages,
   onPageChange,
+  onView,
 }: PurchaseOrderTableProps) {
   return (
     <div className="space-y-4">
@@ -102,11 +103,13 @@ export function PurchaseOrderTable({
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={po.status} />
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <Button variant="ghost" size="icon-sm" render={<Link href={`/inventory/purchase-orders/${po.id}`} />}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </td>
+                   <td className="px-4 py-3 text-center">
+                     {onView && (
+                       <Button variant="ghost" size="icon-sm" onClick={() => onView(po)}>
+                         <Eye className="h-4 w-4" />
+                       </Button>
+                     )}
+                   </td>
                 </tr>
               ))
             )}

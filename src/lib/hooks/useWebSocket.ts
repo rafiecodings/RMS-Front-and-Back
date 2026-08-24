@@ -23,6 +23,7 @@ export function useWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 10;
   const baseDelay = 1000;
+  const maxDelay = 30000;
 
   const onMessageRef = useRef(onMessage);
 
@@ -69,9 +70,14 @@ export function useWebSocket({
           setIsConnected(false);
 
           if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-            const delay =
-              baseDelay * Math.pow(2, reconnectAttemptsRef.current);
+            const delay = Math.min(
+              baseDelay * Math.pow(2, reconnectAttemptsRef.current),
+              maxDelay
+            );
             reconnectAttemptsRef.current += 1;
+            reconnectTimeoutRef.current = setTimeout(connect, delay);
+          } else {
+            const delay = maxDelay;
             reconnectTimeoutRef.current = setTimeout(connect, delay);
           }
         };

@@ -25,6 +25,7 @@ export interface Staff {
 export type StaffRole =
   | "admin"
   | "manager"
+  | "inventory_staff"
   | "cashier"
   | "waiter"
   | "kitchen_staff";
@@ -32,12 +33,12 @@ export type StaffRole =
 export type StaffShift = "morning" | "afternoon" | "evening" | "night";
 
 export const STAFF_ROLES: { value: StaffRole; label: string }[] = [
+  { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
+  { value: "inventory_staff", label: "Inventory Staff" },
   { value: "cashier", label: "Cashier" },
   { value: "waiter", label: "Waiter / Server" },
   { value: "kitchen_staff", label: "Kitchen Staff" },
-  { value: "host", label: "Host" },
-  { value: "bartender", label: "Bartender" },
 ];
 
 export const STAFF_SHIFTS: { value: StaffShift; label: string; time: string }[] = [
@@ -49,6 +50,7 @@ export const STAFF_SHIFTS: { value: StaffShift; label: string; time: string }[] 
 
 export interface StaffFormData {
   user_id?: string;
+  employee_id: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -66,14 +68,14 @@ export interface StaffFormData {
 export interface ShiftSchedule {
   id: string;
   staff_id: string;
-  staff?: Staff;
+  staff?: {
+    id: string;
+    employee_id: string;
+    name?: string | null;
+  } | null;
   date: string;
-  shift: StaffShift;
-  start_time: string;
-  end_time: string;
-  status: "scheduled" | "confirmed" | "completed" | "absent";
-  clock_in?: string;
-  clock_out?: string;
+  shift?: StaffShiftOption | null;
+  status: "scheduled" | "confirmed" | "completed" | "absent" | "swap" | "cancelled";
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -96,16 +98,17 @@ export interface StaffShiftOption {
 export interface AttendanceRecord {
   id: string;
   staff_id: string;
-  staff?: Staff;
-  date: string;
+  staff?: {
+    id: string;
+    employee_id: string;
+    name?: string | null;
+  } | null;
+  date?: string;
   clock_in: string;
   clock_out?: string;
   total_hours?: number;
-  overtime_hours?: number;
   status: "present" | "absent" | "late" | "half_day" | "on_leave";
   notes?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface StaffPerformance {

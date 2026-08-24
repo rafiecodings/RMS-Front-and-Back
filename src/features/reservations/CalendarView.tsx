@@ -12,15 +12,21 @@ interface CalendarViewProps {
   reservations: Reservation[];
   selectedDate: Date | undefined;
   onDateSelect: (date: Date | undefined) => void;
+  /** Reports the visible month upward so the page can fetch its data. */
+  onMonthChange?: (month: Date) => void;
+  isLoading?: boolean;
 }
 
 function formatTime(timeStr: string | undefined | null) {
   if (!timeStr) return "—";
-  const [h, m] = timeStr.split(":");
-  const hour = parseInt(h ?? "0") || 0;
+  const parts = (timeStr || "").split(":");
+  if (parts.length < 2) return "—";
+  const hour = parseInt(parts[0] || "0", 10);
+  if (isNaN(hour)) return "—";
+  const minute = parts[1] || "00";
   const ampm = hour >= 12 ? "PM" : "AM";
   const h12 = hour % 12 || 12;
-  return `${h12}:${m ?? "00"} ${ampm}`;
+  return `${h12}:${minute} ${ampm}`;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -28,16 +34,33 @@ const STATUS_DOT: Record<string, string> = {
   confirmed: "bg-blue-500",
   seated: "bg-purple-500",
   completed: "bg-emerald-500",
-  no_show: "bg-orange-500",
   cancelled: "bg-red-500",
 };
+
+function getDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export function CalendarView({
   reservations,
   selectedDate,
   onDateSelect,
+  onMonthChange,
+  isLoading = false,
 }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  function handleMonthChange(month: Date) {
+    setCurrentMonth(month);
+    onMonthChange?.(month);
+  }
+
+  const todayKey = useMemo(() => {
+    return getDateKey(new Date());
+  }, []);
 
   const reservationsByDate = useMemo(() => {
     const map: Record<string, Reservation[]> = {};
@@ -48,13 +71,6 @@ export function CalendarView({
     }
     return map;
   }, [reservations]);
-
-  function getDateKey(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }
 
   const selectedDateKey = selectedDate ? getDateKey(selectedDate) : "";
   const selectedReservations = selectedDateKey
@@ -76,7 +92,7 @@ export function CalendarView({
           selected={selectedDate}
           onSelect={onDateSelect}
           month={currentMonth}
-          onMonthChange={setCurrentMonth}
+          onMonthChange={handleMonthChange}
           modifiers={modifiers}
           classNames={{
             day: "relative",
@@ -86,7 +102,7 @@ export function CalendarView({
               const key = getDateKey(day.date);
               const count = reservationsByDate[key]?.length ?? 0;
               const isToday =
-                getDateKey(day.date) === getDateKey(new Date());
+                todayKey !== null && getDateKey(day.date) === todayKey;
 
               return (
                 <button
@@ -134,10 +150,14 @@ export function CalendarView({
                 })
               : "Select a date"}
           </CardTitle>
-          {selectedReservations.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {selectedReservations.length} reservation{selectedReservations.length !== 1 ? "s" : ""}
-            </Badge>
+          {isLoading ? (
+            <span className="text-xs text-muted-foreground">Loading…</span>
+          ) : (
+            selectedReservations.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {selectedReservations.length} reservation{selectedReservations.length !== 1 ? "s" : ""}
+              </Badge>
+            )
           )}
         </CardHeader>
         <CardContent>

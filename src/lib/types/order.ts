@@ -7,12 +7,11 @@ export interface Order {
   order_number: string;
   order_type: OrderType;
   status: OrderStatus;
+  payment_status?: string;
   customer_id?: string;
   customer?: Customer;
   table_id?: string;
   table?: Table;
-  served_by?: User;
-  served_by_id?: string;
   subtotal: number;
   tax_amount: number;
   discount_amount: number;
@@ -32,6 +31,7 @@ export interface Order {
   cancellation_reason?: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
 }
 
 export interface OrderItem {
@@ -61,21 +61,19 @@ export interface OrderItemModifier {
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 
 export type OrderStatus =
+  | "draft"
   | "pending"
   | "confirmed"
   | "preparing"
   | "ready"
   | "served"
   | "completed"
-  | "cancelled"
-  | "voided"
-  | "on_hold";
+  | "cancelled";
 
 export type OrderItemStatus =
   | "pending"
   | "preparing"
   | "ready"
-  | "served"
   | "cancelled";
 
 export interface Payment {
@@ -92,9 +90,11 @@ export interface Payment {
 export type PaymentMethod =
   | "cash"
   | "card"
+  | "bank_transfer"
+  | "gift_card"
+  | "loyalty_points"
   | "digital_wallet"
-  | "room_charge"
-  | "corporate_account";
+  | "room_charge";
 
 export interface OrderFormData {
   order_type: OrderType;

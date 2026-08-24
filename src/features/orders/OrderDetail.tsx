@@ -9,25 +9,20 @@ import { cn, formatCurrency, formatTime } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  on_hold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   confirmed:
     "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
   preparing:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  served:
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   completed:
     "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  voided: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
 };
 
 const ITEM_STATUS_STYLES: Record<string, string> = {
   pending: "bg-gray-100 text-gray-700",
   preparing: "bg-amber-100 text-amber-700",
   ready: "bg-emerald-100 text-emerald-700",
-  served: "bg-purple-100 text-purple-700",
   cancelled: "bg-red-100 text-red-700",
 };
 
@@ -61,7 +56,6 @@ export function OrderDetail({ order }: OrderDetailProps) {
           <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
             {order.table && <span>Table {order.table.number}</span>}
             {order.customer && <span>{order.customer.name}</span>}
-            {order.served_by && <span>Served by {order.served_by.name}</span>}
           </div>
         </div>
         {order.placed_at && (
@@ -72,7 +66,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 min-w-0">
           <CardHeader>
             <CardTitle className="text-base">Order Items</CardTitle>
           </CardHeader>
@@ -85,7 +79,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
+                      <span className="font-medium text-sm break-words">
                         {item.menu_item_name}
                       </span>
                       {item.variant && (
@@ -160,7 +154,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Status Timeline</CardTitle>
@@ -181,8 +175,8 @@ export function OrderDetail({ order }: OrderDetailProps) {
                     key={payment.id}
                     className="flex items-center justify-between text-sm"
                   >
-                    <div>
-                      <span className="capitalize">
+                    <div className="min-w-0">
+                      <span className="capitalize break-words">
                         {payment.payment_method.replace(/_/g, " ")}
                       </span>
                       {payment.reference && (
@@ -222,7 +216,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 <p className="text-xs text-muted-foreground font-medium mb-1">
                   Order Notes
                 </p>
-                <p className="text-sm">{order.notes}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{order.notes}</p>
               </CardContent>
             </Card>
           )}

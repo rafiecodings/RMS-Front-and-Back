@@ -5,7 +5,6 @@ import {
   UtensilsCrossed,
   CheckCircle,
   XCircle,
-  Leaf,
   DollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -45,14 +44,13 @@ export function MenuStats({ items }: { items: MenuItem[] }) {
   const total = items.length;
   const available = items.filter((i) => i.is_available).length;
   const unavailable = total - available;
-  const vegetarian = items.filter((i) => i.is_vegetarian || i.is_vegan).length;
   const avgPrice =
     total > 0
       ? items.reduce((sum, i) => sum + i.price, 0) / total
       : 0;
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total Items"
         value={String(total)}
@@ -70,12 +68,6 @@ export function MenuStats({ items }: { items: MenuItem[] }) {
         value={String(unavailable)}
         icon={XCircle}
         iconColor="bg-red-500/10 text-red-600"
-      />
-      <StatCard
-        title="Vegetarian/Vegan"
-        value={String(vegetarian)}
-        icon={Leaf}
-        iconColor="bg-green-500/10 text-green-600"
       />
       <StatCard
         title="Avg Price"

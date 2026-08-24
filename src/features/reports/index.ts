@@ -7,17 +7,10 @@ export {
   RevenueByPaymentChart,
 } from "./components/SalesCharts";
 export { TopItemsTable } from "./components/TopItemsTable";
-export { InventoryTable } from "./components/InventoryTable";
 export { StaffPerformanceTable } from "./components/StaffPerformanceTable";
-export { TaxBreakdownTable, TaxByOrderTypeTable } from "./components/TaxTables";
 export { ExportButton } from "./components/ExportButton";
-export {
-  ConsumptionVarianceTable,
-  WastageSummaryCard,
-  TopSuppliersTable,
-} from "./components/InventoryCharts";
-export {
-  AttendanceSummaryCard,
-  ClockSummaryCard,
-  ShiftCoverageCard,
-} from "./components/StaffCharts";
+export { WastageSummaryCard } from "./components/InventoryCharts";
+export { AttendanceSummaryCard } from "./components/StaffCharts";
+export { AiInsightsPanel } from "./components/AiInsightsPanel";
+export { DemandForecastCard } from "./components/DemandForecastCard";
+export { InventoryForecastCard } from "./components/InventoryForecastCard";

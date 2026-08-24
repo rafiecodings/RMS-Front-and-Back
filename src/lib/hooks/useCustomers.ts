@@ -40,5 +40,22 @@ export function useCustomers(params?: QueryParams) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
   });
 
-  return { list, create, update, remove };
+  const archive = useMutation({
+    mutationFn: (id: string) => api.delete(`/customers/${id}/archive`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+  });
+
+  return { list, create, update, remove, archive };
+}
+
+export function useCustomer(id: string) {
+  return useQuery({
+    queryKey: ["customers", id],
+    queryFn: () =>
+      api
+        .get<ApiResponse<Customer>>(`/customers/${id}`)
+        .then((res) => res.data.data),
+    enabled: !!id,
+    staleTime: 30_000,
+  });
 }

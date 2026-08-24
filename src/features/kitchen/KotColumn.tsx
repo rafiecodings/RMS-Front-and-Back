@@ -12,6 +12,7 @@ interface KotColumnProps {
   count: number;
   onStatusAdvance: (kot: Kot) => void;
   onViewDetail: (kot: Kot) => void;
+  onArchive: (kot: Kot) => void;
 }
 
 const COLUMN_HEADER_STYLES: Record<KotStatus, string> = {
@@ -20,12 +21,17 @@ const COLUMN_HEADER_STYLES: Record<KotStatus, string> = {
     "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
   ready:
     "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
+  completed:
+    "bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800",
+  voided: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
 };
 
 const COLUMN_DOT: Record<KotStatus, string> = {
   received: "bg-blue-500",
   in_progress: "bg-amber-500",
   ready: "bg-emerald-500",
+  completed: "bg-gray-400",
+  voided: "bg-red-400",
 };
 
 function toTimestamp(value: string | null | undefined): number {
@@ -41,6 +47,7 @@ export function KotColumn({
   count,
   onStatusAdvance,
   onViewDetail,
+  onArchive,
 }: KotColumnProps) {
   const sorted = [...kots].sort((a, b) => {
     const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -82,6 +89,7 @@ export function KotColumn({
                 kot={kot}
                 onStatusAdvance={onStatusAdvance}
                 onViewDetail={onViewDetail}
+                onArchive={onArchive}
               />
             ))
           )}

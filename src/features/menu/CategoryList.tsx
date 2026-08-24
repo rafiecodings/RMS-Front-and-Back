@@ -52,7 +52,7 @@ export function CategoryList({
     );
   }
 
-  const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
+  const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <div className="rounded-lg border">
@@ -75,7 +75,7 @@ export function CategoryList({
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
               </TableCell>
               <TableCell className="text-muted-foreground font-mono text-xs">
-                {cat.display_order}
+                {cat.sort_order}
               </TableCell>
               <TableCell className="font-medium">{cat.name}</TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground max-w-[200px] truncate">

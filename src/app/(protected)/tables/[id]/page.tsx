@@ -11,11 +11,10 @@ import {
   ArrowLeft,
   Pencil,
   Users,
-  MapPin,
   Accessibility,
   Hash,
 } from "lucide-react";
-import { useTables, useFloorPlans } from "@/lib/hooks";
+import { useTables } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import type { TableStatus } from "@/lib/types";
 
@@ -39,14 +38,9 @@ export default function TableDetailPage({
 }) {
   const { id } = use(params);
   const { list } = useTables();
-  const { list: fpList } = useFloorPlans();
 
   const tables = list.data ?? [];
-  const floorPlans = fpList.data ?? [];
   const table = tables.find((t) => t.id === id);
-  const floorPlan = table
-    ? floorPlans.find((fp) => fp.id === table.floor_plan_id)
-    : null;
 
   if (list.isLoading) {
     return (
@@ -116,18 +110,6 @@ export default function TableDetailPage({
                 <div>
                   <p className="text-xs text-muted-foreground">Capacity</p>
                   <p className="text-sm font-medium">{table.capacity} guests</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Floor Plan</p>
-                  <p className="text-sm font-medium">
-                    {floorPlan?.name ?? "—"}
-                  </p>
                 </div>
               </div>
 

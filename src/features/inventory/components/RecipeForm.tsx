@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -37,9 +39,41 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
     ingredients: initialData?.ingredients ?? [],
   });
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.menu_item_id || form.ingredients.length === 0) return;
+    setFormError(null);
+    if (!form.menu_item_id) {
+      setFormError("Select a menu item for this recipe.");
+      return;
+    }
+    if (form.ingredients.length === 0) {
+      setFormError("Add at least one ingredient to the recipe.");
+      return;
+    }
+
+    const ids = form.ingredients.map((i) => i.ingredient_id).filter(Boolean);
+    if (ids.length !== new Set(ids).size) {
+      setFormError("Each ingredient can only be added once per recipe.");
+      return;
+    }
+    if (form.ingredients.some((i) => !i.ingredient_id)) {
+      setFormError("Every ingredient row must have an ingredient selected.");
+      return;
+    }
+    if (form.ingredients.some((i) => !i.unit)) {
+      setFormError("Every ingredient row must have a unit.");
+      return;
+    }
+    if (form.ingredients.some((i) => !(Number(i.quantity) > 0))) {
+      setFormError("Every ingredient quantity must be greater than zero.");
+      return;
+    }
+    if (!(Number(form.yield_quantity) > 0)) {
+      setFormError("Yield quantity must be greater than zero.");
+      return;
+    }
     onSubmit(form);
   }
 
@@ -60,9 +94,17 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
   function updateIngredient(index: number, field: "ingredient_id" | "quantity" | "unit", value: string | number) {
     setForm((prev) => ({
       ...prev,
-      ingredients: prev.ingredients.map((ing, i) =>
-        i === index ? { ...ing, [field]: value } : ing
-      ),
+      ingredients: prev.ingredients.map((ing, i) => {
+        if (i !== index) return ing;
+        const updated = { ...ing, [field]: value };
+        // When an ingredient is selected, default the row unit to that
+        // ingredient's base unit (the recipe may still override it).
+        if (field === "ingredient_id" && value) {
+          const selected = ingredients.find((ing2) => ing2.id === value);
+          if (selected) updated.unit = selected.unit;
+        }
+        return updated;
+      }),
     }));
   }
 
@@ -73,7 +115,7 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
       <div className="rounded-lg border bg-card p-6 space-y-4">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Menu Item</h3>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Menu Item *</label>
+          <Label className="text-sm font-medium">Select Menu Item *</Label>
           <Select value={form.menu_item_id} onValueChange={(v) => setForm((prev) => ({ ...prev, menu_item_id: v ?? "" }))}>
             <SelectTrigger>
               <SelectValue placeholder="Choose a menu item" />
@@ -91,7 +133,7 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Yield</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Yield Quantity *</label>
+            <Label className="text-sm font-medium">Yield Quantity *</Label>
             <Input
               type="number"
               min={0.01}
@@ -102,29 +144,29 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Yield Unit *</label>
-            <select
-              value={form.yield_unit}
-              onChange={(e) => setForm((prev) => ({ ...prev, yield_unit: e.target.value }))}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-            >
-              <option value="serving">Serving</option>
-              <option value="piece">Piece</option>
-              <option value="portion">Portion</option>
-              <option value="plate">Plate</option>
-              <option value="cup">Cup</option>
-              <option value="bowl">Bowl</option>
-            </select>
+            <Label className="text-sm font-medium">Yield Unit *</Label>
+            <Select value={form.yield_unit} onValueChange={(v) => setForm((prev) => ({ ...prev, yield_unit: v ?? "serving" }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="serving">Serving</SelectItem>
+                <SelectItem value="piece">Piece</SelectItem>
+                <SelectItem value="portion">Portion</SelectItem>
+                <SelectItem value="plate">Plate</SelectItem>
+                <SelectItem value="cup">Cup</SelectItem>
+                <SelectItem value="bowl">Bowl</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Instructions</label>
-          <textarea
-            value={form.instructions}
+          <Label className="text-sm font-medium">Instructions</Label>
+          <Textarea
+            value={form.instructions ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
             placeholder="Optional preparation instructions"
             rows={3}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
           />
         </div>
       </div>
@@ -156,7 +198,7 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
                   <SelectContent>
                     {ingredients.map((i) => (
                       <SelectItem key={i.id} value={i.id}>
-                        {i.name} ({i.unit})
+                        {i.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -190,6 +232,9 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
       </div>
 
       <div className="flex justify-end gap-2">
+        {formError && (
+          <p className="text-xs text-destructive self-center">{formError}</p>
+        )}
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>

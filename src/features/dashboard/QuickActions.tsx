@@ -71,7 +71,7 @@ export function QuickActions() {
         <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           {actions.map((action) => (
             <Link
               key={action.label}

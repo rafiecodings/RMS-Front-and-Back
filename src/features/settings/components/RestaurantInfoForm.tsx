@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -16,74 +18,171 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { useRestaurantInfo, useUpdateRestaurantInfo } from "../hooks/useSettings";
+import { useSettings, useUpdateSettings } from "../hooks/useSettings";
+import type { OpeningHourRow, RestaurantInfoFormData } from "../types";
 import { LoadingSpinner } from "@/components/shared";
-import type { RestaurantInfoFormData } from "../types";
-
-const TIMEZONES = [
-  "Asia/Manila",
-  "Asia/Singapore",
-  "Asia/Tokyo",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Europe/London",
-];
-
-const CURRENCIES = [
-  { code: "PHP", symbol: "₱", label: "Philippine Peso" },
-  { code: "USD", symbol: "$", label: "US Dollar" },
-  { code: "EUR", symbol: "€", label: "Euro" },
-  { code: "SGD", symbol: "S$", label: "Singapore Dollar" },
-  { code: "JPY", symbol: "¥", label: "Japanese Yen" },
-];
 
 const formSchema = z.object({
   name: z.string().min(1, "Restaurant name is required"),
   description: z.string().optional(),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
+  state: z.string().min(1, "State / Province is required"),
   postal_code: z.string().min(1, "Postal code is required"),
   country: z.string().min(1, "Country is required"),
   phone: z.string().min(1, "Phone is required"),
   email: z.string().email("Invalid email"),
-  website: z.string().url("Invalid URL").optional().or(z.literal("")),
-  timezone: z.string().min(1),
-  currency: z.string().min(1),
-  currency_symbol: z.string().min(1),
   tax_id: z.string().optional(),
-  business_registration: z.string().optional(),
-  opening_hours: z.array(
-    z.object({
-      day: z.string(),
-      open: z.string(),
-      close: z.string(),
-      is_closed: z.boolean(),
-    })
-  ),
 });
 
-export function RestaurantInfoForm() {
-  const { data: info, isLoading } = useRestaurantInfo();
-  const updateMutation = useUpdateRestaurantInfo();
+type FormValues = z.infer<typeof formSchema>;
 
-  const form = useForm<RestaurantInfoFormData>({
+function OpeningHoursEditor({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: OpeningHourRow[];
+  onChange: (rows: OpeningHourRow[]) => void;
+  disabled?: boolean;
+}) {
+  function update(index: number, patch: Partial<OpeningHourRow>) {
+    onChange(value.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  return (
+    <div className="space-y-2">
+      {value.map((row, i) => (
+        <div
+          key={row.day}
+          className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
+        >
+          <span className="w-24 text-sm font-medium capitalize">{row.day}</span>
+          <label className="flex items-center gap-1.5 text-sm">
+            <Checkbox
+              checked={!row.is_closed}
+              onCheckedChange={(checked) =>
+                update(i, { is_closed: !checked })
+              }
+              disabled={disabled}
+            />
+            Open
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="time"
+              value={row.open}
+              onChange={(e) => update(i, { open: e.target.value })}
+              disabled={disabled || row.is_closed}
+              className="h-8 w-[120px]"
+              aria-label={`${row.day} opens at`}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="time"
+              value={row.close}
+              onChange={(e) => update(i, { close: e.target.value })}
+              disabled={disabled || row.is_closed}
+              className="h-8 w-[120px]"
+              aria-label={`${row.day} closes at`}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
+  const { data: settings, isLoading } = useSettings();
+  const updateMutation = useUpdateSettings();
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: info
-      ? {
-          ...info,
-          website: info.website ?? "",
-        }
-      : undefined,
+    defaultValues: {
+      name: "",
+      description: "",
+      address: "",
+      city: "",
+      state: "",
+      postal_code: "",
+      country: "",
+      phone: "",
+      email: "",
+      tax_id: "",
+    },
   });
 
-  if (isLoading) return <LoadingSpinner />;
-  if (!info) return null;
+  // Editable override for opening hours; null = mirror server values.
+  const [hoursOverride, setHoursOverride] = useState<OpeningHourRow[] | null>(null);
 
-  const onSubmit = (data: RestaurantInfoFormData) => {
-    updateMutation.mutate(data, {
+  // Hydrate the form once async data arrives — defaultValues alone do not
+  // repopulate react-hook-form after fetch.
+  useEffect(() => {
+    if (!settings) return;
+    form.reset({
+      name: settings.name ?? "",
+      description: settings.description ?? "",
+      address: settings.address ?? "",
+      city: settings.city ?? "",
+      state: settings.state ?? "",
+      postal_code: settings.postal_code ?? "",
+      country: settings.country ?? "",
+      phone: settings.phone ?? "",
+      email: settings.email ?? "",
+      tax_id: settings.tax_id ?? "",
+    });
+  }, [settings, form]);
+
+  const hoursDraft = hoursOverride ?? settings?.opening_hours ?? [];
+
+  if (isLoading) return <LoadingSpinner />;
+
+  if (!canEdit && settings) {
+    // Read-only summary for managers.
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Restaurant Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p><span className="text-muted-foreground">Name:</span> {settings.name || "Not provided"}</p>
+          <p><span className="text-muted-foreground">Phone:</span> {settings.phone || "Not provided"}</p>
+          <p><span className="text-muted-foreground">Email:</span> {settings.email || "Not provided"}</p>
+          <p><span className="text-muted-foreground">Address:</span> {[settings.address, settings.city, settings.state, settings.postal_code, settings.country].filter(Boolean).join(", ") || "Not provided"}</p>
+          <p className="text-xs text-muted-foreground mt-3">
+            Only Admins can edit restaurant configuration.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const onSubmit = (values: FormValues) => {
+    const hoursRaw: Record<string, { open: string; close: string }> = {};
+    for (const row of hoursDraft) {
+      if (!row.is_closed) {
+        if (!row.open || !row.close) {
+          toast.error(`Opening hours incomplete for ${row.day}`);
+          return;
+        }
+        hoursRaw[row.day] = { open: row.open, close: row.close };
+      }
+    }
+
+    const payload: RestaurantInfoFormData = {
+      ...values,
+      opening_hours: hoursRaw,
+    };
+
+    updateMutation.mutate(payload, {
       onSuccess: () => toast.success("Restaurant info updated"),
-      onError: () => toast.error("Failed to update"),
+      onError: (error) => {
+        const msg =
+          (error as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message;
+        toast.error(msg || "Failed to update restaurant info");
+      },
     });
   };
 
@@ -92,7 +191,7 @@ export function RestaurantInfoForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>Restaurant Profile</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
@@ -127,7 +226,7 @@ export function RestaurantInfoForm() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Contact Number</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -149,25 +248,12 @@ export function RestaurantInfoForm() {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Address</CardTitle>
+            <CardTitle>Contact & Address</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
@@ -242,88 +328,14 @@ export function RestaurantInfoForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Business Details</CardTitle>
+            <CardTitle>Operating Hours</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="timezone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Timezone</FormLabel>
-                    <FormControl>
-                      <select
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        {...field}
-                      >
-                        {TIMEZONES.map((tz) => (
-                          <option key={tz} value={tz}>
-                            {tz}
-                          </option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Currency</FormLabel>
-                    <FormControl>
-                      <select
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        {...field}
-                        onChange={(e) => {
-                          const curr = CURRENCIES.find((c) => c.code === e.target.value);
-                          form.setValue("currency", e.target.value);
-                          if (curr) form.setValue("currency_symbol", curr.symbol);
-                        }}
-                      >
-                        {CURRENCIES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.label} ({c.symbol})
-                          </option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="tax_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax ID / TIN</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="business_registration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business Registration No.</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+          <CardContent>
+            <OpeningHoursEditor
+              value={hoursDraft}
+              onChange={setHoursOverride}
+              disabled={!canEdit}
+            />
           </CardContent>
         </Card>
 

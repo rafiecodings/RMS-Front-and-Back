@@ -1,24 +1,36 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
+import Link from "next/link";
+import { PageHeader, EmptyState, LoadingSpinner, ConfirmDialog, ErrorState } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StockAdjustDialog } from "@/features/inventory";
 import { useIngredients, useStockAdjust, useStockMovements } from "@/lib/hooks";
 import { StockMovementTable } from "@/features/inventory";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
+import { formatCurrency } from "@/lib/utils";
 import { Pencil, PackagePlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { StockAdjustFormData } from "@/lib/types";
+
+function apiError(error: unknown, fallback: string): string {
+  const data = (error as { response?: { data?: { message?: string } } })
+    ?.response?.data;
+  return data?.message ?? fallback;
+}
 
 export default function IngredientDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const { list } = useIngredients({ per_page: 200 });
+  const { user } = useAuth();
+  const canModify = canEdit(user?.role, "inventory");
+
+  const { list, update } = useIngredients({ per_page: 200 });
   const ingredients = list.data?.data?.data ?? [];
   const ingredient = ingredients.find((i) => i.id === id);
 
@@ -30,12 +42,22 @@ export default function IngredientDetailPage() {
 
   const adjustStock = useStockAdjust();
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [activeConfirm, setActiveConfirm] = useState(false);
 
   if (list.isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
       </div>
+    );
+  }
+
+  if (list.isError) {
+    return (
+      <ErrorState
+        message="Failed to load ingredient. Please try again."
+        onRetry={() => router.refresh()}
+      />
     );
   }
 
@@ -53,14 +75,28 @@ export default function IngredientDetailPage() {
     ingredient.current_stock <= 0
       ? { label: "Out of Stock", className: "bg-red-100 text-red-800" }
       : ingredient.current_stock <= ingredient.minimum_stock
-      ? { label: "Low Stock", className: "bg-amber-100 text-amber-800" }
-      : { label: "In Stock", className: "bg-green-100 text-green-800" };
+        ? { label: "Low Stock", className: "bg-amber-100 text-amber-800" }
+        : { label: "In Stock", className: "bg-green-100 text-green-800" };
 
-  function handleAdjust(data: { ingredient_id: string; type: "in" | "out" | "adjustment"; quantity: number; notes?: string }) {
+  function handleAdjust(data: StockAdjustFormData) {
     adjustStock.mutate(data, {
       onSuccess: () => toast.success("Stock adjusted successfully"),
       onError: (e: Error) => toast.error(e.message || "Failed to adjust stock"),
     });
+  }
+
+  function handleToggleActive() {
+    update.mutate(
+      { id: ingredient!.id, data: { is_active: !ingredient!.is_active } },
+      {
+        onSuccess: () =>
+          toast.success(
+            ingredient!.is_active ? "Ingredient deactivated" : "Ingredient activated"
+          ),
+        onError: (e) => toast.error(apiError(e, "Failed to update ingredient")),
+      }
+    );
+    setActiveConfirm(false);
   }
 
   return (
@@ -69,16 +105,18 @@ export default function IngredientDetailPage() {
         title={ingredient.name}
         description={ingredient.description}
         action={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setAdjustOpen(true)}>
-              <PackagePlus className="h-4 w-4 mr-1" />
-              Adjust Stock
-            </Button>
-            <Button render={<Link href={`/inventory/ingredients/${id}/edit`} />}>
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
-          </div>
+          canModify ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setAdjustOpen(true)}>
+                <PackagePlus className="h-4 w-4 mr-1" />
+                Adjust Stock
+              </Button>
+              <Button render={<Link href={`/inventory/ingredients/${id}/edit`} />}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -120,32 +158,51 @@ export default function IngredientDetailPage() {
           <p className="font-medium">{ingredient.storage_location ?? "—"}</p>
         </div>
         <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground">Expiry Date</p>
-          <p className="font-medium">
-            {ingredient.expiry_date
-              ? formatDate(ingredient.expiry_date)
-              : "—"}
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
           <p className="text-xs text-muted-foreground">Maximum Stock</p>
           <p className="font-medium tabular-nums">{ingredient.maximum_stock} {ingredient.unit}</p>
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-xs text-muted-foreground">Status</p>
-          <Badge variant={ingredient.is_active ? "default" : "secondary"}>
-            {ingredient.is_active ? "Active" : "Inactive"}
-          </Badge>
+          <div className="mt-1 flex items-center gap-2">
+            <Badge variant={ingredient.is_active ? "default" : "secondary"}>
+              {ingredient.is_active ? "Active" : "Inactive"}
+            </Badge>
+            {canModify && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveConfirm(true)}
+              >
+                {ingredient.is_active ? "Deactivate" : "Activate"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       <StockMovementTable movements={movements} isLoading={movementsLoading} />
 
       <StockAdjustDialog
+        ingredientId={id}
         open={adjustOpen}
         onOpenChange={setAdjustOpen}
         onSubmit={handleAdjust}
         isLoading={adjustStock.isPending}
+      />
+
+      <ConfirmDialog
+        open={activeConfirm}
+        onOpenChange={setActiveConfirm}
+        title={ingredient.is_active ? "Deactivate Ingredient" : "Activate Ingredient"}
+        description={
+          ingredient.is_active
+            ? `Deactivating "${ingredient.name}" hides it from active selection lists but retains its stock history.`
+            : `Activate "${ingredient.name}" to make it selectable again?`
+        }
+        confirmText={ingredient.is_active ? "Deactivate" : "Activate"}
+        variant={ingredient.is_active ? "destructive" : "default"}
+        onConfirm={handleToggleActive}
+        isLoading={update.isPending}
       />
     </div>
   );

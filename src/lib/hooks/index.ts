@@ -1,11 +1,13 @@
-"use client";
-
 export { useAuth } from "@/providers/AuthProvider";
-export { useCustomers } from "./useCustomers";
-export { useFloorPlans, useTables } from "./useTables";
-export { useReservations } from "./useReservations";
+export { useCustomers, useCustomer } from "./useCustomers";
+export { useTables } from "./useTables";
+export {
+  useReservations,
+  useReservation,
+  useReservationCalendar,
+} from "./useReservations";
 export { useMenuCategories, useMenuItems } from "./useMenu";
-export { useOrders, useOrder } from "./useOrders";
+export { useOrders, useOrder, useUnpaidOrders } from "./useOrders";
 export { useNotifications } from "./useNotifications";
 export { useKitchenOrders } from "./useKitchen";
 export {
@@ -25,9 +27,11 @@ export {
   useStaffMember,
   useStaffPerformance,
   useShiftSchedule,
+  useStaffShifts,
   useAttendance,
   useClockIn,
   useClockOut,
+  useCurrentStaff,
 } from "./useStaff";
 export { useDashboard } from "./useDashboard";
-export { useUsers } from "./useUsers";
+export { useUsers, useUser } from "./useUsers";

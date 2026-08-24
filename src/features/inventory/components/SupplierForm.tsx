@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Supplier, SupplierFormData } from "@/lib/types";
@@ -10,9 +11,15 @@ interface SupplierFormProps {
   initialData?: Supplier;
   onSubmit: (data: SupplierFormData) => void;
   isLoading?: boolean;
+  existingNames?: string[];
 }
 
-export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormProps) {
+export function SupplierForm({
+  initialData,
+  onSubmit,
+  isLoading,
+  existingNames = [],
+}: SupplierFormProps) {
   const router = useRouter();
 
   const [form, setForm] = useState<SupplierFormData>({
@@ -24,9 +31,41 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
     payment_terms: initialData?.payment_terms ?? "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function validate(): Record<string, string> {
+    const next: Record<string, string> = {};
+    const name = (form.name ?? "").trim();
+    if (!name) next.name = "Name is required";
+    else if (existingNames.some((n) => n.toLowerCase() === name.toLowerCase())) {
+      next.name = "A supplier with this name already exists";
+    }
+    if (form.email && !EMAIL_RE.test(form.email)) {
+      next.email = "Enter a valid email address";
+    }
+    return next;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSubmit(form);
+    const next = validate();
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+    onSubmit({
+      ...form,
+      name: name(form.name),
+      contact_person: form.contact_person?.trim() || undefined,
+      email: form.email?.trim() || undefined,
+      phone: form.phone?.trim() || undefined,
+      address: form.address?.trim() || undefined,
+      payment_terms: form.payment_terms?.trim() || undefined,
+    });
+  }
+
+  function name(value: string | undefined): string {
+    return (value ?? "").trim();
   }
 
   function update<K extends keyof SupplierFormData>(key: K, value: SupplierFormData[K]) {
@@ -39,16 +78,18 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Supplier Details</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name *</label>
+            <Label className="text-sm font-medium">Name *</Label>
             <Input
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
               placeholder="e.g. Fresh Produce Co."
               required
+              aria-invalid={!!errors.name}
             />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Contact Person</label>
+            <Label className="text-sm font-medium">Contact Person</Label>
             <Input
               value={form.contact_person ?? ""}
               onChange={(e) => update("contact_person", e.target.value || undefined)}
@@ -58,16 +99,18 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Email</label>
+            <Label className="text-sm font-medium">Email</Label>
             <Input
               type="email"
               value={form.email ?? ""}
               onChange={(e) => update("email", e.target.value || undefined)}
               placeholder="supplier@example.com"
+              aria-invalid={!!errors.email}
             />
+            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Phone</label>
+            <Label className="text-sm font-medium">Phone</Label>
             <Input
               value={form.phone ?? ""}
               onChange={(e) => update("phone", e.target.value || undefined)}
@@ -76,7 +119,7 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Address</label>
+          <Label className="text-sm font-medium">Address</Label>
           <Input
             value={form.address ?? ""}
             onChange={(e) => update("address", e.target.value || undefined)}
@@ -84,7 +127,7 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Payment Terms</label>
+          <Label className="text-sm font-medium">Payment Terms</Label>
           <Input
             value={form.payment_terms ?? ""}
             onChange={(e) => update("payment_terms", e.target.value || undefined)}

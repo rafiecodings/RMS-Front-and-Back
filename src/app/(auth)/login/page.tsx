@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared";
-import { Eye, EyeOff, Store, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Store, AlertCircle, Mail, Lock } from "lucide-react";
 
 interface FormErrors {
   email?: string;
@@ -115,21 +115,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4 py-12">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-      <div className="relative w-full max-w-sm">
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <Store className="h-7 w-7" />
+    <div className="flex min-h-screen bg-background">
+      {/* LEFT — brand panel (desktop only) */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-primary p-12 text-primary-foreground lg:flex">
+        <div className="absolute inset-0 opacity-10 [background:radial-gradient(circle_at_20%_20%,white_0%,transparent_45%),radial-gradient(circle_at_80%_70%,white_0%,transparent_40%)]" />
+        <div className="relative flex items-center gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-4 motion-safe:duration-500">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-foreground/15">
+            <Store className="h-6 w-6" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-base text-muted-foreground">
-            Sign in to Restaurant Management System
-          </p>
+          <span className="text-lg font-semibold tracking-tight">
+            Restaurant Management System
+          </span>
         </div>
 
-        <div className="rounded-2xl border bg-card p-8 shadow-card">
-          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div className="relative max-w-md space-y-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-700" style={{ animationDelay: "120ms", animationFillMode: "backwards" }}>
+          <h2 className="text-4xl font-bold leading-tight tracking-tight">
+            Run your restaurant, end to end.
+          </h2>
+          <p className="text-base leading-relaxed text-primary-foreground/85">
+            One system for orders, tables, kitchen, inventory and
+            decision-ready analytics — built for real service.
+          </p>
+          <ul className="space-y-3 text-sm text-primary-foreground/90">
+            {[
+              "Restaurant Operations — orders, KOT & POS",
+              "Inventory & Suppliers",
+              "Reports & Analytics",
+              "AI Demand Forecast",
+            ].map((feature) => (
+              <li key={feature} className="flex items-center gap-3">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-primary-foreground/70">
+          &copy; {year} Restaurant Management System
+        </p>
+      </div>
+
+      {/* RIGHT — login card */}
+      <div className="relative flex flex-1 items-center justify-center px-4 py-12">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent lg:hidden" />
+        <div className="relative w-full max-w-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
+          <div className="mb-8 text-center lg:text-left">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 lg:hidden">
+              <Store className="h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Sign in to continue managing your restaurant.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-7 shadow-card sm:p-8">
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {apiError && (
               <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -139,10 +181,13 @@ export default function LoginPage() {
 
             <div className="space-y-2.5">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@restaurant.com"
+                  className="h-11 pl-9 transition-shadow"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -154,10 +199,11 @@ export default function LoginPage() {
                   }
                 }}
                 onBlur={() => handleBlur("email")}
-                aria-invalid={!!errors.email && touched.email}
-                disabled={isSubmitting}
-                autoComplete="email"
-              />
+                  aria-invalid={!!errors.email && touched.email}
+                  disabled={isSubmitting}
+                  autoComplete="email"
+                />
+              </div>
               {errors.email && touched.email && (
                 <p className="text-xs text-destructive">{errors.email}</p>
               )}
@@ -166,10 +212,12 @@ export default function LoginPage() {
             <div className="space-y-2.5">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
+                  className="h-11 pl-9 pr-12 transition-shadow"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -184,11 +232,11 @@ export default function LoginPage() {
                   aria-invalid={!!errors.password && touched.password}
                   disabled={isSubmitting}
                   autoComplete="current-password"
-                  className="pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
@@ -207,7 +255,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <Button
                 type="submit"
-                className="w-full h-11 text-base"
+                className="w-full h-11 text-base transition-transform active:scale-[0.99]"
                 disabled={isSubmitting}
               >
                 {isSubmitting && <LoadingSpinner size="sm" className="mr-2" />}
@@ -217,9 +265,10 @@ export default function LoginPage() {
           </form>
         </div>
 
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-          &copy; {year} Restaurant Management System. All rights reserved.
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          Secure restaurant operations platform · &copy; {year} RMS
         </p>
+        </div>
       </div>
     </div>
   );

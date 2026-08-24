@@ -19,8 +19,6 @@ interface FormErrors {
   name?: string;
   number?: string;
   capacity?: string;
-  width?: string;
-  height?: string;
 }
 
 export function TableForm({
@@ -37,10 +35,6 @@ export function TableForm({
     zone: initialData?.zone ?? "",
     section: initialData?.section ?? "",
     is_wheelchair_accessible: initialData?.is_wheelchair_accessible ?? false,
-    pos_x: initialData?.pos_x ?? 0,
-    pos_y: initialData?.pos_y ?? 0,
-    width: initialData?.width ?? 60,
-    height: initialData?.height ?? 60,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -57,12 +51,6 @@ export function TableForm({
     if (formData.capacity < 1) {
       errs.capacity = "Capacity must be at least 1";
     }
-    if (formData.width < 1) {
-      errs.width = "Width must be at least 1";
-    }
-    if (formData.height < 1) {
-      errs.height = "Height must be at least 1";
-    }
     return errs;
   }
 
@@ -76,7 +64,7 @@ export function TableForm({
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
-    setTouched({ name: true, number: true, capacity: true, width: true, height: true });
+    setTouched({ name: true, number: true, capacity: true });
     if (Object.keys(errs).length === 0) {
       onSubmit({
         ...formData,
@@ -192,84 +180,6 @@ export function TableForm({
             <option value="circle">Circle</option>
             <option value="square">Square</option>
           </select>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="pos-x">Position X *</Label>
-          <Input
-            id="pos-x"
-            type="number"
-            min={0}
-            value={formData.pos_x}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                pos_x: parseFloat(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="pos-y">Position Y *</Label>
-          <Input
-            id="pos-y"
-            type="number"
-            min={0}
-            value={formData.pos_y}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                pos_y: parseFloat(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="width">Width *</Label>
-          <Input
-            id="width"
-            type="number"
-            min={1}
-            value={formData.width}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                width: parseFloat(e.target.value) || 1,
-              }))
-            }
-            onBlur={() => handleBlur("width")}
-            aria-invalid={touched.width && !!errors.width}
-          />
-          {touched.width && errors.width && (
-            <p className="text-xs text-destructive">{errors.width}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="height">Height *</Label>
-          <Input
-            id="height"
-            type="number"
-            min={1}
-            value={formData.height}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                height: parseFloat(e.target.value) || 1,
-              }))
-            }
-            onBlur={() => handleBlur("height")}
-            aria-invalid={touched.height && !!errors.height}
-          />
-          {touched.height && errors.height && (
-            <p className="text-xs text-destructive">{errors.height}</p>
-          )}
         </div>
       </div>
 

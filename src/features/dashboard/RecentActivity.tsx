@@ -76,6 +76,7 @@ export function RecentActivity({ data }: { data: DashboardSummary }) {
                   key={item.id}
                   className={cn(
                     "flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50",
+                    "odd:bg-muted/20",
                     index < activities.length - 1 && "border-b border-border/50"
                   )}
                 >
@@ -95,7 +96,7 @@ export function RecentActivity({ data }: { data: DashboardSummary }) {
                       </p>
                     )}
                   </div>
-                  <span className="text-[10px] text-muted-foreground/60 shrink-0 mt-0.5">
+                  <span className="text-xs text-muted-foreground/60 shrink-0 mt-0.5">
                     {timeAgo(item.created_at)}
                   </span>
                 </div>

@@ -1,4 +1,4 @@
-import type { OrderType, PaymentMethod } from "@/lib/types";
+import type { PaymentMethod } from "@/lib/types";
 
 export interface CartItem {
   id: string;
@@ -25,9 +25,6 @@ export interface PaymentLine {
 
 export interface PosState {
   items: CartItem[];
-  orderType: OrderType;
-  customerId?: string;
-  tableId?: string;
   discount?: PosDiscount;
   serviceChargePercent: number;
   notes?: string;
@@ -40,8 +37,5 @@ export type PosAction =
   | { type: "UPDATE_ITEM_NOTES"; id: string; notes: string }
   | { type: "SET_DISCOUNT"; discount?: PosDiscount }
   | { type: "SET_SERVICE_CHARGE"; percent: number }
-  | { type: "SET_ORDER_TYPE"; orderType: OrderType }
-  | { type: "SET_CUSTOMER"; customerId?: string }
-  | { type: "SET_TABLE"; tableId?: string }
   | { type: "SET_NOTES"; notes: string }
   | { type: "CLEAR_CART" };

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -10,19 +9,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/shared";
+import { Switch } from "@/components/ui/switch";
+import { LoadingSpinner, MenuItemImage } from "@/components/shared";
 import { EntityActionDropdown } from "@/components/shared";
-import { ImageOff } from "lucide-react";
 import type { MenuItem } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
 interface MenuItemListProps {
   items: MenuItem[];
   isLoading?: boolean;
+  onView?: (item: MenuItem) => void;
+  onEdit?: (item: MenuItem) => void;
   onDelete?: (item: MenuItem) => void;
+  onToggleAvailability?: (item: MenuItem) => void;
+  canEditItem?: boolean;
 }
 
-export function MenuItemList({ items, isLoading, onDelete }: MenuItemListProps) {
+export function MenuItemList({
+  items,
+  isLoading,
+  onView,
+  onEdit,
+  onDelete,
+  onToggleAvailability,
+  canEditItem,
+}: MenuItemListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -47,12 +58,6 @@ export function MenuItemList({ items, isLoading, onDelete }: MenuItemListProps) 
             <TableHead>Item</TableHead>
             <TableHead className="hidden md:table-cell">Category</TableHead>
             <TableHead className="text-right">Price</TableHead>
-            <TableHead className="hidden lg:table-cell text-center">
-              Prep Time
-            </TableHead>
-            <TableHead className="hidden lg:table-cell text-center">
-              Dietary
-            </TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -62,27 +67,21 @@ export function MenuItemList({ items, isLoading, onDelete }: MenuItemListProps) 
             <TableRow key={item.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  {item.image_url ? (
-                    <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- backend API images; next/image requires remotePatterns config */}
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <ImageOff className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-muted">
+                    <MenuItemImage
+                      src={item.image_url}
+                      alt={item.name}
+                      sizes="44px"
+                    />
+                  </div>
                   <div>
-                    <Link
-                      href={`/menu/items/${item.id}`}
-                      className="font-medium hover:underline"
+                    <button
+                      type="button"
+                      onClick={() => onView?.(item)}
+                      className="font-medium hover:underline text-left"
                     >
                       {item.name}
-                    </Link>
+                    </button>
                     {item.description && (
                       <p className="text-xs text-muted-foreground max-w-[200px] truncate">
                         {item.description}
@@ -97,49 +96,33 @@ export function MenuItemList({ items, isLoading, onDelete }: MenuItemListProps) 
               <TableCell className="text-right font-semibold">
                 {formatCurrency(item.price)}
               </TableCell>
-              <TableCell className="hidden lg:table-cell text-center text-muted-foreground">
-                {item.preparation_time ? `${item.preparation_time}m` : "—"}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center justify-center gap-1">
-                  {item.is_vegetarian && (
-                    <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                      V
-                    </Badge>
-                  )}
-                  {item.is_vegan && (
-                    <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                      VG
-                    </Badge>
-                  )}
-                  {item.is_gluten_free && (
-                    <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                      GF
-                    </Badge>
-                  )}
-                  {!item.is_vegetarian && !item.is_vegan && !item.is_gluten_free && (
-                    <span className="text-muted-foreground text-xs">—</span>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0",
+                      item.is_available
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                    )}
+                  >
+                    {item.is_available ? "Available" : "Unavailable"}
+                  </Badge>
+                  {onToggleAvailability && (
+                    <Switch
+                      checked={item.is_available}
+                      onCheckedChange={() => onToggleAvailability(item)}
+                      aria-label={`Toggle availability for ${item.name}`}
+                    />
                   )}
                 </div>
               </TableCell>
               <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "text-[10px] px-1.5 py-0",
-                    item.is_available
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                      : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                  )}
-                >
-                  {item.is_available ? "Available" : "Unavailable"}
-                </Badge>
-              </TableCell>
-              <TableCell>
                 <EntityActionDropdown
-                  viewHref={`/menu/items/${item.id}`}
+                  onView={onView ? () => onView(item) : undefined}
                   viewLabel="View"
-                  editHref={`/menu/items/${item.id}/edit`}
+                  onEdit={canEditItem && onEdit ? () => onEdit(item) : undefined}
                   editLabel="Edit"
                   onAction={onDelete ? () => onDelete(item) : undefined}
                 />

@@ -1,15 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, EmptyState } from "@/components/shared";
 import { RecipeForm } from "@/features/inventory";
 import { useRecipes } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canManageRecipes } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { RecipeFormData } from "@/lib/types";
 
 export default function NewRecipePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { create } = useRecipes();
+
+  if (!canManageRecipes(user?.role)) {
+    return (
+      <EmptyState
+        title="Not authorized"
+        description="Only managers and admins can create recipes."
+      />
+    );
+  }
 
   function handleSubmit(data: RecipeFormData) {
     create.mutate(data, {
@@ -25,10 +37,7 @@ export default function NewRecipePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Add Recipe"
-        description="Map a menu item to its ingredient list"
-      />
+      <PageHeader title="Add Recipe" description="Create a recipe mapping" />
       <RecipeForm onSubmit={handleSubmit} isLoading={create.isPending} />
     </div>
   );

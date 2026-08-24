@@ -3,9 +3,23 @@
 import { PageHeader } from "@/components/shared";
 import { RoleBadge } from "@/features/staff";
 import { STAFF_ROLES, STAFF_SHIFTS } from "@/lib/types";
+import { useStaffShifts } from "@/lib/hooks";
 import { Shield, Clock } from "lucide-react";
 
+// Reflects the actual RMS roles and their staff-area capabilities,
+// matching PERMISSION_MATRIX and the backend route middleware.
+const PERMISSION_ROWS = [
+  { role: "admin", orders: "All", pos: "All", inventory: "All", staff: "Full", reports: "All" },
+  { role: "manager", orders: "All", pos: "View", inventory: "All", staff: "Full", reports: "All" },
+  { role: "cashier", orders: "View", pos: "Process", inventory: "None", staff: "None", reports: "Revenue" },
+  { role: "waiter", orders: "Edit", pos: "None", inventory: "None", staff: "None", reports: "None" },
+  { role: "kitchen_staff", orders: "View", pos: "None", inventory: "View", staff: "None", reports: "None" },
+  { role: "inventory_staff", orders: "None", pos: "None", inventory: "All", staff: "None", reports: "None" },
+] as const;
+
 export default function RolesPage() {
+  const { data: backendShifts } = useStaffShifts();
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -36,19 +50,33 @@ export default function RolesPage() {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shift Definitions</h3>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          {STAFF_SHIFTS.map((s) => (
-            <div key={s.value} className="rounded-lg border p-3">
-              <p className="font-medium capitalize">{s.label}</p>
+          {(backendShifts && backendShifts.length > 0
+            ? backendShifts.map((s) => ({
+                id: s.id,
+                label: s.name,
+                time: `${s.start_time} – ${s.end_time}`,
+              }))
+            : STAFF_SHIFTS.map((s) => ({
+                id: s.value,
+                label: s.label,
+                time: s.time,
+              }))
+          ).map((s) => (
+            <div key={s.id} className="rounded-lg border p-3">
+              <p className="font-medium">{s.label}</p>
               <p className="text-sm text-muted-foreground">{s.time}</p>
             </div>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          Shift definitions are managed in the system seed data.
+        </p>
       </div>
 
       <div className="rounded-lg border bg-card p-6 space-y-4">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Permission Matrix</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="border-b">
                 <th className="text-left px-3 py-2 font-medium">Role</th>
@@ -60,16 +88,9 @@ export default function RolesPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {[
-                { role: "Manager", orders: "All", pos: "All", inventory: "All", staff: "All", reports: "All" },
-                { role: "Cashier", orders: "View", pos: "Process", inventory: "None", staff: "None", reports: "None" },
-                { role: "Waiter", orders: "Create/View", pos: "None", inventory: "None", staff: "None", reports: "None" },
-                { role: "Kitchen Staff", orders: "View/Update", pos: "None", inventory: "View", staff: "None", reports: "None" },
-                { role: "Host", orders: "View", pos: "None", inventory: "None", staff: "None", reports: "None" },
-                { role: "Bartender", orders: "Create/View", pos: "Process", inventory: "View (bar)", staff: "None", reports: "None" },
-              ].map((row) => (
+              {PERMISSION_ROWS.map((row) => (
                 <tr key={row.role} className="hover:bg-muted/30">
-                  <td className="px-3 py-2 font-medium">{row.role}</td>
+                  <td className="px-3 py-2"><RoleBadge role={row.role} /></td>
                   <td className="px-3 py-2 text-center text-muted-foreground">{row.orders}</td>
                   <td className="px-3 py-2 text-center text-muted-foreground">{row.pos}</td>
                   <td className="px-3 py-2 text-center text-muted-foreground">{row.inventory}</td>
@@ -80,6 +101,9 @@ export default function RolesPage() {
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-muted-foreground">
+          The backend API remains the authoritative enforcer of these permissions.
+        </p>
       </div>
     </div>
   );

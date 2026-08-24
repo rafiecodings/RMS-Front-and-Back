@@ -13,7 +13,6 @@ import type {
 import type {
   Invoice,
   Refund,
-  RefundFormData,
   BillingStats,
 } from "../types";
 
@@ -105,7 +104,7 @@ export function usePaymentHistory(
     queryKey: ["payment-history", params],
     queryFn: () =>
       api
-        .get<PaginatedResponse<Payment>>("/billing/payments", { params })
+        .get<PaginatedResponse<Payment>>("/payments", { params })
         .then((res) => normalizePaginated(res.data)),
     staleTime: 30_000,
   });
@@ -116,7 +115,7 @@ export function useRefunds(params?: QueryParams & { status?: string }) {
     queryKey: ["refunds", params],
     queryFn: () =>
       api
-        .get<PaginatedResponse<Refund>>("/billing/refunds", { params })
+        .get<PaginatedResponse<Refund>>("/payments/refunds", { params })
         .then((res) => normalizePaginated(res.data)),
     staleTime: 30_000,
   });
@@ -129,18 +128,36 @@ export function useRefund(id: string) {
     queryKey: ["refunds", id],
     queryFn: () =>
       api
-        .get<ApiResponse<Refund>>(`/billing/refunds/${id}`)
+        .get<ApiResponse<Refund>>(`/payments/refunds`, { params: { search: id } })
         .then((res) => res.data.data),
     enabled: !!id,
   });
 }
 
+/**
+ * Creates a refund via the canonical backend path:
+ * POST /invoices/{invoiceId}/refund { payment_id, amount, reason }.
+ */
 export function useProcessRefund() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: RefundFormData & { order_id: string }) =>
-      api.post<ApiResponse<Refund>>("/billing/refunds", data),
+    mutationFn: ({
+      invoiceId,
+      paymentId,
+      amount,
+      reason,
+    }: {
+      invoiceId: string;
+      paymentId: string;
+      amount: number;
+      reason: string;
+    }) =>
+      api.post<ApiResponse<Refund>>(`/invoices/${invoiceId}/refund`, {
+        payment_id: paymentId,
+        amount,
+        reason,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["refunds"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -155,7 +172,7 @@ export function useBillingStats() {
     queryKey: ["billing-stats"],
     queryFn: () =>
       api
-        .get<ApiResponse<BillingStats>>("/billing/stats")
+        .get<ApiResponse<BillingStats>>("/payments/stats")
         .then((res) => res.data.data),
     refetchInterval: 30000,
   });

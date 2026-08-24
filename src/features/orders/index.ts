@@ -5,3 +5,4 @@ export { OrderForm } from "./OrderForm";
 export { OrderStatusSelect } from "./OrderStatusSelect";
 export { OrderTimeline } from "./OrderTimeline";
 export { PaymentForm } from "./PaymentForm";
+export { PosOrderScreen } from "./PosOrderScreen";

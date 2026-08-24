@@ -7,29 +7,25 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
+  withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+let isRedirecting = false;
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isRedirecting) {
+      isRedirecting = true;
       if (typeof window !== "undefined") {
-        localStorage.removeItem("auth_token");
-        window.location.href = "/login";
+        window.dispatchEvent(new CustomEvent("rms:force-logout"));
       }
+      setTimeout(() => {
+        isRedirecting = false;
+      }, 5000);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

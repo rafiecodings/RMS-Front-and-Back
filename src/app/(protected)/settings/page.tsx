@@ -4,10 +4,6 @@ import { PageHeader } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Building2,
-  Receipt,
-  Tags,
-  Users,
-  Shield,
   Settings,
 } from "lucide-react";
 import { SettingsSidebar } from "@/features/settings";
@@ -21,38 +17,6 @@ const SETTINGS_SECTIONS = [
     href: "/settings/restaurant",
     color: "text-emerald-600",
     bgColor: "bg-emerald-50",
-  },
-  {
-    title: "Taxes",
-    description: "Configure tax rates and types",
-    icon: Receipt,
-    href: "/settings/taxes",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-50",
-  },
-  {
-    title: "Discounts",
-    description: "Manage promotional discounts and promo codes",
-    icon: Tags,
-    href: "/settings/discounts",
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-  },
-  {
-    title: "User Management",
-    description: "Create and manage system users",
-    icon: Users,
-    href: "/settings/users",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-  },
-  {
-    title: "Roles & Permissions",
-    description: "Configure roles and RBAC permissions",
-    icon: Shield,
-    href: "/settings/roles",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
   },
   {
     title: "System Preferences",

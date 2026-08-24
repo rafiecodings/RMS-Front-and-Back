@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
 import { SupplierForm } from "@/features/inventory";
 import { useSuppliers } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { SupplierFormData } from "@/lib/types";
 
@@ -11,6 +13,7 @@ export default function EditSupplierPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { user } = useAuth();
 
   const { list, update } = useSuppliers({ per_page: 200 });
   const suppliers = list.data?.data?.data ?? [];
@@ -30,6 +33,12 @@ export default function EditSupplierPage() {
         title="Supplier not found"
         description="This supplier may have been deleted."
       />
+    );
+  }
+
+  if (!canEdit(user?.role, "inventory")) {
+    return (
+      <PageHeader title="Not authorized" description="You cannot edit suppliers." />
     );
   }
 
@@ -58,6 +67,9 @@ export default function EditSupplierPage() {
         initialData={supplier}
         onSubmit={handleSubmit}
         isLoading={update.isPending}
+        existingNames={suppliers
+          .filter((s) => s.id !== id)
+          .map((s) => s.name)}
       />
     </div>
   );

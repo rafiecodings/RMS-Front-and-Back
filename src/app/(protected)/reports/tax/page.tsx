@@ -15,8 +15,6 @@ import {
 import {
   ReportFilters,
   ReportSummaryCard,
-  TaxBreakdownTable,
-  TaxByOrderTypeTable,
   ExportButton,
 } from "@/features/reports";
 import { useTaxReport } from "@/features/reports/hooks/useReports";
@@ -75,11 +73,8 @@ export default function TaxReportsPage() {
             />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <TaxBreakdownTable data={report.tax_breakdown} />
-            <TaxByOrderTypeTable data={report.tax_by_order_type} />
-          </div>
-
+          {/* Per-type/per-bracket breakdowns are not tracked in the data
+              model; only real collected-tax figures are shown. */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base font-semibold">Monthly Tax Trend</CardTitle>

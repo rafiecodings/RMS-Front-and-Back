@@ -4,12 +4,23 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared";
 import { SupplierForm } from "@/features/inventory";
 import { useSuppliers } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { SupplierFormData } from "@/lib/types";
 
 export default function NewSupplierPage() {
   const router = useRouter();
-  const { create } = useSuppliers();
+  const { user } = useAuth();
+  const { create, list } = useSuppliers({ per_page: 200 });
+
+  const existingNames = (list.data?.data?.data ?? []).map((s) => s.name);
+
+  if (!canEdit(user?.role, "inventory")) {
+    return (
+      <PageHeader title="Not authorized" description="You cannot create suppliers." />
+    );
+  }
 
   function handleSubmit(data: SupplierFormData) {
     create.mutate(data, {
@@ -29,7 +40,11 @@ export default function NewSupplierPage() {
         title="Add Supplier"
         description="Add a new supplier to your directory"
       />
-      <SupplierForm onSubmit={handleSubmit} isLoading={create.isPending} />
+      <SupplierForm
+        onSubmit={handleSubmit}
+        isLoading={create.isPending}
+        existingNames={existingNames}
+      />
     </div>
   );
 }

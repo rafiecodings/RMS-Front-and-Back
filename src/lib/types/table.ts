@@ -1,16 +1,5 @@
-export interface FloorPlan {
-  id: string;
-  name: string;
-  description?: string;
-  is_active: boolean;
-  tables: Table[];
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Table {
   id: string;
-  floor_plan_id: string;
   name: string;
   number: string;
   capacity: number;
@@ -43,7 +32,6 @@ export type TableStatus =
   | "maintenance";
 
 export interface TableFormData {
-  floor_plan_id?: string;
   name: string;
   number: string;
   capacity: number;
@@ -51,13 +39,4 @@ export interface TableFormData {
   zone?: string;
   section?: string;
   is_wheelchair_accessible: boolean;
-  pos_x: number;
-  pos_y: number;
-  width: number;
-  height: number;
-}
-
-export interface FloorPlanFormData {
-  name: string;
-  description?: string;
 }

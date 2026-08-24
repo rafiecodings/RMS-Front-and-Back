@@ -2,18 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Clock } from "lucide-react";
+import { Clock, Pause } from "lucide-react";
+import type { KotStatus } from "@/lib/types";
 
 interface OrderTimerProps {
   createdAt: string;
+  status?: KotStatus;
+  stopAt?: string | null;
   className?: string;
+  showIcon?: boolean;
 }
 
-function getElapsedMs(createdAt: string | null | undefined): number {
+const TERMINAL_STATUSES: KotStatus[] = ["ready", "completed"];
+
+function computeElapsed(createdAt: string | null | undefined): number {
   if (!createdAt) return 0;
   const created = new Date(createdAt).getTime();
   if (Number.isNaN(created)) return 0;
   return Math.max(0, Date.now() - created);
+}
+
+function computeStoppedElapsed(
+  createdAt: string | null | undefined,
+  stopAt: string | null | undefined
+): number {
+  if (!createdAt || !stopAt) return computeElapsed(createdAt);
+  const created = new Date(createdAt).getTime();
+  const stopped = new Date(stopAt).getTime();
+  if (Number.isNaN(created) || Number.isNaN(stopped)) return 0;
+  return Math.max(0, stopped - created);
 }
 
 function formatElapsed(ms: number): string {
@@ -44,26 +61,46 @@ function getTimerBg(ms: number): string {
   return "bg-muted/50";
 }
 
-export function OrderTimer({ createdAt, className }: OrderTimerProps) {
-  const [elapsed, setElapsed] = useState(() => getElapsedMs(createdAt));
+export function OrderTimer({ createdAt, status, stopAt, className, showIcon = true }: OrderTimerProps) {
+  const isTerminal = status !== undefined && TERMINAL_STATUSES.includes(status);
+  const isStopped = isTerminal || Boolean(stopAt);
+  const [elapsed, setElapsed] = useState(() => {
+    if (isStopped) return computeStoppedElapsed(createdAt, stopAt);
+    return computeElapsed(createdAt);
+  });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsed(getElapsedMs(createdAt));
-    }, 1000);
+    if (isStopped) {
+      // Already stopped: the lazy initializer above captured the frozen
+      // elapsed (using the explicit stop timestamp when present). No live
+      // ticking is needed, so just leave the frozen value in place.
+      return;
+    }
+    // Not stopped: run the live interval.
+    function update() {
+      setElapsed(computeElapsed(createdAt));
+    }
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [createdAt]);
+  }, [createdAt, stopAt, isStopped, status]);
 
   return (
     <div
       className={cn(
         "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-mono font-medium",
-        getTimerColor(elapsed),
-        getTimerBg(elapsed),
+        isStopped ? "bg-muted/30 text-muted-foreground" : getTimerColor(elapsed),
+        isStopped ? "" : getTimerBg(elapsed),
         className
       )}
     >
-      <Clock className="h-3 w-3" />
+      {showIcon && (
+        isStopped ? (
+          <Pause className="h-3 w-3" />
+        ) : (
+          <Clock className="h-3 w-3" />
+        )
+      )}
       {formatElapsed(elapsed)}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,7 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
   const { list: suppliersList } = useSuppliers({ per_page: 200 });
   const { list: ingredientsList } = useIngredients({ per_page: 200 });
 
-  const suppliers = suppliersList.data?.data?.data ?? [];
+  const suppliers = (suppliersList.data?.data?.data ?? []).filter((s) => s.is_active);
   const ingredients = ingredientsList.data?.data?.data ?? [];
 
   const [form, setForm] = useState<PurchaseOrderFormData>({
@@ -71,7 +72,7 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Purchase Order Details</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Supplier *</label>
+            <Label className="text-sm font-medium">Supplier *</Label>
             <Select value={form.supplier_id} onValueChange={(v) => setForm((prev) => ({ ...prev, supplier_id: v ?? "" }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select supplier" />
@@ -84,7 +85,7 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Expected Delivery</label>
+            <Label className="text-sm font-medium">Expected Delivery</Label>
             <Input
               type="date"
               value={form.expected_date ?? ""}
@@ -93,7 +94,7 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Notes</label>
+          <Label className="text-sm font-medium">Notes</Label>
           <Input
             value={form.notes ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value || undefined }))}

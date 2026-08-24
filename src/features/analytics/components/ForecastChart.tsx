@@ -123,7 +123,7 @@ export function ForecastChart({ data }: ForecastChartProps) {
       </Card>
 
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Daily Demand Forecast</DialogTitle>
           </DialogHeader>

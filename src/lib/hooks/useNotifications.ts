@@ -1,5 +1,4 @@
 import {
-  useMutation,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -9,11 +8,14 @@ import type { Notification } from "@/lib/types";
 const STORAGE_KEY = "notifications";
 const MAX_NOTIFICATIONS = 50;
 
+let notificationIdCounter = 0;
+
 function generateId(): string {
   if (typeof window !== "undefined" && typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  notificationIdCounter += 1;
+  return `${Date.now()}-${notificationIdCounter}`;
 }
 
 function loadFromStorage(): Notification[] {

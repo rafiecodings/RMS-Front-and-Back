@@ -11,7 +11,6 @@ export interface Ingredient {
   supplier_id?: string;
   supplier?: Supplier;
   is_active: boolean;
-  expiry_date?: string;
   storage_location?: string;
   created_at: string;
   updated_at: string;
@@ -67,15 +66,18 @@ export interface PurchaseOrder {
   supplier_id: string;
   supplier?: Supplier;
   status: PurchaseOrderStatus;
-  order_date: string;
+  order_date?: string;
+  expected_date?: string;
   expected_delivery_date?: string;
+  received_at?: string;
   received_date?: string;
-  subtotal: number;
-  tax_amount: number;
+  subtotal?: number;
+  tax_amount?: number;
   total_amount: number;
   notes?: string;
   items: PurchaseOrderItem[];
   created_by?: string;
+  creator?: { name?: string };
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +95,7 @@ export interface PurchaseOrderItem {
 export type PurchaseOrderStatus =
   | "draft"
   | "pending"
+  | "confirmed"
   | "approved"
   | "ordered"
   | "partial"
@@ -103,7 +106,7 @@ export interface StockMovement {
   id: string;
   ingredient_id: string;
   ingredient?: Ingredient;
-  type: "in" | "out" | "adjustment" | "wastage";
+  type: "inward" | "outward" | "adjustment" | "wastage";
   quantity: number;
   reference_type?: string;
   reference_id?: string;
@@ -167,8 +170,8 @@ export interface IngredientFormData {
   cost_per_unit: number;
   category?: string;
   supplier_id?: string;
-  expiry_date?: string;
   storage_location?: string;
+  is_active?: boolean;
 }
 
 export interface SupplierFormData {
@@ -178,6 +181,7 @@ export interface SupplierFormData {
   phone?: string;
   address?: string;
   payment_terms?: string;
+  is_active?: boolean;
 }
 
 export interface PurchaseOrderFormData {

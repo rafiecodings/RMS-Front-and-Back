@@ -15,6 +15,7 @@ import {
   MessageSquare,
   CheckCircle,
   XCircle,
+  ChevronRight,
 } from "lucide-react";
 import type { Reservation, ReservationStatus } from "@/lib/types";
 import { cn, formatLabel } from "@/lib/utils";
@@ -28,10 +29,10 @@ const STATUS_BADGE: Record<ReservationStatus, string> = {
     "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   completed:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  no_show:
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   cancelled:
     "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  no_show:
+    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
 };
 
 function formatDate(dateStr: string | undefined | null) {
@@ -55,27 +56,27 @@ function formatTime(timeStr: string | undefined | null) {
   return `${h12}:${m ?? "00"} ${ampm}`;
 }
 
-function formatDateTime(dateStr: string | undefined | null) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("en-PH", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export function ReservationDetail({
   reservation,
+  onEdit,
   onCancel,
+  onCheckIn,
+  onComplete,
 }: {
   reservation: Reservation;
+  onEdit?: () => void;
   onCancel?: () => void;
+  onCheckIn?: () => void;
+  onComplete?: () => void;
 }) {
   const canEdit = reservation.status === "pending" || reservation.status === "confirmed";
-  const canCancel = reservation.status !== "cancelled" && reservation.status !== "completed";
+  const canCancel =
+    reservation.status !== "cancelled" &&
+    reservation.status !== "completed" &&
+    reservation.status !== "no_show";
+  const canCheckIn =
+    reservation.status === "pending" || reservation.status === "confirmed";
+  const canComplete = reservation.status === "seated";
 
   return (
     <div className="space-y-6">
@@ -94,14 +95,33 @@ export function ReservationDetail({
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Created {formatDateTime(reservation.created_at)}
+            Created {formatDate(reservation.created_at)}
           </p>
         </div>
         <div className="flex gap-2">
           {canEdit && (
-            <Button variant="outline" size="sm" render={<Link href={`/reservations/${reservation.id}/edit`} />}>
-              <Pencil className="h-4 w-4 mr-1.5" />
-              Edit
+            onEdit ? (
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                Edit
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" render={<Link href={`/reservations/${reservation.id}/edit`} />}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                Edit
+              </Button>
+            )
+          )}
+          {canCheckIn && onCheckIn && (
+            <Button variant="default" size="sm" onClick={onCheckIn}>
+              <CheckCircle className="h-4 w-4 mr-1.5" />
+              Check In
+            </Button>
+          )}
+          {canComplete && onComplete && (
+            <Button variant="default" size="sm" onClick={onComplete}>
+              <ChevronRight className="h-4 w-4 mr-1.5" />
+              Complete
             </Button>
           )}
           {canCancel && onCancel && (
@@ -170,7 +190,7 @@ export function ReservationDetail({
                 <div>
                   <p className="text-xs text-muted-foreground">Table</p>
                   <p className="text-sm font-medium">
-                    {reservation.table ? `${reservation.table.number}${reservation.table.name ? ` — ${reservation.table.name}` : ""}` : "Not assigned"}
+                    {reservation.table ? `${reservation.table.number}${reservation.table.name ? ` · ${reservation.table.name}` : ""}` : "Not assigned"}
                   </p>
                 </div>
               </div>
@@ -192,48 +212,6 @@ export function ReservationDetail({
         </Card>
 
         <div className="space-y-4">
-          {reservation.arrival_time && (
-            <Card>
-              <CardContent className="pt-1">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-emerald-600" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Arrived</p>
-                    <p className="text-sm font-medium">{formatDateTime(reservation.arrival_time)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {reservation.seated_time && (
-            <Card>
-              <CardContent className="pt-1">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Seated</p>
-                    <p className="text-sm font-medium">{formatDateTime(reservation.seated_time)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {reservation.completed_time && (
-            <Card>
-              <CardContent className="pt-1">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Completed</p>
-                    <p className="text-sm font-medium">{formatDateTime(reservation.completed_time)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {reservation.cancellation_reason && (
             <Card>
               <CardContent className="pt-1">
@@ -252,3 +230,4 @@ export function ReservationDetail({
     </div>
   );
 }
+

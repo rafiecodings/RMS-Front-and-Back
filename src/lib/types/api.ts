@@ -36,6 +36,12 @@ export interface QueryParams {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  customer_type?: string;
+  status?: string;
+  reservation_date?: string;
+  reservation_time?: string;
+  party_size?: number;
+  exclude_reservation_id?: string;
 }
 
 export interface User {

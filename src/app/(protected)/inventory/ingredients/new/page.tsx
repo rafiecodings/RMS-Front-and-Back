@@ -9,7 +9,9 @@ import type { IngredientFormData } from "@/lib/types";
 
 export default function NewIngredientPage() {
   const router = useRouter();
-  const { create } = useIngredients();
+  const { create, list } = useIngredients({ per_page: 200 });
+
+  const existingNames = (list.data?.data?.data ?? []).map((i) => i.name);
 
   function handleSubmit(data: IngredientFormData) {
     create.mutate(data, {
@@ -29,7 +31,11 @@ export default function NewIngredientPage() {
         title="Add Ingredient"
         description="Add a new ingredient to your inventory"
       />
-      <IngredientForm onSubmit={handleSubmit} isLoading={create.isPending} />
+      <IngredientForm
+        onSubmit={handleSubmit}
+        isLoading={create.isPending}
+        existingNames={existingNames}
+      />
     </div>
   );
 }

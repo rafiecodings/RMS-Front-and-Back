@@ -12,8 +12,9 @@ export interface Kot {
   estimated_time?: number;
   started_at?: string;
   completed_at?: string;
+  archived_at?: string;
   notes?: string;
-  items: KotItem[];
+  items?: KotItem[];
   assigned_to?: User;
   assigned_to_id?: string;
   created_at: string;
@@ -23,7 +24,8 @@ export interface Kot {
 export interface KotItem {
   id: string;
   order_item_id: string;
-  menu_item_name: string;
+  name?: string;
+  menu_item_name?: string;
   quantity: number;
   variant?: string;
   notes?: string;
@@ -31,7 +33,7 @@ export interface KotItem {
   modifiers?: { name: string; price: number }[];
 }
 
-export type KotStatus = "received" | "in_progress" | "ready";
+export type KotStatus = "received" | "in_progress" | "ready" | "completed" | "voided";
 
 export type KotItemStatus = "pending" | "in_progress" | "ready";
 

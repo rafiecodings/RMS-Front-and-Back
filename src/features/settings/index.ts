@@ -1,12 +1,3 @@
 export { SettingsSidebar } from "./components/SettingsSidebar";
 export { RestaurantInfoForm } from "./components/RestaurantInfoForm";
-export { TaxTable } from "./components/TaxTable";
-export { TaxForm } from "./components/TaxForm";
-export { DiscountTable } from "./components/DiscountTable";
-export { DiscountForm } from "./components/DiscountForm";
-export { UserTable } from "./components/UserTable";
-export { UserForm } from "./components/UserForm";
-export { RoleTable } from "./components/RoleTable";
-export { RoleForm } from "./components/RoleForm";
-export { PermissionMatrix } from "./components/PermissionMatrix";
 export { SystemPreferences } from "./components/SystemPreferences";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -25,6 +25,7 @@ import {
   FileBarChart,
   type LucideIcon,
 } from "lucide-react";
+import { SIDEBAR_ROLES } from "@/lib/utils/permissions";
 
 interface NavItem {
   label: string;
@@ -38,55 +39,49 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const ADMIN_ROLES = ["admin", "manager"];
-const INVENTORY_ROLES = ["admin", "manager", "inventory_staff"];
-const WAITER_ROLES = ["admin", "manager", "waiter"];
-const CASHIER_ROLES = ["admin", "manager", "cashier"];
-const KITCHEN_ROLES = ["admin", "manager", "kitchen_staff"];
-
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
-    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: SIDEBAR_ROLES.dashboard }],
   },
   {
     label: "Operations",
     items: [
-      { label: "Customers", href: "/customers", icon: Users, roles: [...WAITER_ROLES, ...CASHIER_ROLES] },
-      { label: "Tables", href: "/tables", icon: Grid3X3, roles: WAITER_ROLES },
-      { label: "Reservations", href: "/reservations", icon: Calendar, roles: [...WAITER_ROLES, ...CASHIER_ROLES] },
-      { label: "Orders", href: "/orders", icon: ClipboardList, roles: [...WAITER_ROLES, ...CASHIER_ROLES, ...KITCHEN_ROLES] },
-      { label: "Kitchen", href: "/kitchen", icon: ChefHat, roles: [...KITCHEN_ROLES, ...WAITER_ROLES] },
-      { label: "POS", href: "/pos", icon: CreditCard, roles: [...WAITER_ROLES, ...CASHIER_ROLES] },
+      { label: "Customers", href: "/customers", icon: Users, roles: SIDEBAR_ROLES.customers },
+      { label: "Tables", href: "/tables", icon: Grid3X3, roles: SIDEBAR_ROLES.tables },
+      { label: "Reservations", href: "/reservations", icon: Calendar, roles: SIDEBAR_ROLES.reservations },
+      { label: "Orders", href: "/orders", icon: ClipboardList, roles: SIDEBAR_ROLES.orders },
+      { label: "Kitchen", href: "/kitchen", icon: ChefHat, roles: SIDEBAR_ROLES.kitchen },
+      { label: "POS", href: "/pos", icon: CreditCard, roles: SIDEBAR_ROLES.pos },
     ],
   },
   {
     label: "Menu",
     items: [
-      { label: "Categories", href: "/menu/categories", icon: ShoppingBag, roles: ADMIN_ROLES },
-      { label: "Items", href: "/menu/items", icon: UtensilsCrossed, roles: ADMIN_ROLES },
+      { label: "Categories", href: "/menu/categories", icon: ShoppingBag, roles: SIDEBAR_ROLES.staff },
+      { label: "Items", href: "/menu/items", icon: UtensilsCrossed, roles: SIDEBAR_ROLES.staff },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Ingredients", href: "/inventory/ingredients", icon: Package, roles: INVENTORY_ROLES },
-      { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck, roles: INVENTORY_ROLES },
-      { label: "Suppliers", href: "/inventory/suppliers", icon: Truck, roles: INVENTORY_ROLES },
+      { label: "Ingredients", href: "/inventory/ingredients", icon: Package, roles: SIDEBAR_ROLES.inventory },
+      { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck, roles: SIDEBAR_ROLES.inventory },
+      { label: "Suppliers", href: "/inventory/suppliers", icon: Truck, roles: SIDEBAR_ROLES.inventory },
       {
-        label: "Purchase Requests",
+        label: "Purchase Orders",
         href: "/inventory/purchase-orders",
         icon: FileBarChart,
-        roles: INVENTORY_ROLES,
+        roles: SIDEBAR_ROLES.inventory,
       },
     ],
   },
   {
     label: "Management",
     items: [
-      { label: "Staff", href: "/staff", icon: UserCog, roles: ADMIN_ROLES },
-      { label: "Reports & Analytics", href: "/reports", icon: BarChart3, roles: ADMIN_ROLES },
-      { label: "Settings", href: "/settings", icon: Settings, roles: ADMIN_ROLES },
+      { label: "Staff", href: "/staff", icon: UserCog, roles: SIDEBAR_ROLES.staff },
+      { label: "Reports & Analytics", href: "/reports", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
+      { label: "Settings", href: "/settings", icon: Settings, roles: SIDEBAR_ROLES.settings },
     ],
   },
 ];
@@ -106,9 +101,90 @@ export function useFilteredNavGroups(): NavGroup[] {
   }, [role]);
 }
 
-export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+
+export function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 border-b px-4 py-5",
+        collapsed && "justify-center px-0"
+      )}
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+      <Store className="h-5 w-5" />
+    </div>
+      {!collapsed && (
+        <div className="flex flex-col">
+          <span className="text-base font-bold tracking-tight">RMS</span>
+          <span className="text-[10px] text-muted-foreground">
+            Restaurant Management
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SIDEBAR_COLLAPSED_KEY = "rms.sidebar.collapsed";
+
+export function useSidebarCollapsed() {
+  // Lazy init from localStorage (client-only component tree).
+  const [collapsed, setCollapsed] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1"
+  );
+
+  const toggle = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      return next;
+    });
+  }, []);
+
+  return { collapsed, toggle };
+}
+
+export function NavLinks({
+  onNavigate,
+  collapsed = false,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
   const filteredNavGroups = useFilteredNavGroups();
+
+  if (collapsed) {
+    // Icon-only rail with hover tooltips.
+    const flat = filteredNavGroups.flatMap((g) => g.items);
+    return (
+      <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-4">
+        {flat.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/");
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              onClick={onNavigate}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-150",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
 
   return (
     <nav className="flex-1 overflow-y-auto py-4">
@@ -148,28 +224,5 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       ))}
     </nav>
-  );
-}
-
-export function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 border-b px-4 py-5",
-        collapsed && "justify-center px-0"
-      )}
-    >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-      <Store className="h-5 w-5" />
-    </div>
-    {!collapsed && (
-      <div className="flex flex-col">
-        <span className="text-base font-bold tracking-tight">RMS</span>
-        <span className="text-[10px] text-muted-foreground">
-          Restaurant Management
-        </span>
-      </div>
-    )}
-    </div>
   );
 }

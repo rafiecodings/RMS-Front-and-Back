@@ -6,31 +6,28 @@ import { PageHeader } from "@/components/shared";
 import { ReservationForm } from "@/features/reservations";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useReservations, useCustomers, useFloorPlans, useTables } from "@/lib/hooks";
+import { useReservations } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { ReservationFormData } from "@/lib/types";
 
 export default function NewReservationPage() {
   const router = useRouter();
   const { create } = useReservations();
-  const { list: customerList } = useCustomers();
-  const { list: fpList } = useFloorPlans();
-
-  const customers = customerList.data?.data?.data ?? [];
-  const floorPlans = fpList.data ?? [];
-
-  const firstFloorPlanId = floorPlans[0]?.id;
-  const { list: tableList } = useTables(firstFloorPlanId);
-  const tables = tableList.data ?? [];
 
   function handleSubmit(data: ReservationFormData) {
-    create.mutate(data, {
-      onSuccess: () => {
-        toast.success("Reservation created successfully");
-        router.push("/reservations");
+    create.mutate(
+      {
+        ...data,
+        reservation_date: `${data.reservation_date}T${data.reservation_time}`,
       },
-      onError: () => toast.error("Failed to create reservation"),
-    });
+      {
+        onSuccess: () => {
+          toast.success("Reservation created successfully");
+          router.push("/reservations");
+        },
+        onError: () => toast.error("Failed to create reservation"),
+      }
+    );
   }
 
   return (
@@ -47,8 +44,6 @@ export default function NewReservationPage() {
       />
       <div className="rounded-lg border bg-card p-6 shadow-sm max-w-2xl">
         <ReservationForm
-          customers={customers}
-          tables={tables}
           onSubmit={handleSubmit}
           isLoading={create.isPending}
           submitLabel="Create Reservation"

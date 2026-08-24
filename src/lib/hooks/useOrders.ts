@@ -69,6 +69,10 @@ export function useOrders(
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Confirming an order creates its KOT server-side; keep the kitchen
+      // board in sync.
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
       addNotification(queryClient, {
         type: "info",
         icon: "info",
@@ -84,7 +88,6 @@ export function useOrders(
       api.post<ApiResponse<unknown>>(`/orders/${id}/payments`, data),
     onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["billing"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       addNotification(queryClient, {
         type: "payment",
@@ -98,22 +101,46 @@ export function useOrders(
 
   const cancel = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api.post<ApiResponse<Order>>(`/orders/${id}/void`, { reason }),
+      api.patch<ApiResponse<Order>>(`/orders/${id}/status`, {
+        status: "cancelled",
+        notes: reason,
+      }),
     onSuccess: (res) => {
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // The KOT stays on the board until the backend voids it — refresh so
+      // the kitchen sees the cancelled parent order immediately.
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
       addNotification(queryClient, {
         type: "warning",
         icon: "warning",
-        title: "Order voided",
-        description: `Order #${order.order_number} has been voided.`,
+        title: "Order cancelled",
+        description: `Order #${order.order_number} has been cancelled.`,
         action: { label: "View order", href: `/orders/${order.id}` },
       });
     },
   });
 
-  return { list, create, update, updateStatus, addPayment, cancel };
+  const archive = useMutation({
+    mutationFn: (id: string) =>
+      api.patch<ApiResponse<Order>>(`/orders/${id}/archive`, {}),
+    onSuccess: (res) => {
+      const order = res.data.data;
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      addNotification(queryClient, {
+        type: "info",
+        icon: "info",
+        title: "Order archived",
+        description: `Order #${order.order_number} has been archived.`,
+        action: { label: "View order", href: `/orders/${order.id}` },
+      });
+    },
+  });
+
+  return { list, create, update, updateStatus, addPayment, cancel, archive };
 }
 
 export function useOrder(id: string) {
@@ -124,5 +151,18 @@ export function useOrder(id: string) {
         .get<ApiResponse<Order>>(`/orders/${id}`)
         .then((res) => res.data.data),
     enabled: !!id,
+  });
+}
+
+export function useUnpaidOrders() {
+  return useQuery({
+    queryKey: ["orders", "unpaid"],
+    queryFn: () =>
+      api
+        .get<PaginatedResponse<Order>>("/orders", {
+          params: { payment_status: "unpaid,partial", per_page: 200 },
+        })
+        .then((res) => normalizePaginated(res.data)),
+    staleTime: 10_000,
   });
 }

@@ -13,6 +13,7 @@ interface CategoryFormProps {
   onSubmit: (data: MenuCategoryFormData) => void;
   isLoading?: boolean;
   submitLabel?: string;
+  existingNames?: string[];
 }
 
 export function CategoryForm({
@@ -20,22 +21,37 @@ export function CategoryForm({
   onSubmit,
   isLoading,
   submitLabel = "Save Category",
+  existingNames = [],
 }: CategoryFormProps) {
    const [formData, setFormData] = useState<MenuCategoryFormData>({
-     name: initialData?.name ?? "",
-     description: initialData?.description ?? "",
-     sort_order: initialData?.sort_order ?? 0,
-     is_active: initialData?.is_active ?? true,
-   });
+    name: initialData?.name ?? "",
+    description: initialData?.description ?? "",
+    sort_order: initialData?.sort_order ?? 0,
+    is_active: initialData?.is_active ?? true,
+  });
 
   const [nameError, setNameError] = useState<string>();
   const [nameTouched, setNameTouched] = useState(false);
 
+  function validateName(name: string): string | undefined {
+    const trimmed = name.trim();
+    if (!trimmed) return "Category name is required";
+    if (
+      existingNames.some(
+        (n) => n.toLowerCase() === trimmed.toLowerCase()
+      )
+    ) {
+      return "A category with this name already exists";
+    }
+    return undefined;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setNameTouched(true);
-    if (!formData.name.trim()) {
-      setNameError("Category name is required");
+    const error = validateName(formData.name);
+    if (error) {
+      setNameError(error);
       return;
     }
     setNameError(undefined);
@@ -58,8 +74,7 @@ export function CategoryForm({
           }
           onBlur={() => {
             setNameTouched(true);
-            if (!formData.name.trim()) setNameError("Category name is required");
-            else setNameError(undefined);
+            setNameError(validateName(formData.name));
           }}
           placeholder="e.g. Appetizers, Main Course, Desserts"
           aria-invalid={nameTouched && !!nameError}

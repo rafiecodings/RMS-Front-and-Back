@@ -1,107 +1,138 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "./RoleBadge";
-import { formatCurrency, formatDate, formatDateTime, safeNumber } from "@/lib/utils";
-import { Pencil, ArrowLeft, Mail, Phone, Star, Calendar, DollarSign } from "lucide-react";
-import type { Staff } from "@/lib/types";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { Pencil, ArrowLeft, Mail, Phone, Calendar, BriefcaseBusiness } from "lucide-react";
+import type { Staff, StaffRole } from "@/lib/types";
 
 interface StaffDetailProps {
   staff: Staff;
+  onEdit?: () => void;
+  canEdit?: boolean;
 }
 
-export function StaffDetail({ staff }: StaffDetailProps) {
-  const router = useRouter();
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <div className="text-sm font-medium break-words">{children}</div>
+    </div>
+  );
+}
+
+export function StaffDetail({ staff, onEdit, canEdit = true }: StaffDetailProps) {
+  const email = staff.user?.email ?? null;
+  const phone = staff.phone ?? null;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon-sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-lg font-semibold">{staff.first_name} {staff.last_name}</h2>
-            <p className="text-sm text-muted-foreground">{staff.employee_id}</p>
+      {/* PROFILE SUMMARY */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          {!onEdit && (
+            <Button variant="ghost" size="icon-sm" render={<Link href="/staff/employees" />}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold truncate">
+              {staff.user?.name ?? "Unknown"}
+            </h2>
+            <p className="text-sm text-muted-foreground truncate">
+              ID: {staff.employee_id ?? "—"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <RoleBadge role={(staff.user?.role ?? "waiter") as StaffRole} />
           <Badge variant={staff.is_active ? "default" : "secondary"}>
             {staff.is_active ? "Active" : "Inactive"}
           </Badge>
-          <Button render={<Link href={`/staff/employees/${staff.id}/edit`} />}>
-            <Pencil className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
+          {canEdit &&
+            (onEdit ? (
+              <Button onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            ) : (
+              <Button render={<Link href={`/staff/employees/${staff.id}/edit`} />}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            ))}
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Mail className="h-3.5 w-3.5" />
-            Email
-          </div>
-          <p className="font-medium text-sm">{staff.email}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Phone className="h-3.5 w-3.5" />
-            Phone
-          </div>
-          <p className="font-medium text-sm">{staff.phone ?? "—"}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Star className="h-3.5 w-3.5" />
-            Rating
-          </div>
-          <p className="font-medium text-sm">
-            {staff.average_rating != null ? `${safeNumber(staff.average_rating).toFixed(1)} / 5.0` : "—"}
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Calendar className="h-3.5 w-3.5" />
-            Hired
-          </div>
-          <p className="font-medium text-sm">{formatDate(staff.hire_date)}</p>
+      {/* CONTACT INFORMATION — emails/phones wrap instead of overlapping */}
+      <div className="rounded-lg border p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+          <Mail className="h-3.5 w-3.5" />
+          Contact Information
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Email">{email ?? "Not provided"}</Field>
+          <Field label="Contact Number">
+            <span className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {phone ?? "Not provided"}
+            </span>
+          </Field>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground mb-1">Role</p>
-          <RoleBadge role={staff.role} />
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground mb-1">Shift</p>
-          <p className="font-medium capitalize">{staff.shift ?? "Not assigned"}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <DollarSign className="h-3.5 w-3.5" />
-            Hourly Rate
-          </div>
-          <p className="font-medium">{staff.hourly_rate != null ? formatCurrency(staff.hourly_rate) : "—"}</p>
+      {/* EMPLOYMENT */}
+      <div className="rounded-lg border p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+          <BriefcaseBusiness className="h-3.5 w-3.5" />
+          Employment
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Position">{staff.position ?? "Not provided"}</Field>
+          <Field label="Department">{staff.department ?? "Not provided"}</Field>
+          <Field label="Employment Type">
+            {staff.employment_type
+              ? staff.employment_type.replace(/_/g, " ")
+              : "Not provided"}
+          </Field>
+          <Field label="Hire Date">{formatDate(staff.hire_date)}</Field>
+          <Field label="Hourly Rate">
+            {staff.hourly_rate != null ? formatCurrency(staff.hourly_rate) : "Not provided"}
+          </Field>
+          <Field label="Commission Rate">
+            {staff.commission_rate != null ? `${staff.commission_rate}%` : "Not provided"}
+          </Field>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground mb-1">Commission Rate</p>
-          <p className="font-medium">{staff.commission_rate != null ? `${staff.commission_rate}%` : "—"}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground mb-1">Orders Handled</p>
-          <p className="font-medium tabular-nums">{staff.total_orders_handled ?? 0}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-xs text-muted-foreground mb-1">Tips Earned</p>
-          <p className="font-medium tabular-nums">{staff.total_tips_earned != null ? formatCurrency(staff.total_tips_earned) : "—"}</p>
+      {/* PERFORMANCE SUMMARY (real tracked metrics only) */}
+      <div className="rounded-lg border p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          Performance Summary
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Rating">
+            {staff.average_rating != null
+              ? `${Number(staff.average_rating).toFixed(1)} / 5.0`
+              : "Not provided"}
+          </Field>
+          <Field label="Orders Handled">
+            <span className="tabular-nums">{staff.total_orders_handled ?? 0}</span>
+          </Field>
+          <Field label="Tips Earned">
+            {staff.total_tips_earned != null
+              ? formatCurrency(staff.total_tips_earned)
+              : "Not provided"}
+          </Field>
         </div>
       </div>
     </div>

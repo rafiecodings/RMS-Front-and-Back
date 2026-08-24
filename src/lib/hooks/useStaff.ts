@@ -12,6 +12,7 @@ import type {
   StaffPerformance,
   ShiftSchedule,
   ShiftScheduleFormData,
+  StaffShiftOption,
   AttendanceRecord,
 } from "@/lib/types";
 
@@ -69,7 +70,7 @@ export function useStaffPerformance(id: string) {
   });
 }
 
-export function useShiftSchedule(params?: QueryParams & { staff_id?: string; date?: string; date_from?: string; date_to?: string }) {
+export function useShiftSchedule(params?: QueryParams & { staff_id?: string; date?: string; start_date?: string; end_date?: string }) {
   const queryClient = useQueryClient();
 
   const list = useQuery({

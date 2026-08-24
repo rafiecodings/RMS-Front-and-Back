@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Percent, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { PosDiscount } from "../types";
+import { useTaxRate } from "@/features/settings/hooks/useSettings";
 
 interface CartSummaryProps {
   subtotal: number;
@@ -28,6 +29,7 @@ export function CartSummary({
   onEditDiscount,
   onEditServiceCharge,
 }: CartSummaryProps) {
+  const taxRate = useTaxRate();
   return (
     <div className="space-y-2 text-sm">
       <div className="flex items-center justify-between">
@@ -61,7 +63,7 @@ export function CartSummary({
       </div>
 
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">VAT (12%)</span>
+        <span className="text-muted-foreground">VAT ({taxRate}%)</span>
         <span>{formatCurrency(vatAmount)}</span>
       </div>
 

@@ -1,10 +1,8 @@
 import { useReducer, useMemo, useCallback } from "react";
 import type { PosState, PosAction, CartItem } from "../types";
-import type { OrderType } from "@/lib/types";
 
 const initialState: PosState = {
   items: [],
-  orderType: "dine_in",
   serviceChargePercent: 0,
 };
 
@@ -58,22 +56,11 @@ function posReducer(state: PosState, action: PosAction): PosState {
       return { ...state, discount: action.discount };
     case "SET_SERVICE_CHARGE":
       return { ...state, serviceChargePercent: action.percent };
-    case "SET_ORDER_TYPE":
-      return {
-        ...state,
-        orderType: action.orderType,
-        tableId: action.orderType === "dine_in" ? state.tableId : undefined,
-      };
-    case "SET_CUSTOMER":
-      return { ...state, customerId: action.customerId };
-    case "SET_TABLE":
-      return { ...state, tableId: action.tableId };
     case "SET_NOTES":
       return { ...state, notes: action.notes };
     case "CLEAR_CART":
       return {
         ...initialState,
-        orderType: state.orderType,
       };
     default:
       return state;
@@ -113,21 +100,6 @@ export function usePosCart() {
 
   const setServiceCharge = useCallback(
     (percent: number) => dispatch({ type: "SET_SERVICE_CHARGE", percent }),
-    []
-  );
-
-  const setOrderType = useCallback(
-    (orderType: OrderType) => dispatch({ type: "SET_ORDER_TYPE", orderType }),
-    []
-  );
-
-  const setCustomer = useCallback(
-    (customerId?: string) => dispatch({ type: "SET_CUSTOMER", customerId }),
-    []
-  );
-
-  const setTable = useCallback(
-    (tableId?: string) => dispatch({ type: "SET_TABLE", tableId }),
     []
   );
 
@@ -177,9 +149,6 @@ export function usePosCart() {
     updateItemNotes,
     setDiscount,
     setServiceCharge,
-    setOrderType,
-    setCustomer,
-    setTable,
     setNotes,
     clearCart,
   };

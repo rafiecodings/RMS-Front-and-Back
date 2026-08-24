@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
 import { StaffForm } from "@/features/staff";
-import { useStaff } from "@/lib/hooks";
+import { useStaffMember, useStaff } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { StaffFormData } from "@/lib/types";
 
@@ -12,11 +12,10 @@ export default function EditEmployeePage() {
   const router = useRouter();
   const id = params.id as string;
 
-  const { list, update } = useStaff({ per_page: 200 });
-  const staffList = list.data?.data?.data ?? [];
-  const staff = staffList.find((s) => s.id === id);
+  const { data: staff, isLoading } = useStaffMember(id);
+  const { update } = useStaff();
 
-  if (list.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
@@ -51,7 +50,7 @@ export default function EditEmployeePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Edit ${staff.first_name} ${staff.last_name}`}
+        title={`Edit ${staff.user?.name ?? staff.employee_id ?? "Unknown"}`}
         description="Update staff profile"
       />
       <StaffForm

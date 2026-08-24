@@ -6,7 +6,7 @@ import { PageHeader, LoadingSpinner, ConfirmDialog } from "@/components/shared";
 import { ReservationDetail } from "@/features/reservations";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useReservations } from "@/lib/hooks";
+import { useReservation, useReservations } from "@/lib/hooks";
 import { toast } from "sonner";
 
 export default function ReservationDetailPage({
@@ -15,11 +15,11 @@ export default function ReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { list, cancel } = useReservations();
+  const { data: reservation, isLoading } = useReservation(id);
+  const { cancel, checkIn, complete } = useReservations();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-
-  const reservations = list.data?.data?.data ?? [];
-  const reservation = reservations.find((r) => r.id === id);
+  const [showCheckInDialog, setShowCheckInDialog] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   function handleCancel() {
     if (!reservation) return;
@@ -35,7 +35,29 @@ export default function ReservationDetailPage({
     );
   }
 
-  if (list.isLoading) {
+  function handleCheckIn() {
+    if (!reservation) return;
+    checkIn.mutate(reservation.id, {
+      onSuccess: () => {
+        toast.success(`Reservation ${reservation.reservation_number} checked in`);
+        setShowCheckInDialog(false);
+      },
+      onError: () => toast.error("Failed to check in"),
+    });
+  }
+
+  function handleComplete() {
+    if (!reservation) return;
+    complete.mutate(reservation.id, {
+      onSuccess: () => {
+        toast.success(`Reservation ${reservation.reservation_number} completed`);
+        setShowCompleteDialog(false);
+      },
+      onError: () => toast.error("Failed to complete reservation"),
+    });
+  }
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <LoadingSpinner size="lg" />
@@ -74,6 +96,8 @@ export default function ReservationDetailPage({
       <ReservationDetail
         reservation={reservation}
         onCancel={() => setShowCancelDialog(true)}
+        onCheckIn={() => setShowCheckInDialog(true)}
+        onComplete={() => setShowCompleteDialog(true)}
       />
 
       <ConfirmDialog
@@ -85,6 +109,26 @@ export default function ReservationDetailPage({
         variant="destructive"
         onConfirm={handleCancel}
         isLoading={cancel.isPending}
+      />
+
+      <ConfirmDialog
+        open={showCheckInDialog}
+        onOpenChange={setShowCheckInDialog}
+        title="Check In"
+        description={`Mark reservation ${reservation.reservation_number} as seated and occupy the table?`}
+        confirmText="Check In"
+        onConfirm={handleCheckIn}
+        isLoading={checkIn.isPending}
+      />
+
+      <ConfirmDialog
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+        title="Complete Reservation"
+        description={`Mark reservation ${reservation.reservation_number} as completed and free the table?`}
+        confirmText="Complete"
+        onConfirm={handleComplete}
+        isLoading={complete.isPending}
       />
     </div>
   );

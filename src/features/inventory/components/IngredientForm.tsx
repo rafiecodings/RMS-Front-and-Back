@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +19,18 @@ interface IngredientFormProps {
   initialData?: Ingredient;
   onSubmit: (data: IngredientFormData) => void;
   isLoading?: boolean;
+  existingNames?: string[];
 }
 
 const UNITS = ["kg", "g", "mg", "L", "mL", "oz", "lb", "pcs", "bunch", "pack"];
 const CATEGORIES = ["meat", "seafood", "vegetables", "fruits", "dairy", "grains", "spices", "condiments", "pantry", "beverages", "other"];
 
-export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientFormProps) {
+export function IngredientForm({
+  initialData,
+  onSubmit,
+  isLoading,
+  existingNames = [],
+}: IngredientFormProps) {
   const router = useRouter();
   const { list: suppliersList } = useSuppliers({ per_page: 100 });
   const suppliers = suppliersList.data?.data?.data ?? [];
@@ -38,17 +45,49 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
     cost_per_unit: initialData?.cost_per_unit ?? 0,
     category: initialData?.category ?? "",
     supplier_id: initialData?.supplier_id ?? "",
-    expiry_date: initialData?.expiry_date ?? "",
     storage_location: initialData?.storage_location ?? "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validate(): Record<string, string> {
+    const next: Record<string, string> = {};
+    const name = (form.name ?? "").trim();
+    if (!name) next.name = "Name is required";
+    else if (
+      existingNames.some((n) => n.toLowerCase() === name.toLowerCase())
+    ) {
+      next.name = "An ingredient with this name already exists";
+    }
+    if (!form.unit) next.unit = "Unit is required";
+    if ((form.current_stock ?? 0) < 0) next.current_stock = "Cannot be negative";
+    if ((form.minimum_stock ?? 0) < 0) next.minimum_stock = "Cannot be negative";
+    if ((form.maximum_stock ?? 0) < 0) next.maximum_stock = "Cannot be negative";
+    if ((form.minimum_stock ?? 0) > (form.maximum_stock ?? 0)) {
+      next.minimum_stock = "Minimum cannot exceed maximum";
+    }
+    if ((form.cost_per_unit ?? 0) < 0) next.cost_per_unit = "Cannot be negative";
+    return next;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSubmit(form);
+    const next = validate();
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+    onSubmit({
+      ...form,
+      name: name(form.name),
+      description: form.description?.trim() || undefined,
+    });
   }
 
   function update<K extends keyof IngredientFormData>(key: K, value: IngredientFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function name(value: string | undefined): string {
+    return (value ?? "").trim();
   }
 
   return (
@@ -57,16 +96,18 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Basic Information</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name *</label>
+            <Label className="text-sm font-medium">Name *</Label>
             <Input
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
               placeholder="e.g. Chicken Breast"
               required
+              aria-invalid={!!errors.name}
             />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Category</label>
+            <Label className="text-sm font-medium">Category</Label>
             <Select value={form.category ?? "none"} onValueChange={(v) => update("category", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
@@ -81,7 +122,7 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
+          <Label className="text-sm font-medium">Description</Label>
           <Input
             value={form.description ?? ""}
             onChange={(e) => update("description", e.target.value || undefined)}
@@ -94,7 +135,7 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Stock & Pricing</h3>
         <div className="grid gap-4 md:grid-cols-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Unit *</label>
+            <Label className="text-sm font-medium">Unit *</Label>
             <Select value={form.unit} onValueChange={(v) => update("unit", v ?? form.unit)}>
               <SelectTrigger>
                 <SelectValue />
@@ -107,7 +148,7 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Current Stock *</label>
+            <Label className="text-sm font-medium">Current Stock *</Label>
             <Input
               type="number"
               min={0}
@@ -115,10 +156,12 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
               value={form.current_stock}
               onChange={(e) => update("current_stock", parseFloat(e.target.value) || 0)}
               required
+              aria-invalid={!!errors.current_stock}
             />
+            {errors.current_stock && <p className="text-xs text-destructive">{errors.current_stock}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Minimum Stock *</label>
+            <Label className="text-sm font-medium">Minimum Stock *</Label>
             <Input
               type="number"
               min={0}
@@ -126,10 +169,12 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
               value={form.minimum_stock}
               onChange={(e) => update("minimum_stock", parseFloat(e.target.value) || 0)}
               required
+              aria-invalid={!!errors.minimum_stock}
             />
+            {errors.minimum_stock && <p className="text-xs text-destructive">{errors.minimum_stock}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Maximum Stock *</label>
+            <Label className="text-sm font-medium">Maximum Stock *</Label>
             <Input
               type="number"
               min={0}
@@ -137,12 +182,14 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
               value={form.maximum_stock}
               onChange={(e) => update("maximum_stock", parseFloat(e.target.value) || 0)}
               required
+              aria-invalid={!!errors.maximum_stock}
             />
+            {errors.maximum_stock && <p className="text-xs text-destructive">{errors.maximum_stock}</p>}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Cost per Unit *</label>
+            <Label className="text-sm font-medium">Cost per Unit *</Label>
             <Input
               type="number"
               min={0}
@@ -150,10 +197,12 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
               value={form.cost_per_unit}
               onChange={(e) => update("cost_per_unit", parseFloat(e.target.value) || 0)}
               required
+              aria-invalid={!!errors.cost_per_unit}
             />
+            {errors.cost_per_unit && <p className="text-xs text-destructive">{errors.cost_per_unit}</p>}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Supplier</label>
+            <Label className="text-sm font-medium">Supplier</Label>
             <Select value={form.supplier_id ?? "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select supplier" />
@@ -173,19 +222,11 @@ export function IngredientForm({ initialData, onSubmit, isLoading }: IngredientF
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Additional Details</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Storage Location</label>
+            <Label className="text-sm font-medium">Storage Location</Label>
             <Input
               value={form.storage_location ?? ""}
               onChange={(e) => update("storage_location", e.target.value || undefined)}
               placeholder="e.g. Walk-in Cooler A"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Expiry Date</label>
-            <Input
-              type="date"
-              value={form.expiry_date ?? ""}
-              onChange={(e) => update("expiry_date", e.target.value || undefined)}
             />
           </div>
         </div>

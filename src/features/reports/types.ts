@@ -1,8 +1,20 @@
 import type { OrderType } from "@/lib/types";
 
-export type ReportPeriod = "today" | "yesterday" | "this_week" | "this_month" | "last_month" | "this_quarter" | "this_year" | "custom";
+export type ReportPeriod =
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "last_week"
+  | "last_7_days"
+  | "last_30_days"
+  | "this_month"
+  | "last_month"
+  | "this_quarter"
+  | "this_year"
+  | "custom";
 
-export type ExportFormat = "pdf" | "excel" | "csv";
+/** Only formats the backend actually generates. */
+export type ExportFormat = "csv" | "json";
 
 export interface DateRange {
   from: string;
@@ -19,10 +31,9 @@ export interface RevenueReport {
   total_revenue: number;
   total_orders: number;
   average_order_value: number;
-  revenue_growth: number;
+  /** Null when no comparable previous period exists. */
+  revenue_growth: number | null;
   daily_revenue: DailyRevenueData[];
-  revenue_by_type: RevenueByType[];
-  revenue_by_payment: RevenueByPayment[];
 }
 
 export interface DailyRevenueData {
@@ -44,22 +55,22 @@ export interface RevenueByPayment {
   percentage: number;
 }
 
+export interface HourlyDistribution {
+  hour: number;
+  orders: number;
+  revenue: number;
+}
+
 export interface SalesReport {
   total_sales: number;
   total_items_sold: number;
   average_ticket: number;
-  sales_growth: number;
-  sales_by_day: SalesByDay[];
-  sales_by_category: SalesByCategory[];
+  /** Null when no comparable previous period exists. */
+  sales_growth: number | null;
   revenue_by_type: RevenueByType[];
-  top_items: TopSalesItem[];
-  bottom_items: TopSalesItem[];
-}
-
-export interface SalesByDay {
-  date: string;
-  sales: number;
-  items: number;
+  revenue_by_payment: RevenueByPayment[];
+  hourly_distribution: HourlyDistribution[];
+  sales_by_category: SalesByCategory[];
 }
 
 export interface SalesByCategory {
@@ -81,10 +92,7 @@ export interface TopSalesItem {
 export interface MenuPerformanceReport {
   total_menu_items: number;
   active_items: number;
-  average_margin: number;
   item_performance: MenuItemPerformance[];
-  category_performance: CategoryPerformance[];
-  modifier_usage: ModifierUsage[];
 }
 
 export interface MenuItemPerformance {
@@ -93,79 +101,44 @@ export interface MenuItemPerformance {
   category: string;
   quantity_sold: number;
   revenue: number;
-  cost: number;
-  margin: number;
-  margin_percentage: number;
-  popularity_score: number;
-}
-
-export interface CategoryPerformance {
-  category: string;
-  items_count: number;
-  total_sold: number;
-  total_revenue: number;
-  average_margin: number;
-}
-
-export interface ModifierUsage {
-  modifier: string;
-  count: number;
-  revenue: number;
+  order_count: number;
+  /**
+   * Recipe-level costing is not tracked, so per-item cost/margin are
+   * intentionally unknown instead of fake zeros.
+   */
+  cost: number | null;
+  margin: number | null;
+  margin_percentage: number | null;
 }
 
 export interface InventoryReport {
   total_ingredients: number;
-  total_stock_value: number;
   low_stock_count: number;
-  stock_valuation: StockValuation[];
-  consumption_variance: ConsumptionVariance[];
+  total_stock_value: number;
   wastage_summary: WastageSummary;
-  top_suppliers: TopSupplier[];
-}
-
-export interface StockValuation {
-  id: string;
-  name: string;
-  current_stock: number;
-  unit: string;
-  unit_cost: number;
-  total_value: number;
-  status: "ok" | "low" | "critical" | "out_of_stock";
-}
-
-export interface ConsumptionVariance {
-  id: string;
-  name: string;
-  expected_usage: number;
-  actual_usage: number;
-  variance: number;
-  variance_percentage: number;
-  cost_impact: number;
+  low_stock_items: LowStockItem[];
 }
 
 export interface WastageSummary {
   total_wastage_count: number;
   total_wastage_cost: number;
-  by_reason: { reason: string; count: number; cost: number }[];
+  by_reason: { reason: string; count: number; quantity: number; cost: number }[];
 }
 
-export interface TopSupplier {
+export interface LowStockItem {
   id: string;
   name: string;
-  orders_count: number;
-  total_purchased: number;
-  average_delivery_days: number;
+  current_stock: number;
+  minimum_stock: number;
+  unit_cost: number;
+  unit: string;
 }
 
 export interface StaffReport {
   total_staff: number;
   active_staff: number;
-  total_labor_cost: number;
-  labor_cost_percentage: number;
   attendance_summary: AttendanceSummary;
   performance_ranking: StaffPerformanceRanking[];
-  shift_coverage: ShiftCoverage[];
-  clock_summary: ClockSummary;
 }
 
 export interface AttendanceSummary {
@@ -174,63 +147,36 @@ export interface AttendanceSummary {
   absent: number;
   late: number;
   on_leave: number;
-  attendance_rate: number;
+  /** Null when no attendance records exist in the period. */
+  attendance_rate: number | null;
 }
 
 export interface StaffPerformanceRanking {
   id: string;
   name: string;
+  position: string;
   role: string;
   orders_handled: number;
   revenue_generated: number;
-  average_rating: number;
-  attendance_rate: number;
-  performance_score: number;
-}
-
-export interface ShiftCoverage {
-  shift: string;
-  staff_count: number;
-  coverage_percentage: number;
-}
-
-export interface ClockSummary {
-  average_hours_per_day: number;
-  overtime_hours: number;
-  total_worked_hours: number;
+  avg_ticket: number;
+  shifts_scheduled: number;
+  /** Null when the staff member has no attendance records in range. */
+  attendance_rate: number | null;
 }
 
 export interface TaxReport {
   total_tax_collected: number;
-  tax_breakdown: TaxBreakdown[];
   monthly_tax: MonthlyTax[];
-  tax_by_order_type: TaxByOrderType[];
-}
-
-export interface TaxBreakdown {
-  tax_type: string;
-  rate: number;
-  taxable_amount: number;
-  tax_amount: number;
 }
 
 export interface MonthlyTax {
   month: string;
   tax_collected: number;
-  taxable_sales: number;
-}
-
-export interface TaxByOrderType {
-  order_type: OrderType;
-  taxable_sales: number;
-  tax_collected: number;
-  percentage: number;
 }
 
 export interface ExportPayload {
-  report_type: string;
+  type: string;
   format: ExportFormat;
-  date_from: string;
-  date_to: string;
-  filters?: Record<string, string>;
+  start_date: string;
+  end_date: string;
 }

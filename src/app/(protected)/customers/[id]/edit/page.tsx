@@ -7,7 +7,7 @@ import { PageHeader, LoadingSpinner } from "@/components/shared";
 import { CustomerForm } from "@/features/customers";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useCustomers } from "@/lib/hooks";
+import { useCustomer, useCustomers } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { CustomerFormData } from "@/lib/types";
 
@@ -18,10 +18,8 @@ export default function EditCustomerPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { list, update } = useCustomers();
-
-  const customers = list.data?.data?.data ?? [];
-  const customer = customers.find((c) => c.id === id);
+  const { data: customer, isLoading } = useCustomer(id);
+  const { update } = useCustomers();
 
   function handleSubmit(data: CustomerFormData) {
     update.mutate(
@@ -38,7 +36,7 @@ export default function EditCustomerPage({
     );
   }
 
-  if (list.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <LoadingSpinner size="lg" />
@@ -68,10 +66,10 @@ export default function EditCustomerPage({
       <PageHeader
         title="Edit Customer"
         description={`Editing profile for ${customer.name}`}
-        action={
+         action={
           <Button variant="outline" size="sm" render={<Link href={`/customers/${id}`} />}>
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Back
+            Back to Customer
           </Button>
         }
       />

@@ -10,32 +10,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/shared";
+import { LoadingSpinner, EmptyState } from "@/components/shared";
 import { EntityActionDropdown } from "@/components/shared";
+import { Users } from "lucide-react";
 import type { Customer } from "@/lib/types";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const CUSTOMER_TYPE_BADGE: Record<string, string> = {
   walk_in: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-  registered:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  regular:
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  corporate:
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  vip: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
 };
 
 interface CustomerTableProps {
   customers: Customer[];
   isLoading?: boolean;
   onDelete?: (customer: Customer) => void;
+  onArchive?: (customer: Customer) => void;
+  canEdit?: boolean;
 }
 
 export function CustomerTable({
   customers,
   isLoading,
   onDelete,
+  onArchive,
+  canEdit = true,
 }: CustomerTableProps) {
   if (isLoading) {
     return (
@@ -47,28 +45,24 @@ export function CustomerTable({
 
   if (customers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">No customers found</p>
-      </div>
+      <EmptyState
+        title="No customers found"
+        description="No customers match your current search or filters."
+        icon={<Users className="h-8 w-8" />}
+      />
     );
   }
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead className="hidden md:table-cell">Email</TableHead>
-            <TableHead className="hidden md:table-cell">Phone</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead className="text-right">Points</TableHead>
-            <TableHead className="text-right hidden lg:table-cell">
-              Orders
-            </TableHead>
-            <TableHead className="text-right hidden lg:table-cell">
-              Total Spent
-            </TableHead>
+            <TableHead className="text-right">Orders</TableHead>
+            <TableHead className="text-right">Visits</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -83,38 +77,44 @@ export function CustomerTable({
                   {customer.name}
                 </Link>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">
-                {customer.email || "—"}
+              <TableCell>
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-[10px] px-1.5 py-0",
+                    CUSTOMER_TYPE_BADGE[customer.customer_type] ?? CUSTOMER_TYPE_BADGE.walk_in
+                  )}
+                >
+                  {customer.customer_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                </Badge>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">
-                {customer.phone || "—"}
+              <TableCell className="text-right">
+                {customer.total_orders}
+              </TableCell>
+              <TableCell className="text-right">
+                {customer.visit_count ?? 0}
               </TableCell>
               <TableCell>
                 <Badge
                   variant="secondary"
                   className={cn(
                     "text-[10px] px-1.5 py-0",
-                    CUSTOMER_TYPE_BADGE[customer.customer_type]
+                    customer.is_active
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                      : "bg-gray-100 text-gray-600 dark:bg-gray-900/40 dark:text-gray-400"
                   )}
                 >
-                  {customer.customer_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {customer.is_active ? "Active" : "Inactive"}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right font-medium">
-                {customer.loyalty_points}
-              </TableCell>
-              <TableCell className="text-right hidden lg:table-cell">
-                {customer.total_orders}
-              </TableCell>
-              <TableCell className="text-right hidden lg:table-cell font-medium">
-                {formatCurrency(customer.total_spent)}
-              </TableCell>
-              <TableCell>
+<TableCell>
                 <EntityActionDropdown
                   viewHref={`/customers/${customer.id}`}
                   viewLabel="View Details"
-                  editHref={`/customers/${customer.id}/edit`}
+                  editHref={canEdit ? `/customers/${customer.id}/edit` : undefined}
                   onAction={onDelete ? () => onDelete(customer) : undefined}
+                  onArchive={onArchive ? () => onArchive(customer) : undefined}
+                  archiveLabel="Archive"
                 />
               </TableCell>
             </TableRow>
@@ -124,3 +124,5 @@ export function CustomerTable({
     </div>
   );
 }
+
+

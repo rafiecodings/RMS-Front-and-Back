@@ -5,6 +5,8 @@ import { Separator } from "@/components/ui/separator";
 import { Printer } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Invoice, Refund } from "../types";
+import { useTaxRate, useSettings } from "@/features/settings/hooks/useSettings";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface ReceiptPrintProps {
   invoice: Invoice;
@@ -17,6 +19,9 @@ export function ReceiptPrint({
   refunds,
   showPrintButton = true,
 }: ReceiptPrintProps) {
+  const taxRate = useTaxRate();
+  const { data: settings } = useSettings();
+  const { user } = useAuth();
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -46,12 +51,22 @@ export function ReceiptPrint({
       <div className="p-6 print:p-4">
         <div className="mx-auto max-w-md space-y-4 text-sm print:text-xs">
           <div className="text-center">
+            {/* Restaurant identity from Settings (authoritative). */}
             <p className="text-lg font-bold print:text-base">
-              Restaurant Management System
+              {settings?.name || "Restaurant"}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {dateStr} {timeStr}
+            {settings?.address && (
+              <p className="text-xs text-muted-foreground">{settings.address}</p>
+            )}
+            {settings?.phone && (
+              <p className="text-xs text-muted-foreground">{settings.phone}</p>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {dateStr} · {timeStr}
             </p>
+            {user?.name && (
+              <p className="text-xs text-muted-foreground">Cashier: {user.name}</p>
+            )}
           </div>
 
           <Separator className="print:bg-gray-300" />
@@ -115,7 +130,7 @@ export function ReceiptPrint({
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-muted-foreground">VAT (12%)</span>
+              <span className="text-muted-foreground">VAT ({taxRate}%)</span>
               <span>{formatCurrency(invoice.tax_amount)}</span>
             </div>
             {invoice.service_charge > 0 && (

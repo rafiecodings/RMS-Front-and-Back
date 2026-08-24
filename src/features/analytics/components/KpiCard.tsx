@@ -10,7 +10,8 @@ interface KpiCardProps {
   title: string;
   value: number;
   format?: "currency" | "number" | "percentage" | "hours";
-  change?: number;
+  /** Null/undefined = no comparable baseline; the trend chip is hidden. */
+  change?: number | null;
   icon?: ReactNode;
   subtitle?: string;
 }
@@ -42,7 +43,7 @@ export const KpiCard = memo(function KpiCard({
       <CardContent>
         <div className="flex items-end gap-3">
           <div className="text-2xl font-bold">{formattedValue}</div>
-          {change !== undefined && (
+          {change !== undefined && change !== null && (
             <div
               className={cn(
                 "flex items-center text-xs font-medium mb-1",

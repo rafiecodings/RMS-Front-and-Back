@@ -13,7 +13,7 @@ export function useKitchenOrders() {
     queryFn: () =>
       api
         .get<ApiResponse<Kot[]>>("/kot", {
-          params: { status: "received,in_progress" },
+          params: { status: "received,in_progress", per_page: 200 },
         })
         .then((res) => unwrapArray<Kot>(res.data)),
     refetchInterval: 5000,
@@ -25,7 +25,7 @@ export function useKitchenOrders() {
     queryFn: () =>
       api
         .get<ApiResponse<Kot[]>>("/kot", {
-          params: { status: "received,in_progress,ready" },
+          params: { status: "received,in_progress,ready,completed", per_page: 200 },
         })
         .then((res) => unwrapArray<Kot>(res.data)),
     refetchInterval: 5000,
@@ -42,9 +42,9 @@ export function useKitchenOrders() {
     },
   });
 
-  const updatePriority = useMutation({
-    mutationFn: ({ id, priority }: { id: string; priority: string }) =>
-      api.patch<ApiResponse<Kot>>(`/kot/${id}/priority`, { priority }),
+  const archive = useMutation({
+    mutationFn: (id: string) =>
+      api.patch<ApiResponse<Kot>>(`/kot/${id}/archive`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
@@ -52,5 +52,5 @@ export function useKitchenOrders() {
     },
   });
 
-  return { active, all, updateStatus, updatePriority };
+  return { active, all, updateStatus, archive };
 }

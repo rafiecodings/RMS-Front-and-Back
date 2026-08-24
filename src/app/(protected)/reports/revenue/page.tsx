@@ -11,7 +11,7 @@ export default function RevenueReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const { data: report, isLoading } = useRevenueReport({ period, date_range: dateRange });
+  const { data: report, isLoading, isError: listError } = useRevenueReport({ period, date_range: dateRange });
 
   return (
     <div className="space-y-6">
@@ -36,6 +36,10 @@ export default function RevenueReportsPage() {
 
       {isLoading ? (
         <LoadingSpinner />
+      ) : listError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+          Failed to load the revenue report. Please try again.
+        </div>
       ) : report ? (
         <>
           <div className="grid gap-4 md:grid-cols-3">

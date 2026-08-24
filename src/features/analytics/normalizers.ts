@@ -24,6 +24,13 @@ import type {
   CustomerSegment,
   TopCustomer,
   VisitTrend,
+  DemandForecast,
+  ForecastPrediction,
+  ForecastHorizon,
+  LowStockProjection,
+  StockoutProjectionItem,
+  StockoutContributor,
+  StockoutSeverity,
 } from "./types";
 
 interface RawDaily {
@@ -53,7 +60,10 @@ export function normalizeRevenueAnalytics(raw: unknown): RevenueAnalytics {
 
   return {
     total_revenue: totalRevenue,
-    revenue_growth: safeNumber(r.revenue_growth),
+    revenue_growth:
+      r.revenue_growth === null || r.revenue_growth === undefined
+        ? null
+        : safeNumber(r.revenue_growth),
     average_order_value:
       totalOrders > 0 ? totalRevenue / totalOrders : safeNumber(r.average_order_value),
     revenue_by_hour: safeArray<RawDaily>(r.revenue_by_hour).map(
@@ -106,7 +116,10 @@ export function normalizeSalesAnalytics(raw: unknown): SalesTrends {
   }>(raw);
   return {
     total_sales: safeNumber(r.total_sales),
-    sales_growth: safeNumber(r.sales_growth),
+    sales_growth:
+      r.sales_growth === null || r.sales_growth === undefined
+        ? null
+        : safeNumber(r.sales_growth),
     total_items_sold: safeNumber(r.total_items_sold),
     average_ticket: safeNumber(r.average_ticket),
     sales_by_hour: safeArray<{ hour?: unknown; items_sold?: unknown; revenue?: unknown }>(
@@ -142,6 +155,7 @@ export function normalizeSalesAnalytics(raw: unknown): SalesTrends {
       quantity_sold?: unknown;
       revenue?: unknown;
       average_price?: unknown;
+      forecast_daily_demand?: unknown;
       trend?: unknown;
     }>(r.top_items).map(
       (d): BestSellingItem => ({
@@ -151,10 +165,16 @@ export function normalizeSalesAnalytics(raw: unknown): SalesTrends {
         quantity_sold: safeNumber(d.quantity_sold),
         revenue: safeNumber(d.revenue),
         average_price: safeNumber(d.average_price),
-        trend: (safeString(d.trend) as BestSellingItem["trend"]) || "stable",
+        forecast_daily_demand: safeNumber(d.forecast_daily_demand),
+        trend: normalizeDemandTrend(d.trend),
       }),
     ),
   };
+}
+
+export function normalizeDemandTrend(value: unknown): BestSellingItem["trend"] {
+  const trend = safeString(value);
+  return trend === "rising" || trend === "falling" ? trend : "stable";
 }
 
 export function normalizePeakHours(raw: unknown): PeakHours {
@@ -353,4 +373,124 @@ export function normalizeCustomerAnalytics(raw: unknown): CustomerAnalytics {
       }),
     ),
   };
+}
+
+export function normalizeForecast(raw: unknown): DemandForecast {
+  const r = safeObject<{
+    item_id?: unknown;
+    horizon?: unknown;
+    model?: unknown;
+    fallback?: unknown;
+    predictions?: unknown;
+  }>(raw);
+
+  const predictions = safeArray<{
+    date?: unknown;
+    qty?: unknown;
+    lower_ci?: unknown;
+    upper_ci?: unknown;
+  }>(r.predictions).map(
+    (p): ForecastPrediction => ({
+      date: safeString(p.date),
+      qty: safeNumber(p.qty),
+      lower_ci: safeNumber(p.lower_ci),
+      upper_ci: safeNumber(p.upper_ci),
+    }),
+  );
+
+  const rawHorizon = safeNumber(r.horizon);
+  const horizon = (
+    rawHorizon === 7 || rawHorizon === 14 || rawHorizon === 30 ? rawHorizon : 7
+  ) as ForecastHorizon;
+
+  return {
+    item_id: safeString(r.item_id),
+    horizon,
+    model: safeString(r.model) || "naive",
+    fallback: Boolean(r.fallback),
+    predictions,
+  };
+}
+
+export function normalizeLowStockProjection(raw: unknown): LowStockProjection {
+  const r = safeObject<{
+    generated_at?: unknown;
+    horizon_days?: unknown;
+    items?: unknown;
+    summary?: unknown;
+  }>(raw);
+
+  const items = safeArray<{
+    id?: unknown;
+    name?: unknown;
+    category?: unknown;
+    unit?: unknown;
+    current_stock?: unknown;
+    minimum_stock?: unknown;
+    forecast_daily_usage?: unknown;
+    days_until_stockout?: unknown;
+    severity?: unknown;
+    contributors?: unknown;
+  }>(r.items).map(
+    (d): StockoutProjectionItem => ({
+      id: safeString(d.id),
+      name: safeString(d.name),
+      category: safeString(d.category) || null,
+      unit: safeString(d.unit),
+      current_stock: safeNumber(d.current_stock),
+      minimum_stock: safeNumber(d.minimum_stock),
+      forecast_daily_usage: safeNumber(d.forecast_daily_usage),
+      days_until_stockout:
+        d.days_until_stockout === null || d.days_until_stockout === undefined
+          ? null
+          : safeNumber(d.days_until_stockout),
+      severity: normalizeStockoutSeverity(d.severity),
+      contributors: safeArray<{
+        menu_item_id?: unknown;
+        name?: unknown;
+        forecast_daily_demand?: unknown;
+      }>(d.contributors).map(
+        (c): StockoutContributor => ({
+          menu_item_id: safeString(c.menu_item_id),
+          name: safeString(c.name),
+          forecast_daily_demand: safeNumber(c.forecast_daily_demand),
+        }),
+      ),
+    }),
+  );
+
+  const rawHorizon = safeNumber(r.horizon_days);
+  const horizon = (
+    rawHorizon === 7 || rawHorizon === 14 || rawHorizon === 30 ? rawHorizon : 7
+  ) as ForecastHorizon;
+
+  const summary = safeObject<Record<string, unknown>>(r.summary);
+  const toCount = (key: string): number =>
+    typeof summary[key] === "number" ? (summary[key] as number) : 0;
+
+  return {
+    generated_at: safeString(r.generated_at),
+    horizon_days: horizon,
+    items,
+    summary: {
+      out_of_stock: toCount("out_of_stock"),
+      critical: toCount("critical"),
+      high: toCount("high"),
+      medium: toCount("medium"),
+      low: toCount("low"),
+    },
+  };
+}
+
+function normalizeStockoutSeverity(value: unknown): StockoutSeverity {
+  const severity = safeString(value);
+  return (
+    severity === "out_of_stock" ||
+    severity === "critical" ||
+    severity === "high" ||
+    severity === "medium" ||
+    severity === "low"
+      ? severity
+      : "low"
+  );
 }

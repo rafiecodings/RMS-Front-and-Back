@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatDate, formatTime, safeNumber } from "@/lib/utils";
-import { StatusBadge, TableLoadingRows, TableEmptyRow } from "@/components/shared";
+import { formatDate, safeNumber } from "@/lib/utils";
+import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import type { AttendanceRecord } from "@/lib/types";
 
@@ -93,7 +93,7 @@ export function AttendanceTable({
               records.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/30">
                    <td className="px-4 py-3">
-                     <p className="font-medium">{r.staff?.user?.name ?? "—"}</p>
+                     <p className="font-medium">{r.staff?.name ?? "—"}</p>
                    </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(r.date)}

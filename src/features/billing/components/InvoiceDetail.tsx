@@ -8,6 +8,7 @@ import { ArrowLeft, Printer, RotateCcw } from "lucide-react";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import type { Invoice } from "../types";
+import { useTaxRate } from "@/features/settings/hooks/useSettings";
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -20,6 +21,7 @@ export function InvoiceDetail({
   onPrint,
   onRefund,
 }: InvoiceDetailProps) {
+  const taxRate = useTaxRate();
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -133,7 +135,7 @@ export function InvoiceDetail({
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">VAT (12%)</span>
+                <span className="text-muted-foreground">VAT ({taxRate}%)</span>
                 <span>{formatCurrency(invoice.tax_amount)}</span>
               </div>
               {invoice.service_charge > 0 && (

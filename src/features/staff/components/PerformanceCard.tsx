@@ -2,7 +2,7 @@
 
 import { Star, TrendingUp, Clock, Award } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
-import { safeNumber, formatCurrency } from "@/lib/utils";
+import { safeNumber } from "@/lib/utils";
 import type { StaffPerformance } from "@/lib/types";
 
 interface PerformanceCardProps {

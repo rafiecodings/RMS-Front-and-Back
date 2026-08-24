@@ -14,7 +14,8 @@ export interface AnalyticsFilters {
 
 export interface RevenueAnalytics {
   total_revenue: number;
-  revenue_growth: number;
+  /** Null when no comparable previous period exists. */
+  revenue_growth: number | null;
   average_order_value: number;
   revenue_by_hour: RevenueByHour[];
   revenue_by_day: RevenueByDay[];
@@ -48,7 +49,8 @@ export interface RevenueTrend {
 
 export interface SalesTrends {
   total_sales: number;
-  sales_growth: number;
+  /** Null when no comparable previous period exists. */
+  sales_growth: number | null;
   total_items_sold: number;
   average_ticket: number;
   sales_by_hour: SalesByHour[];
@@ -76,6 +78,8 @@ export interface SalesByDay {
   revenue: number;
 }
 
+export type DemandTrend = "rising" | "falling" | "stable";
+
 export interface BestSellingItem {
   id: string;
   name: string;
@@ -83,7 +87,8 @@ export interface BestSellingItem {
   quantity_sold: number;
   revenue: number;
   average_price: number;
-  trend: "up" | "down" | "stable";
+  forecast_daily_demand: number;
+  trend: DemandTrend;
 }
 
 export interface PeakHours {
@@ -199,4 +204,62 @@ export interface DrillDownData {
   title: string;
   data: Record<string, unknown>[];
   type: "bar" | "line" | "pie" | "area";
+}
+
+export type ForecastHorizon = 7 | 14 | 30;
+
+export interface ForecastPrediction {
+  date: string;
+  qty: number;
+  lower_ci: number;
+  upper_ci: number;
+}
+
+export interface DemandForecast {
+  item_id: string;
+  horizon: ForecastHorizon;
+  model: string;
+  fallback: boolean;
+  predictions: ForecastPrediction[];
+}
+
+export type StockoutSeverity =
+  | "out_of_stock"
+  | "critical"
+  | "high"
+  | "medium"
+  | "low";
+
+export interface StockoutContributor {
+  menu_item_id: string;
+  name: string;
+  forecast_daily_demand: number;
+}
+
+export interface StockoutProjectionItem {
+  id: string;
+  name: string;
+  category: string | null;
+  unit: string;
+  current_stock: number;
+  minimum_stock: number;
+  forecast_daily_usage: number;
+  days_until_stockout: number | null;
+  severity: StockoutSeverity;
+  contributors: StockoutContributor[];
+}
+
+export interface StockoutProjectionSummary {
+  out_of_stock: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface LowStockProjection {
+  generated_at: string;
+  horizon_days: ForecastHorizon;
+  items: StockoutProjectionItem[];
+  summary: StockoutProjectionSummary;
 }

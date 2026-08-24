@@ -7,16 +7,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { PriorityBadge } from "./PriorityBadge";
 import { OrderTimer } from "./OrderTimer";
 import type { Kot } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Archive } from "lucide-react";
 
 interface KotDetailSheetProps {
   kot: Kot | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onArchive?: (kot: Kot) => void;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -24,6 +27,7 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  completed: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
 };
 
 const ITEM_STATUS_STYLES: Record<string, string> = {
@@ -32,25 +36,18 @@ const ITEM_STATUS_STYLES: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-700",
 };
 
-function formatTime(dateStr?: string) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("en-PH", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function KotDetailSheet({
   kot,
   open,
   onOpenChange,
+  onArchive,
 }: KotDetailSheetProps) {
   if (!kot) return null;
 
   const tableNumber = kot.order?.table?.number;
   const customerName = kot.order?.customer?.name;
+  const isTerminal = kot.status === "ready" || kot.status === "completed";
+  const stopAt = isTerminal ? (kot.completed_at ?? kot.updated_at) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,7 +101,7 @@ export function KotDetailSheet({
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Time</p>
-              <OrderTimer createdAt={kot.created_at} />
+              <OrderTimer createdAt={kot.created_at} status={kot.status} stopAt={stopAt} />
             </div>
             {kot.estimated_time && (
               <div>
@@ -126,7 +123,7 @@ export function KotDetailSheet({
           <div>
             <h4 className="text-sm font-semibold mb-2">Items</h4>
             <div className="space-y-2">
-              {kot.items.map((item) => (
+              {(kot.items ?? []).map((item) => (
                 <div
                   key={item.id}
                   className="rounded-lg border p-3 space-y-1"
@@ -134,7 +131,7 @@ export function KotDetailSheet({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {item.quantity}× {item.menu_item_name}
+                        {item.quantity}× {item.name ?? item.menu_item_name}
                       </span>
                       {item.variant && (
                         <span className="text-xs text-muted-foreground">
@@ -188,25 +185,20 @@ export function KotDetailSheet({
             </>
           )}
 
-          {/* Timeline */}
-          <Separator />
-          <div className="space-y-1">
-            <h4 className="text-sm font-semibold mb-2">Timeline</h4>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <p className="text-muted-foreground">Received</p>
-                <p className="font-medium">{formatTime(kot.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Started</p>
-                <p className="font-medium">{formatTime(kot.started_at)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Completed</p>
-                <p className="font-medium">{formatTime(kot.completed_at)}</p>
-              </div>
-            </div>
-          </div>
+          {/* Archive action */}
+          {isTerminal && onArchive && (
+            <>
+              <Separator />
+              <Button
+                variant="outline"
+                className="w-full text-xs"
+                onClick={() => onArchive(kot)}
+              >
+                <Archive className="h-3.5 w-3.5 mr-1" />
+                Archive KOT
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

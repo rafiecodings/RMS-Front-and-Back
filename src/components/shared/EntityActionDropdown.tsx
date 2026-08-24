@@ -15,9 +15,14 @@ interface EntityActionDropdownProps {
   viewLabel?: string;
   editHref?: string;
   editLabel?: string;
+  onView?: () => void;
+  onEdit?: () => void;
   onAction?: () => void;
   actionLabel?: string;
   actionIcon?: LucideIcon;
+  onArchive?: () => void;
+  archiveLabel?: string;
+  archiveIcon?: LucideIcon;
 }
 
 export function EntityActionDropdown({
@@ -25,9 +30,14 @@ export function EntityActionDropdown({
   viewLabel = "View",
   editHref,
   editLabel = "Edit",
+  onView,
+  onEdit,
   onAction,
   actionLabel = "Delete",
   actionIcon: ActionIcon = Trash2,
+  onArchive,
+  archiveLabel = "Archive",
+  archiveIcon: ArchiveIcon = Trash2,
 }: EntityActionDropdownProps) {
   return (
     <DropdownMenu>
@@ -36,16 +46,28 @@ export function EntityActionDropdown({
         <span className="sr-only">Actions</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {viewHref && (
-          <DropdownMenuItem render={<Link href={viewHref} />}>
+        {(viewHref || onView) && (
+          <DropdownMenuItem
+            render={viewHref ? <Link href={viewHref} /> : undefined}
+            onClick={onView}
+          >
             <Eye className="h-4 w-4 mr-2" />
             {viewLabel}
           </DropdownMenuItem>
         )}
-        {editHref && (
-          <DropdownMenuItem render={<Link href={editHref} />}>
+        {(editHref || onEdit) && (
+          <DropdownMenuItem
+            render={editHref ? <Link href={editHref} /> : undefined}
+            onClick={onEdit}
+          >
             <Pencil className="h-4 w-4 mr-2" />
             {editLabel}
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={onArchive} variant="destructive">
+            <ArchiveIcon className="h-4 w-4 mr-2" />
+            {archiveLabel}
           </DropdownMenuItem>
         )}
         {onAction && (

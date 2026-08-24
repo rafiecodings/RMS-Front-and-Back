@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useStaff, useShiftSchedule } from "@/lib/hooks";
 import { StaffStats } from "@/features/staff";
 import { Users, CalendarCheck, ClipboardList, BarChart3, ArrowRight, Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function StaffPage() {
+  const [today] = useState(() => new Date().toISOString().split("T")[0]);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const { list: staffList } = useStaff({ per_page: 200 });
   const staff = staffList.data?.data?.data ?? [];
   const activeStaff = staff.filter((s) => s.is_active);
@@ -17,7 +22,6 @@ export default function StaffPage() {
       activeStaff.filter((s) => s.average_rating != null).length
     : 0;
 
-  const today = new Date().toISOString().split("T")[0];
   const { list: shiftsList } = useShiftSchedule({ date: today, per_page: 200 });
   const shifts = shiftsList.data?.data?.data ?? [];
   const uniqueOnShift = new Set(shifts.map((s) => s.staff_id)).size;
@@ -35,10 +39,12 @@ export default function StaffPage() {
         title="Staff Management"
         description="Manage employees, shifts, attendance, and performance"
         action={
-          <Button render={<Link href="/staff/employees/new" />}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Staff
-          </Button>
+          isAdmin && (
+            <Button render={<Link href="/staff/employees/new" />}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Staff
+            </Button>
+          )
         }
       />
 

@@ -1,8 +1,10 @@
 export { IngredientTable } from "./components/IngredientTable";
 export { IngredientForm } from "./components/IngredientForm";
 export { IngredientStats } from "./components/IngredientStats";
+export { IngredientDetail } from "./components/IngredientDetail";
 export { SupplierTable } from "./components/SupplierTable";
 export { SupplierForm } from "./components/SupplierForm";
+export { SupplierDetail } from "./components/SupplierDetail";
 export { RecipeTable } from "./components/RecipeTable";
 export { RecipeForm } from "./components/RecipeForm";
 export { RecipeDetail } from "./components/RecipeDetail";

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +10,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, AlertTriangle, Eye, Pencil } from "lucide-react";
+import { TableLoadingRows, TableEmptyRow, TablePagination } from "@/components/shared";
 import { formatCurrency } from "@/lib/utils";
 import type { Ingredient } from "@/lib/types";
 
@@ -26,6 +33,9 @@ interface IngredientTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  canEdit?: boolean;
+  onView?: (ingredient: Ingredient) => void;
+  onEdit?: (ingredient: Ingredient) => void;
 }
 
 const CATEGORIES = [
@@ -37,6 +47,8 @@ const CATEGORIES = [
   { value: "dairy", label: "Dairy" },
   { value: "grains", label: "Grains" },
   { value: "spices", label: "Spices" },
+  { value: "condiments", label: "Condiments" },
+  { value: "pantry", label: "Pantry" },
   { value: "beverages", label: "Beverages" },
   { value: "other", label: "Other" },
 ];
@@ -57,6 +69,9 @@ export function IngredientTable({
   currentPage,
   totalPages,
   onPageChange,
+  canEdit,
+  onView,
+  onEdit,
 }: IngredientTableProps) {
   return (
     <div className="space-y-4">
@@ -84,20 +99,20 @@ export function IngredientTable({
         </Select>
       </div>
 
-      <div className="rounded-lg border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium">Name</th>
-              <th className="text-left px-4 py-3 font-medium">Category</th>
-              <th className="text-right px-4 py-3 font-medium">Stock</th>
-              <th className="text-right px-4 py-3 font-medium">Min</th>
-              <th className="text-right px-4 py-3 font-medium">Cost/Unit</th>
-              <th className="text-center px-4 py-3 font-medium">Status</th>
-              <th className="text-center px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="text-right">Min</TableHead>
+              <TableHead className="text-right">Cost/Unit</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isLoading ? (
               <TableLoadingRows colSpan={7} />
             ) : ingredients.length === 0 ? (
@@ -107,8 +122,8 @@ export function IngredientTable({
                 const status = stockStatus(item);
                 const isLow = item.current_stock <= item.minimum_stock;
                 return (
-                  <tr key={item.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3">
+                  <TableRow key={item.id}>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         {isLow && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
                         <div>
@@ -118,60 +133,60 @@ export function IngredientTable({
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground capitalize">
                       {item.category ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
                       {item.current_stock} {item.unit}
-                    </td>
-                    <td className="px-4 py-3 text-right text-muted-foreground tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">
                       {item.minimum_stock}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {formatCurrency(item.cost_per_unit)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="icon-sm" render={<Link href={`/inventory/ingredients/${item.id}`} />}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Badge variant={status.variant} className="text-[10px] px-1.5 py-0">
+                          {status.label}
+                        </Badge>
+                        {!item.is_active && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {onView && (
+                          <Button variant="ghost" size="icon-sm" onClick={() => onView(item)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canEdit && onEdit && (
+                          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }
+
+

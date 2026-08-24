@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -40,6 +39,23 @@ interface FormErrors {
   items?: string;
 }
 
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 export function OrderForm({
   initialData,
   menuItems,
@@ -60,6 +76,8 @@ export function OrderForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [itemSearch, setItemSearch] = useState("");
+  const [itemFocused, setItemFocused] = useState(false);
+  const itemBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === formData.table_id
@@ -68,7 +86,8 @@ export function OrderForm({
   const filteredMenuItems = menuItems.filter(
     (item) =>
       item.is_available &&
-      item.name.toLowerCase().includes(itemSearch.toLowerCase())
+      (itemSearch === "" ||
+        item.name.toLowerCase().includes(itemSearch.toLowerCase()))
   );
 
   function validate(): FormErrors {
@@ -147,13 +166,25 @@ export function OrderForm({
     0
   );
 
+  const showItemDropdown = itemFocused || itemSearch !== "";
+  // The backend PUT /orders/{id} only applies notes/customer/table —
+  // items and order type are immutable after creation.
+  const isEdit = !!initialData;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {isEdit && (
+        <div className="rounded-lg border bg-blue-500/5 px-4 py-3 text-sm text-muted-foreground">
+          Order items and type cannot be changed after creation. You can update
+          the customer, table, and notes.
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
           <Label>Order Type *</Label>
           <Select
             value={formData.order_type}
+            disabled={isEdit}
             onValueChange={(v) =>
               v &&
               setFormData((prev) => ({
@@ -196,14 +227,6 @@ export function OrderForm({
               {customers.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
-                  {c.customer_type === "vip" && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-1 text-[9px] px-1 py-0"
-                    >
-                      VIP
-                    </Badge>
-                  )}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -243,131 +266,148 @@ export function OrderForm({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label>Menu Items *</Label>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={itemSearch}
-            onChange={(e) => setItemSearch(e.target.value)}
-            placeholder="Search menu items to add..."
-            className="pl-8"
-          />
-        </div>
-
-        {itemSearch && (
-          <div className="max-h-48 overflow-y-auto rounded-lg border divide-y">
-            {filteredMenuItems.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground text-center">
-                No items found
-              </div>
-            ) : (
-              filteredMenuItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => addItem(item)}
-                  className="flex items-center justify-between w-full p-3 hover:bg-muted/50 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.category?.name ?? "Uncategorized"}
-                    </p>
-                  </div>
-                  <span className="text-sm font-medium shrink-0 ml-4">
-                    {formatCurrency(item.price)}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        )}
-
-        {touched.items && errors.items && (
-          <p className="text-xs text-destructive">{errors.items}</p>
-        )}
-      </div>
-
-      {formData.items.length > 0 && (
+      {!isEdit && (
+      <Section title="Menu Items">
         <div className="space-y-2">
-          {formData.items.map((orderItem) => {
-            const menuItem = menuItems.find(
-              (m) => m.id === orderItem.menu_item_id
-            );
-            return (
-              <div
-                key={orderItem.menu_item_id}
-                className="flex items-center gap-3 rounded-lg border p-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {menuItem?.name ?? "Unknown Item"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(orderItem.unit_price)} each
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() =>
-                      updateItemQuantity(
-                        orderItem.menu_item_id,
-                        orderItem.quantity - 1
-                      )
-                    }
-                  >
-                    −
-                  </Button>
-                  <span className="w-8 text-center text-sm font-medium">
-                    {orderItem.quantity}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() =>
-                      updateItemQuantity(
-                        orderItem.menu_item_id,
-                        orderItem.quantity + 1
-                      )
-                    }
-                  >
-                    +
-                  </Button>
-                </div>
-
-                <span className="text-sm font-medium w-20 text-right">
-                  {formatCurrency(orderItem.unit_price * orderItem.quantity)}
-                </span>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeItem(orderItem.menu_item_id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            );
-          })}
-
-          <div className="flex justify-end text-sm font-bold pt-2">
-            <span>Subtotal: {formatCurrency(itemTotal)}</span>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+              onFocus={() => {
+                if (itemBlurTimer.current) clearTimeout(itemBlurTimer.current);
+                setItemFocused(true);
+              }}
+              onBlur={() => {
+                itemBlurTimer.current = setTimeout(
+                  () => setItemFocused(false),
+                  150
+                );
+              }}
+              placeholder="Search menu items to add..."
+              className="pl-8"
+            />
           </div>
+
+          {showItemDropdown && (
+            <div className="max-h-48 overflow-y-auto rounded-lg border divide-y bg-popover z-10">
+              {filteredMenuItems.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">
+                  No items found
+                </div>
+              ) : (
+                filteredMenuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addItem(item)}
+                    className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.category?.name ?? "Uncategorized"}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {touched.items && errors.items && (
+            <p className="text-xs text-destructive">{errors.items}</p>
+          )}
         </div>
+      </Section>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="order-notes">Notes</Label>
+      {formData.items.length > 0 && (
+        <Section title={isEdit ? "Items (read-only)" : "Order Summary"}>
+          <div className="space-y-2">
+            {formData.items.map((orderItem) => {
+              const menuItem = menuItems.find(
+                (m) => m.id === orderItem.menu_item_id
+              );
+              return (
+                <div
+                  key={orderItem.menu_item_id}
+                  className="flex items-center gap-3 rounded-lg border p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {menuItem?.name ?? "Unknown Item"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(orderItem.unit_price)} each
+                    </p>
+                  </div>
+
+                  {!isEdit && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() =>
+                        updateItemQuantity(
+                          orderItem.menu_item_id,
+                          orderItem.quantity - 1
+                        )
+                      }
+                    >
+                      −
+                    </Button>
+                    <span className="w-8 text-center text-sm font-medium">
+                      {orderItem.quantity}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() =>
+                        updateItemQuantity(
+                          orderItem.menu_item_id,
+                          orderItem.quantity + 1
+                        )
+                      }
+                    >
+                      +
+                    </Button>
+                  </div>
+                  )}
+
+                  <span className="text-sm font-medium w-20 text-right">
+                    {formatCurrency(orderItem.unit_price * orderItem.quantity)}
+                  </span>
+
+                  {!isEdit && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeItem(orderItem.menu_item_id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="flex justify-end text-sm font-bold pt-2">
+              <span>Subtotal: {formatCurrency(itemTotal)}</span>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      <Section title="Notes">
         <Textarea
-          id="order-notes"
           value={formData.notes ?? ""}
           onChange={(e) =>
             setFormData((prev) => ({ ...prev, notes: e.target.value }))
@@ -375,7 +415,7 @@ export function OrderForm({
           placeholder="Special instructions, allergies, etc."
           rows={2}
         />
-      </div>
+      </Section>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button

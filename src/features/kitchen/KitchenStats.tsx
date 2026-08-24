@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Inbox,
@@ -49,13 +50,13 @@ function toTimestamp(value: string | null | undefined): number {
   return Number.isNaN(d.getTime()) ? 0 : d.getTime();
 }
 
-function formatAvgWait(kots: Kot[]): string {
+function formatAvgWait(kots: Kot[], nowMs: number): string {
   const withStarted = kots.filter((k) => k.started_at || k.created_at);
   if (withStarted.length === 0) return "—";
 
   const totalMs = withStarted.reduce((sum, k) => {
     const start = toTimestamp(k.started_at ?? k.created_at);
-    const end = k.completed_at ? toTimestamp(k.completed_at) : Date.now();
+    const end = k.completed_at ? toTimestamp(k.completed_at) : nowMs;
     return sum + (end - start);
   }, 0);
 
@@ -65,10 +66,17 @@ function formatAvgWait(kots: Kot[]): string {
 }
 
 export function KitchenStats({ kots }: KitchenStatsProps) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const received = kots.filter((k) => k.status === "received").length;
   const inProgress = kots.filter((k) => k.status === "in_progress").length;
   const ready = kots.filter((k) => k.status === "ready").length;
-  const avgWait = formatAvgWait(kots);
+  const avgWait = formatAvgWait(kots, nowMs);
 
   return (
     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">

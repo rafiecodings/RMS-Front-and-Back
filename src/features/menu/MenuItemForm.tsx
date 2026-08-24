@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LoadingSpinner } from "@/components/shared";
+import { LoadingSpinner, MenuItemImage } from "@/components/shared";
+import { MENU_ITEM_IMAGES } from "@/lib/config/menu-item-images";
 import type { MenuItem, MenuItemFormData, MenuCategory } from "@/lib/types";
 
 interface MenuItemFormProps {
@@ -30,13 +31,6 @@ interface FormErrors {
   price?: string;
 }
 
-function parseTags(input: string): string[] {
-  return input
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-}
-
 export function MenuItemForm({
   initialData,
   categories,
@@ -49,24 +43,9 @@ export function MenuItemForm({
     name: initialData?.name ?? "",
     description: initialData?.description ?? "",
     price: initialData?.price ?? 0,
-    cost_price: initialData?.cost_price,
+    image_url: initialData?.image_url ?? "",
     is_available: initialData?.is_available ?? true,
-    is_vegetarian: initialData?.is_vegetarian ?? false,
-    is_vegan: initialData?.is_vegan ?? false,
-    is_gluten_free: initialData?.is_gluten_free ?? false,
-    preparation_time: initialData?.preparation_time,
-    calories: initialData?.calories,
-    allergens: initialData?.allergens ?? [],
-    tags: initialData?.tags ?? [],
-    station: initialData?.station ?? "",
   });
-
-  const [tagsInput, setTagsInput] = useState(
-    initialData?.tags?.join(", ") ?? ""
-  );
-  const [allergensInput, setAllergensInput] = useState(
-    initialData?.allergens?.join(", ") ?? ""
-  );
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -75,7 +54,7 @@ export function MenuItemForm({
     const errs: FormErrors = {};
     if (!formData.name.trim()) errs.name = "Item name is required";
     if (!formData.category_id) errs.category_id = "Category is required";
-    if (formData.price < 0) errs.price = "Price must be 0 or more";
+    if (formData.price <= 0) errs.price = "Price must be greater than 0";
     return errs;
   }
 
@@ -95,9 +74,7 @@ export function MenuItemForm({
         ...formData,
         name: formData.name.trim(),
         description: formData.description?.trim() || undefined,
-        tags: parseTags(tagsInput),
-        allergens: parseTags(allergensInput),
-        station: formData.station?.trim() || undefined,
+        image_url: formData.image_url?.trim() || undefined,
       });
     }
   }
@@ -177,7 +154,7 @@ export function MenuItemForm({
           <Input
             id="item-price"
             type="number"
-            min={0}
+            min={0.01}
             step={0.01}
             value={formData.price}
             onChange={(e) =>
@@ -194,73 +171,7 @@ export function MenuItemForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="item-cost">Cost Price (PHP)</Label>
-          <Input
-            id="item-cost"
-            type="number"
-            min={0}
-            step={0.01}
-            value={formData.cost_price ?? ""}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                cost_price: e.target.value ? parseFloat(e.target.value) : undefined,
-              }))
-            }
-            placeholder="Optional"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="item-prep">Prep Time (min)</Label>
-          <Input
-            id="item-prep"
-            type="number"
-            min={0}
-            value={formData.preparation_time ?? ""}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                preparation_time: e.target.value ? parseInt(e.target.value) : undefined,
-              }))
-            }
-            placeholder="e.g. 15"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="item-calories">Calories</Label>
-          <Input
-            id="item-calories"
-            type="number"
-            min={0}
-            value={formData.calories ?? ""}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                calories: e.target.value ? parseInt(e.target.value) : undefined,
-              }))
-            }
-            placeholder="Optional"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="item-station">Station</Label>
-          <Input
-            id="item-station"
-            value={formData.station}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, station: e.target.value }))
-            }
-            placeholder="e.g. Hot Kitchen, Cold Kitchen"
-          />
-        </div>
-
-        <div className="flex items-end pb-1">
+        <div className="flex items-end pb-1 sm:col-span-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox
               checked={formData.is_available}
@@ -273,55 +184,38 @@ export function MenuItemForm({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            checked={formData.is_vegetarian}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, is_vegetarian: !!checked }))
-            }
-          />
-          <span className="text-sm">Vegetarian</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            checked={formData.is_vegan}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, is_vegan: !!checked }))
-            }
-          />
-          <span className="text-sm">Vegan</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            checked={formData.is_gluten_free}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, is_gluten_free: !!checked }))
-            }
-          />
-          <span className="text-sm">Gluten Free</span>
-        </label>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="item-tags">Tags</Label>
-          <Input
-            id="item-tags"
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="Comma-separated, e.g. spicy, popular"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="item-allergens">Allergens</Label>
-          <Input
-            id="item-allergens"
-            value={allergensInput}
-            onChange={(e) => setAllergensInput(e.target.value)}
-            placeholder="Comma-separated, e.g. nuts, dairy"
-          />
+      {/* MENU IMAGE — predefined static picker (UAT build; no file uploads) */}
+      <div className="space-y-2">
+        <Label>Menu Image</Label>
+        <div className="flex items-start gap-3">
+          <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            <MenuItemImage src={formData.image_url} alt={formData.name || "Menu item preview"} sizes="112px" />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Select
+              value={formData.image_url || "none"}
+              onValueChange={(val) => {
+                const path = typeof val === "string" && val !== "none" ? val : "";
+                setFormData((prev) => ({ ...prev, image_url: path }));
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choose menu image" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="none">No image (placeholder)</SelectItem>
+                {MENU_ITEM_IMAGES.map((img) => (
+                  <SelectItem key={img.path} value={img.path}>
+                    {img.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Optional. Images are served from the app&rsquo;s static assets for
+              this build.
+            </p>
+          </div>
         </div>
       </div>
 

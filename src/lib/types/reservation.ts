@@ -9,18 +9,16 @@ export interface Reservation {
   table?: ReservationTable | null;
   guest_name?: string;
   guest_phone?: string;
+  guest_email?: string;
+  source?: string;
   reservation_number: string;
   reservation_date: string;
   reservation_time: string;
   party_size: number;
   status: ReservationStatus;
   special_requests?: string;
-  arrival_time?: string;
-  seated_time?: string;
-  completed_time?: string;
-  no_show: boolean;
-  cancelled: boolean;
   cancellation_reason?: string;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,8 +28,8 @@ export type ReservationStatus =
   | "confirmed"
   | "seated"
   | "completed"
-  | "no_show"
-  | "cancelled";
+  | "cancelled"
+  | "no_show";
 
 export interface ReservationFormData {
   customer_id?: string;
@@ -44,4 +42,6 @@ export interface ReservationFormData {
   party_size: number;
   source?: string;
   special_requests?: string;
+  status?: ReservationStatus;
 }
+

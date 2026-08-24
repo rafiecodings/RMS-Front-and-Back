@@ -69,6 +69,30 @@ export function EmptyState({
   );
 }
 
+interface ErrorStateProps {
+  message: string;
+  onRetry?: () => void;
+  className?: string;
+}
+
+export function ErrorState({ message, onRetry, className }: ErrorStateProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 py-10 text-center",
+        className
+      )}
+    >
+      <p className="text-sm font-medium text-destructive">{message}</p>
+      {onRetry && (
+        <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface ChartEmptyStateProps {
   height?: number;
   message?: string;
@@ -145,7 +169,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -186,14 +210,11 @@ export const StatusBadge = memo(function StatusBadge({
     needs_cleaning: "bg-warning/10 text-warning",
     maintenance: "bg-muted text-muted-foreground",
     pending: "bg-blue-500/10 text-blue-500",
-    on_hold: "bg-yellow-500/10 text-yellow-500",
     confirmed: "bg-indigo-500/10 text-indigo-500",
     preparing: "bg-amber-500/10 text-amber-500",
     ready: "bg-emerald-500/10 text-emerald-500",
-    served: "bg-purple-500/10 text-purple-500",
     completed: "bg-green-500/10 text-green-500",
     cancelled: "bg-red-500/10 text-red-500",
-    voided: "bg-gray-500/10 text-gray-500",
     received: "bg-info/10 text-info",
     in_progress: "bg-warning/10 text-warning",
     draft: "bg-muted text-muted-foreground",
@@ -214,7 +235,14 @@ export const StatusBadge = memo(function StatusBadge({
     rush: "bg-destructive/10 text-destructive",
     waiting: "bg-warning/10 text-warning",
     seated: "bg-success/10 text-success",
+    served: "bg-emerald-500/10 text-emerald-500",
     no_show: "bg-muted text-muted-foreground",
+    voided: "bg-destructive/10 text-destructive",
+    swap: "bg-info/10 text-info",
+    absent: "bg-red-500/10 text-red-500",
+    late: "bg-amber-500/10 text-amber-500",
+    half_day: "bg-orange-500/10 text-orange-500",
+    on_leave: "bg-blue-500/10 text-blue-500",
   };
 
   return (
@@ -303,12 +331,38 @@ interface TablePaginationProps {
   onPageChange: (page: number) => void;
 }
 
+/**
+ * Sliding page-number window around the current page, always including
+ * the first and last page, with "…" separators for gaps.
+ */
+function getPageWindow(currentPage: number, totalPages: number): (number | "ellipsis")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const wanted = new Set<number>(
+    [1, totalPages, currentPage - 1, currentPage, currentPage + 1].filter(
+      (p) => p >= 1 && p <= totalPages
+    )
+  );
+  const sorted = [...wanted].sort((a, b) => a - b);
+  const out: (number | "ellipsis")[] = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) out.push("ellipsis");
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
 export const TablePagination = memo(function TablePagination({
   currentPage,
   totalPages,
   onPageChange,
 }: TablePaginationProps) {
   if (totalPages <= 1) return null;
+
+  const pages = getPageWindow(currentPage, totalPages);
 
   return (
     <div className="flex items-center justify-between">
@@ -321,14 +375,34 @@ export const TablePagination = memo(function TablePagination({
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
+          aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
+        {pages.map((p, i) =>
+          p === "ellipsis" ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-sm text-muted-foreground">
+              …
+            </span>
+          ) : (
+            <Button
+              key={p}
+              variant={p === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => onPageChange(p)}
+              disabled={p === currentPage}
+              className="min-w-9"
+            >
+              {p}
+            </Button>
+          )
+        )}
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
+          aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -434,3 +508,5 @@ export const ActiveBadge = memo(function ActiveBadge({ isActive }: ActiveBadgePr
 export { SearchInput } from "./SearchInput";
 export { EntityActionDropdown } from "./EntityActionDropdown";
 export { ErrorBoundary } from "./ErrorBoundary";
+
+export { MenuItemImage } from "./MenuItemImage";

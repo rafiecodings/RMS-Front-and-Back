@@ -7,95 +7,54 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared";
 import { ConfirmDialog } from "@/components/shared";
 import { formatCurrency } from "@/lib/utils";
 import { useProcessRefund } from "../hooks/useBilling";
-import type { Invoice, RefundType } from "../types";
+import type { Invoice } from "../types";
 
 interface RefundFormProps {
   invoice: Invoice;
 }
 
+/**
+ * The backend refunds individual recorded payments:
+ * POST /invoices/{id}/refund { payment_id, amount, reason }.
+ * Item-level refunds are not supported server-side, so this form offers
+ * Full / Partial amounts settled against a chosen payment.
+ */
 export function RefundForm({ invoice }: RefundFormProps) {
   const router = useRouter();
   const processRefund = useProcessRefund();
 
-  const [refundType, setRefundType] = useState<RefundType>("full");
-  const [reason, setReason] = useState("");
-  const [customAmount, setCustomAmount] = useState(invoice.total_amount);
-  const [selectedItems, setSelectedItems] = useState<
-    { order_item_id: string; quantity: number; refund_amount: number }[]
-  >(
-    invoice.items.map((item) => ({
-      order_item_id: item.id,
-      quantity: item.quantity,
-      refund_amount: item.total_amount,
-    }))
+  const paymentsWithPaid = invoice.payments.filter((p) => p.amount > 0);
+  const [paymentId, setPaymentId] = useState<string>(
+    paymentsWithPaid[0]?.id ?? ""
   );
+  const [refundFull, setRefundFull] = useState(true);
+  const [customAmount, setCustomAmount] = useState<number>(0);
+  const [reason, setReason] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  function toggleItem(itemId: string) {
-    setSelectedItems((prev) => {
-      const exists = prev.find((i) => i.order_item_id === itemId);
-      if (exists) {
-        return prev.filter((i) => i.order_item_id !== itemId);
-      }
-      const item = invoice.items.find((i) => i.id === itemId);
-      if (!item) return prev;
-      return [
-        ...prev,
-        {
-          order_item_id: item.id,
-          quantity: item.quantity,
-          refund_amount: item.total_amount,
-        },
-      ];
-    });
-  }
-
-  function updateItemQuantity(orderItemId: string, qty: number) {
-    setSelectedItems((prev) =>
-      prev.map((i) => {
-        if (i.order_item_id !== orderItemId) return i;
-        const item = invoice.items.find((it) => it.id === orderItemId);
-        if (!item) return i;
-        const unitPrice = item.total_amount / item.quantity;
-        return {
-          ...i,
-          quantity: qty,
-          refund_amount: unitPrice * qty,
-        };
-      })
-    );
-  }
-
-  const allSelected = selectedItems.length === invoice.items.length;
-
-  function selectAll() {
-    if (allSelected) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(
-        invoice.items.map((item) => ({
-          order_item_id: item.id,
-          quantity: item.quantity,
-          refund_amount: item.total_amount,
-        }))
-      );
-    }
-  }
-
-  const computedRefundAmount =
-    refundType === "full"
-      ? invoice.total_amount
-      : refundType === "partial"
-        ? customAmount
-        : selectedItems.reduce((s, i) => s + i.refund_amount, 0);
+  const selectedPayment = paymentsWithPaid.find((p) => p.id === paymentId);
+  const maxRefundable = selectedPayment?.amount ?? 0;
+  const computedRefundAmount = refundFull
+    ? maxRefundable
+    : Math.min(customAmount, maxRefundable);
 
   function handleSubmit() {
+    if (!selectedPayment) {
+      toast.error("This invoice has no payments to refund");
+      return;
+    }
     if (!reason.trim()) {
       toast.error("Please provide a reason for the refund");
       return;
@@ -108,121 +67,92 @@ export function RefundForm({ invoice }: RefundFormProps) {
   }
 
   function confirmRefund() {
+    if (!selectedPayment) return;
     processRefund.mutate(
       {
-        order_id: invoice.id,
-        refund_type: refundType,
+        invoiceId: invoice.id,
+        paymentId: selectedPayment.id,
+        amount: Math.round(computedRefundAmount * 100) / 100,
         reason: reason.trim(),
-        amount: refundType === "partial" ? customAmount : undefined,
-        items: refundType === "item_level" ? selectedItems : undefined,
       },
       {
         onSuccess: () => {
           toast.success("Refund processed successfully");
           router.push("/billing/refunds");
         },
-        onError: () => toast.error("Failed to process refund"),
+        onError: (error) => {
+          const msg =
+            (
+              error as { response?: { data?: { message?: string } } }
+            )?.response?.data?.message;
+          toast.error(msg || "Failed to process refund");
+        },
       }
+    );
+  }
+
+  if (paymentsWithPaid.length === 0) {
+    return (
+      <div className="rounded-lg border p-6 text-sm text-muted-foreground">
+        This invoice has no recorded payments yet, so there is nothing to
+        refund.
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <div className="rounded-lg border p-4 space-y-2">
+        <Label>Payment to Refund</Label>
+        <Select
+          value={paymentId}
+          onValueChange={(v) => setPaymentId(v ?? "")}
+        >
+          <SelectTrigger className="w-full sm:w-[320px]">
+            <SelectValue placeholder="Select payment" />
+          </SelectTrigger>
+          <SelectContent>
+            {paymentsWithPaid.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {formatCurrency(p.amount)} ·{" "}
+                {p.payment_method.replace(/_/g, " ")} ·{" "}
+                {p.reference ?? "no reference"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="rounded-lg border p-4">
         <h3 className="text-sm font-semibold mb-3">Refund Type</h3>
         <div className="flex gap-2">
-          {(["full", "partial", "item_level"] as RefundType[]).map((type) => (
-            <Button
-              key={type}
-              variant={refundType === type ? "default" : "outline"}
-              onClick={() => setRefundType(type)}
-              className="capitalize"
-            >
-              {type === "item_level" ? "Item Level" : type}
-            </Button>
-          ))}
+          <Button
+            variant={refundFull ? "default" : "outline"}
+            onClick={() => setRefundFull(true)}
+          >
+            Full Payment
+          </Button>
+          <Button
+            variant={!refundFull ? "default" : "outline"}
+            onClick={() => setRefundFull(false)}
+          >
+            Partial Amount
+          </Button>
         </div>
       </div>
 
-      {refundType === "item_level" && (
-        <div className="rounded-lg border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Select Items</h3>
-            <button
-              type="button"
-              onClick={selectAll}
-              className="text-xs text-primary hover:underline"
-            >
-              {allSelected ? "Deselect All" : "Select All"}
-            </button>
-          </div>
-          <div className="divide-y">
-            {invoice.items.map((item) => {
-              const isSelected = selectedItems.some(
-                (i) => i.order_item_id === item.id
-              );
-              const selected = selectedItems.find(
-                (i) => i.order_item_id === item.id
-              );
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 py-2.5"
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => toggleItem(item.id)}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {item.menu_item_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.quantity}× {formatCurrency(item.unit_price)}
-                    </p>
-                  </div>
-                  {isSelected && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Qty:</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={item.quantity}
-                        value={selected?.quantity ?? item.quantity}
-                        onChange={(e) =>
-                          updateItemQuantity(
-                            item.id,
-                            parseInt(e.target.value) || 1
-                          )
-                        }
-                        className="h-7 w-16"
-                      />
-                    </div>
-                  )}
-                  <span className="text-sm font-medium shrink-0">
-                    {formatCurrency(
-                      selected?.refund_amount ?? item.total_amount
-                    )}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {refundType === "partial" && (
+      {!refundFull && (
         <div className="rounded-lg border p-4 space-y-2">
           <Label htmlFor="refund-amount">
-            Refund Amount (max {formatCurrency(invoice.total_amount)})
+            Refund Amount (max {formatCurrency(maxRefundable)})
           </Label>
           <Input
             id="refund-amount"
             type="number"
             min={0.01}
-            max={invoice.total_amount}
+            max={maxRefundable}
             step={0.01}
-            value={customAmount}
+            value={customAmount || ""}
             onChange={(e) => setCustomAmount(parseFloat(e.target.value) || 0)}
           />
         </div>
@@ -264,6 +194,7 @@ export function RefundForm({ invoice }: RefundFormProps) {
         <Button
           onClick={handleSubmit}
           disabled={
+            !selectedPayment ||
             computedRefundAmount <= 0 ||
             !reason.trim() ||
             processRefund.isPending
@@ -280,7 +211,7 @@ export function RefundForm({ invoice }: RefundFormProps) {
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Confirm Refund"
-        description={`Process refund of ${formatCurrency(computedRefundAmount)} for ${refundType === "full" ? "full order" : refundType === "partial" ? "partial amount" : "selected items"}?`}
+        description={`Process refund of ${formatCurrency(computedRefundAmount)} for ${refundFull ? "the full payment" : "a partial amount"}?`}
         onConfirm={confirmRefund}
         confirmText="Confirm Refund"
       />

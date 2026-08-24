@@ -10,12 +10,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, ChevronLeft, ChevronRight, Star, Power } from "lucide-react";
-import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
+import { Search, Eye, Star, Power, Pencil } from "lucide-react";
+import { TableLoadingRows, TableEmptyRow, TablePagination } from "@/components/shared";
 import { RoleBadge } from "./RoleBadge";
 import { safeNumber } from "@/lib/utils";
-import type { Staff } from "@/lib/types";
+import type { Staff, StaffRole } from "@/lib/types";
 
 interface StaffTableProps {
   staff: Staff[];
@@ -27,15 +35,19 @@ interface StaffTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onView?: (staff: Staff) => void;
+  onEdit?: (staff: Staff) => void;
   onToggleActive?: (staff: Staff) => void;
+  canEdit?: boolean;
 }
 
 const ROLES: { value: string; label: string }[] = [
   { value: "all", label: "All Roles" },
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
-  { value: "cashier", label: "Cashier" },
+  { value: "inventory_staff", label: "Inventory Staff" },
   { value: "waiter", label: "Waiter" },
+  { value: "cashier", label: "Cashier" },
   { value: "kitchen_staff", label: "Kitchen Staff" },
 ];
 
@@ -49,7 +61,10 @@ export function StaffTable({
   currentPage,
   totalPages,
   onPageChange,
+  onView,
+  onEdit,
   onToggleActive,
+  canEdit = false,
 }: StaffTableProps) {
   return (
     <div className="space-y-4">
@@ -75,41 +90,41 @@ export function StaffTable({
         </Select>
       </div>
 
-      <div className="rounded-lg border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium">Employee</th>
-              <th className="text-left px-4 py-3 font-medium">Role</th>
-              <th className="text-left px-4 py-3 font-medium">Shift</th>
-              <th className="text-left px-4 py-3 font-medium">Phone</th>
-              <th className="text-center px-4 py-3 font-medium">Rating</th>
-              <th className="text-center px-4 py-3 font-medium">Status</th>
-              <th className="text-center px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Shift</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead className="text-center">Rating</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isLoading ? (
               <TableLoadingRows colSpan={7} />
             ) : staff.length === 0 ? (
               <TableEmptyRow message="No staff members found" colSpan={7} />
             ) : (
-               staff.map((s) => (
-                 <tr key={s.id} className="hover:bg-muted/30">
-                   <td className="px-4 py-3">
-                     <div>
-                       <p className="font-medium">{s.user?.name ?? "—"}</p>
-                       <p className="text-xs text-muted-foreground">{s.user?.email ?? "—"}</p>
-                     </div>
-                   </td>
-                   <td className="px-4 py-3">
-                     <RoleBadge role={s.user?.role ?? ""} />
-                   </td>
-                   <td className="px-4 py-3 text-muted-foreground capitalize">
-                     {s.position ?? "—"}
-                   </td>
-                   <td className="px-4 py-3 text-muted-foreground">{s.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-center">
+              staff.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{s.user?.name ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground">{s.user?.email ?? "—"}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <RoleBadge role={(s.user?.role ?? "waiter") as StaffRole} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground capitalize">
+                    {s.position ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{s.phone ?? "—"}</TableCell>
+                  <TableCell className="text-center">
                     {s.average_rating != null ? (
                       <div className="flex items-center justify-center gap-1">
                         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
@@ -118,51 +133,53 @@ export function StaffTable({
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center">
                     <Badge variant={s.is_active ? "default" : "secondary"}>
                       {s.is_active ? "Active" : "Inactive"}
                     </Badge>
-                  </td>
-                   <td className="px-4 py-3 text-center">
-                     <div className="flex items-center justify-center gap-1">
-                       <Button variant="ghost" size="icon-sm" render={<Link href={`/staff/employees/${s.id}`} />}>
-                         <Eye className="h-4 w-4" />
-                       </Button>
-                       {onToggleActive && (
-                         <Button
-                           variant="ghost"
-                           size="icon-sm"
-                           onClick={() => onToggleActive(s)}
-                           className={s.is_active ? "text-emerald-600" : "text-muted-foreground"}
-                         >
-                           <Power className="h-4 w-4" />
-                         </Button>
-                       )}
-                     </div>
-                   </td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {onView ? (
+                        <Button variant="ghost" size="icon-sm" onClick={() => onView(s)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon-sm" render={<Link href={`/staff/employees/${s.id}`} />}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canEdit && onEdit && (
+                        <Button variant="ghost" size="icon-sm" onClick={() => onEdit(s)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canEdit && onToggleActive && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => onToggleActive(s)}
+                          title={s.is_active ? "Deactivate staff member" : "Activate staff member"}
+                          className={s.is_active ? "text-emerald-600" : "text-muted-foreground"}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= totalPages}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

@@ -36,6 +36,10 @@ export function TableOccupancy({ data }: { data: DashboardSummary }) {
           />
         </div>
 
+        <p className="text-sm text-muted-foreground/60">
+          Available = empty · Occupied = occupied · Reserved = booked
+        </p>
+
         <div className="grid grid-cols-2 gap-3">
           <StatusBlock
             count={tables.available}

@@ -4,8 +4,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { PerformanceCard } from "@/features/staff";
 import { useStaff, useStaffPerformance } from "@/lib/hooks";
-import { Button } from "@/components/ui/button";
-import { safeNumber, formatCurrency } from "@/lib/utils";
+import { safeNumber } from "@/lib/utils";
 import {
   Select,
   SelectContent,

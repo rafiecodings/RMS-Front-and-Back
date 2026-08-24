@@ -1,14 +1,19 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { use } from "react";
 import { EmptyState, LoadingSpinner } from "@/components/shared";
 import { RecipeDetail } from "@/features/inventory";
 import { useRecipe } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canManageRecipes } from "@/lib/utils/permissions";
 
-export default function RecipeDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
-
+export default function RecipeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { user } = useAuth();
   const { data: recipe, isLoading } = useRecipe(id);
 
   if (isLoading) {
@@ -29,8 +34,9 @@ export default function RecipeDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <RecipeDetail recipe={recipe} />
-    </div>
+    <RecipeDetail
+      recipe={recipe}
+      canEdit={canManageRecipes(user?.role)}
+    />
   );
 }

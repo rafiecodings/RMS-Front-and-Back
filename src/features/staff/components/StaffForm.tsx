@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import React from "react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -16,21 +17,22 @@ import type { Staff, StaffFormData, StaffRole, StaffShift } from "@/lib/types";
 interface StaffFormProps {
   initialData?: Staff;
   onSubmit: (data: StaffFormData) => void;
+  onCancel?: () => void;
   isLoading?: boolean;
 }
 
-export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) {
-  const router = useRouter();
+export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffFormProps) {
   const today = new Date().toISOString().split("T")[0];
 
   const [form, setForm] = React.useState<StaffFormData>({
-    first_name: initialData?.first_name ?? "",
-    last_name: initialData?.last_name ?? "",
-    email: initialData?.email ?? "",
+    employee_id: initialData?.employee_id ?? "",
+    first_name: initialData?.user?.name?.split(" ")[0] ?? "",
+    last_name: initialData?.user?.name?.split(" ").slice(1).join(" ") ?? "",
+    email: initialData?.user?.email ?? "",
     password: "",
     phone: initialData?.phone ?? "",
-    role: initialData?.role ?? "waiter",
-    shift: initialData?.shift,
+    role: (initialData?.user?.role ?? "waiter") as StaffRole,
+    shift: undefined,
     position: initialData?.position ?? "",
     department: initialData?.department ?? "",
     hourly_rate: initialData?.hourly_rate,
@@ -53,7 +55,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Personal Information</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">First Name *</label>
+            <Label className="text-sm font-medium">First Name *</Label>
             <Input
               value={form.first_name}
               onChange={(e) => update("first_name", e.target.value)}
@@ -62,7 +64,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Last Name *</label>
+            <Label className="text-sm font-medium">Last Name *</Label>
             <Input
               value={form.last_name}
               onChange={(e) => update("last_name", e.target.value)}
@@ -73,7 +75,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Email *</label>
+            <Label className="text-sm font-medium">Email *</Label>
             <Input
               type="email"
               value={form.email}
@@ -83,7 +85,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Phone</label>
+            <Label className="text-sm font-medium">Phone</Label>
             <Input
               value={form.phone ?? ""}
               onChange={(e) => update("phone", e.target.value || undefined)}
@@ -93,7 +95,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
         </div>
         {!initialData && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Password *</label>
+            <Label className="text-sm font-medium">Password *</Label>
             <Input
               type="password"
               value={form.password ?? ""}
@@ -109,8 +111,14 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Employment Details</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Role *</label>
-            <Select value={form.role} onValueChange={(v) => update("role", (v ?? "waiter") as StaffRole)}>
+            <Label className="text-sm font-medium">
+              Role {initialData ? "(managed via user accounts)" : "*"}
+            </Label>
+            <Select
+              value={form.role}
+              onValueChange={(v) => update("role", (v ?? "waiter") as StaffRole)}
+              disabled={!!initialData}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -120,9 +128,14 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
                 ))}
               </SelectContent>
             </Select>
+            {initialData && (
+              <p className="text-xs text-muted-foreground">
+                Role changes are restricted to Admin via user account management.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Position *</label>
+            <Label className="text-sm font-medium">Position *</Label>
             <Input
               value={form.position ?? ""}
               onChange={(e) => update("position", e.target.value)}
@@ -130,7 +143,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Shift</label>
+            <Label className="text-sm font-medium">Shift</Label>
             <Select value={form.shift ?? "none"} onValueChange={(v) => update("shift", v === "none" || v === null ? undefined : v as StaffShift)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select shift" />
@@ -144,7 +157,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Department</label>
+            <Label className="text-sm font-medium">Department</Label>
             <Input
               value={form.department ?? ""}
               onChange={(e) => update("department", e.target.value || undefined)}
@@ -154,7 +167,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Hire Date *</label>
+            <Label className="text-sm font-medium">Hire Date *</Label>
             <Input
               type="date"
               value={form.hire_date}
@@ -163,7 +176,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Hourly Rate (₱)</label>
+            <Label className="text-sm font-medium">Hourly Rate (â‚±)</Label>
             <Input
               type="number"
               min={0}
@@ -174,7 +187,7 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Commission Rate (%)</label>
+            <Label className="text-sm font-medium">Commission Rate (%)</Label>
             <Input
               type="number"
               min={0}
@@ -189,7 +202,11 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => (onCancel ? onCancel() : window.history.back())}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={isLoading || !form.first_name || !form.last_name || !form.email}>
@@ -200,4 +217,3 @@ export function StaffForm({ initialData, onSubmit, isLoading }: StaffFormProps) 
   );
 }
 
-import React from "react";

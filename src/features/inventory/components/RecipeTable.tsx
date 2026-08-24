@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { Eye, Pencil, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { TableLoadingRows } from "@/components/shared";
 import { formatCurrency } from "@/lib/utils";
 import type { Recipe } from "@/lib/types";
@@ -14,6 +13,9 @@ interface RecipeTableProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  canEdit?: boolean;
+  onView?: (recipe: Recipe) => void;
+  onEdit?: (recipe: Recipe) => void;
 }
 
 export function RecipeTable({
@@ -22,6 +24,9 @@ export function RecipeTable({
   currentPage,
   totalPages,
   onPageChange,
+  canEdit,
+  onView,
+  onEdit,
 }: RecipeTableProps) {
   return (
     <div className="space-y-4">
@@ -53,16 +58,25 @@ export function RecipeTable({
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3">
-                      <p className="font-medium">{r.menu_item_name ?? `Menu Item ${r.menu_item_id.slice(0, 8)}`}</p>
+                      <p className="font-medium">{r.menu_item_name ?? "Unknown Menu Item"}</p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge variant="secondary">{(r.ingredients ?? []).length} items</Badge>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totalCost)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="icon-sm" render={<Link href={`/inventory/recipes/${r.id}`} />}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-center gap-1">
+                        {onView && (
+                          <Button variant="ghost" size="icon-sm" onClick={() => onView(r)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canEdit && onEdit && (
+                          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(r)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

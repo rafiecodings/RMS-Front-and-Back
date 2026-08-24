@@ -14,11 +14,9 @@ import {
 import { Trash2 } from "lucide-react";
 import type { PaymentLine } from "../types";
 import type { PaymentMethod } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
 
 interface SplitPaymentLineProps {
   line: PaymentLine;
-  remaining: number;
   isFirst: boolean;
   onUpdate: (id: string, updates: Partial<PaymentLine>) => void;
   onRemove: (id: string) => void;
@@ -27,19 +25,76 @@ interface SplitPaymentLineProps {
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
   card: "Card",
+  bank_transfer: "Bank Transfer",
+  gift_card: "Gift Card",
+  loyalty_points: "Loyalty Points",
   digital_wallet: "Digital Wallet",
   room_charge: "Room Charge",
-  corporate_account: "Corporate Account",
 };
+
+const CARD_TYPES = ["Visa", "Mastercard", "American Express", "JCB", "Other"];
+
+function composeCardReference(
+  cardType: string,
+  last4: string,
+  approval: string
+): string {
+  return [
+    cardType || "",
+    last4 ? `•••• ${last4}` : "",
+    approval ? `APPROVAL: ${approval}` : "",
+  ]
+    .filter(Boolean)
+    .join("  |  ");
+}
 
 export function SplitPaymentLine({
   line,
-  remaining,
   isFirst,
   onUpdate,
   onRemove,
 }: SplitPaymentLineProps) {
   const [touched, setTouched] = useState(false);
+  const [localAmount, setLocalAmount] = useState<string>(
+    line.amount > 0 ? String(line.amount) : ""
+  );
+  const [cardType, setCardType] = useState("");
+  const [last4, setLast4] = useState("");
+  const [approval, setApproval] = useState("");
+  const [referenceText, setReferenceText] = useState(line.reference ?? "");
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setLocalAmount("");
+      onUpdate(line.id, { amount: 0 });
+      return;
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setLocalAmount(val);
+      onUpdate(line.id, { amount: num });
+    }
+  };
+
+  function updateCardField(
+    partial: Partial<{ cardType: string; last4: string; approval: string }>
+  ) {
+    const nextCardType = partial.cardType ?? cardType;
+    const nextLast4 = partial.last4 ?? last4;
+    const nextApproval = partial.approval ?? approval;
+    if (partial.cardType !== undefined) setCardType(nextCardType);
+    if (partial.last4 !== undefined) setLast4(nextLast4);
+    if (partial.approval !== undefined) setApproval(nextApproval);
+    onUpdate(line.id, {
+      reference: composeCardReference(nextCardType, nextLast4, nextApproval),
+    });
+  }
+
+  function updateReference(value: string) {
+    setReferenceText(value);
+    onUpdate(line.id, { reference: value || undefined });
+  }
 
   return (
     <div className="rounded-lg border p-2.5 space-y-2">
@@ -84,36 +139,93 @@ export function SplitPaymentLine({
         <div className="space-y-1">
           <Label className="text-xs">Amount (₱)</Label>
           <Input
-            type="number"
-            min={0.01}
-            step={0.01}
-            value={line.amount || ""}
+            type="text"
+            inputMode="decimal"
+            value={localAmount}
+            onChange={handleAmountChange}
+            onBlur={() => setTouched(true)}
             placeholder="0.00"
-            onFocus={() => setTouched(true)}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value) || 0;
-              onUpdate(line.id, { amount: val });
-            }}
             className="h-8"
           />
         </div>
       </div>
 
-      {line.method !== "cash" && (
+      {line.method === "card" && (
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Card Type</Label>
+            <Select
+              value={cardType || undefined}
+              onValueChange={(v) => updateCardField({ cardType: v ?? "" })}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                {CARD_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Last 4 Digits</Label>
+            <Input
+              value={last4}
+              maxLength={4}
+              inputMode="numeric"
+              onChange={(e) =>
+                updateCardField({
+                  last4: e.target.value.replace(/\D/g, "").slice(0, 4),
+                })
+              }
+              placeholder="1234"
+              className="h-8"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Approval Code</Label>
+            <Input
+              value={approval}
+              onChange={(e) => updateCardField({ approval: e.target.value })}
+              placeholder="APPR123"
+              className="h-8"
+            />
+          </div>
+        </div>
+      )}
+
+      {line.method === "bank_transfer" && (
         <div className="space-y-1">
-          <Label className="text-xs">Reference</Label>
+          <Label className="text-xs">Bank / Reference</Label>
           <Input
-            value={line.reference ?? ""}
-            onChange={(e) => onUpdate(line.id, { reference: e.target.value })}
-            placeholder="Transaction reference"
+            value={referenceText}
+            onChange={(e) => updateReference(e.target.value)}
+            placeholder="BDO · REF: TXN-001"
             className="h-8"
           />
         </div>
       )}
 
+      {line.method !== "cash" &&
+        line.method !== "card" &&
+        line.method !== "bank_transfer" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Reference</Label>
+            <Input
+              value={referenceText}
+              onChange={(e) => updateReference(e.target.value)}
+              placeholder="Transaction reference"
+              className="h-8"
+            />
+          </div>
+        )}
+
       {!touched && line.amount === 0 && isFirst && (
         <p className="text-[10px] text-muted-foreground">
-          Click amount field to auto-fill with {formatCurrency(remaining)}
+          Enter the amount received to complete this payment.
         </p>
       )}
     </div>

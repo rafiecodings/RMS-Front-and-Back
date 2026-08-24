@@ -1,7 +1,13 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarCheck, Clock, Users, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import {
+  CalendarCheck,
+  Clock,
+  AlertTriangle,
+  XCircle,
+  Users,
+} from "lucide-react";
 import type { Reservation } from "@/lib/types";
 
 function StatCard({
@@ -23,9 +29,7 @@ function StatCard({
             <p className="text-sm text-muted-foreground">{title}</p>
             <p className="text-2xl font-bold tracking-tight">{value}</p>
           </div>
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconColor}`}
-          >
+          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconColor}`}>
             <Icon className="h-5 w-5" />
           </div>
         </div>
@@ -34,21 +38,32 @@ function StatCard({
   );
 }
 
-export function ReservationStats({ reservations }: { reservations: Reservation[] }) {
+export function ReservationStats({
+  reservations,
+  total,
+}: {
+  reservations: Reservation[];
+  total?: number;
+}) {
   const today = new Date().toISOString().split("T")[0];
 
-  const total = reservations.length;
-  const todayCount = reservations.filter((r) => r.reservation_date === today).length;
+  // Total reflects server-side meta (all pages) when provided; other figures
+  // describe the currently loaded slice.
+  const totalCount = total ?? reservations.length;
+  const todayCount = reservations.filter(
+    (r) => r.reservation_date === today
+  ).length;
   const pending = reservations.filter((r) => r.status === "pending").length;
-  const confirmed = reservations.filter((r) => r.status === "confirmed").length;
-  const cancelled = reservations.filter((r) => r.status === "cancelled").length;
-  const noShow = reservations.filter((r) => r.status === "no_show").length;
+  const seated = reservations.filter((r) => r.status === "seated").length;
+  const cancelled = reservations.filter(
+    (r) => r.status === "cancelled"
+  ).length;
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
       <StatCard
         title="Total"
-        value={String(total)}
+        value={String(totalCount)}
         icon={CalendarCheck}
         iconColor="bg-blue-500/10 text-blue-600"
       />
@@ -65,9 +80,9 @@ export function ReservationStats({ reservations }: { reservations: Reservation[]
         iconColor="bg-amber-500/10 text-amber-600"
       />
       <StatCard
-        title="Confirmed"
-        value={String(confirmed)}
-        icon={CheckCircle}
+        title="Seated"
+        value={String(seated)}
+        icon={Users}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />
       <StatCard
@@ -75,12 +90,6 @@ export function ReservationStats({ reservations }: { reservations: Reservation[]
         value={String(cancelled)}
         icon={XCircle}
         iconColor="bg-red-500/10 text-red-600"
-      />
-      <StatCard
-        title="No Show"
-        value={String(noShow)}
-        icon={Users}
-        iconColor="bg-orange-500/10 text-orange-600"
       />
     </div>
   );

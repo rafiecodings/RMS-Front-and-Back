@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   usePosCart,
@@ -10,20 +11,58 @@ import {
   DiscountDialog,
   PaymentDialog,
   ReceiptDialog,
+  ExistingOrderDialog,
 } from "@/features/pos";
-import { useOrders } from "@/lib/hooks";
-import type { MenuItem } from "@/lib/types";
-import type { PosDiscount, PaymentLine as PosPaymentLine } from "@/features/pos";
+import { useOrders, useOrder } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canAccessRevenueReport } from "@/lib/utils/permissions";
+import type { MenuItem, OrderType, Order } from "@/lib/types";
+import type { PosDiscount, PaymentLine as PosPaymentLine, CartItemType } from "@/features/pos";
 
 export default function PosPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const cart = usePosCart();
   const { create: createOrder, addPayment } = useOrders();
 
   const [discountOpen, setDiscountOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [existingDialogOpen, setExistingDialogOpen] = useState(false);
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
+  const { data: existingOrderData } = useOrder(existingOrderId ?? "");
+  const existingOrder: Order | null = existingOrderId
+    ? existingOrderData ?? null
+    : null;
+
   const [completedOrderNumber, setCompletedOrderNumber] = useState("");
   const [completedPayments, setCompletedPayments] = useState<PosPaymentLine[]>([]);
+  const [completedOrderType, setCompletedOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
+  const [completedCustomerName, setCompletedCustomerName] = useState("");
+  const [completedTableNumber, setCompletedTableNumber] = useState("");
+  // Server-computed figures captured at payment time so the receipt always
+  // mirrors the recorded transaction/invoice instead of client cart math.
+  const [completedItems, setCompletedItems] = useState<CartItemType[]>([]);
+  const [completedTotals, setCompletedTotals] = useState<{
+    subtotal: number;
+    discountAmount: number;
+    vatAmount: number;
+    serviceChargeAmount: number;
+    totalAmount: number;
+  } | null>(null);
+  // For partial settlements (existing orders): the balance being paid now and
+  // what was already paid before this session.
+  const [completedDue, setCompletedDue] = useState<number | undefined>(undefined);
+  const [completedPrevPaid, setCompletedPrevPaid] = useState<number | undefined>(undefined);
+
+  function resetCompletedTransaction() {
+    setCompletedOrderNumber("");
+    setCompletedPayments([]);
+    setCompletedItems([]);
+    setCompletedTotals(null);
+    setCompletedDue(undefined);
+    setCompletedPrevPaid(undefined);
+  }
 
   const handleAddToCart = useCallback(
     (item: MenuItem) => {
@@ -63,66 +102,243 @@ export default function PosPage() {
     }
   }
 
-  async function handleProcessPayment(payments: PosPaymentLine[]) {
-    try {
-      const orderResult = await createOrder.mutateAsync({
-        order_type: cart.state.orderType,
-        customer_id: cart.state.customerId,
-        table_id: cart.state.tableId,
-        notes: cart.state.notes,
-        items: cart.state.items.map((item) => ({
+  async function payNewOrder(
+    payments: PosPaymentLine[],
+    orderType: OrderType,
+    customerId?: string,
+    tableId?: string
+  ) {
+    const orderResult = await createOrder.mutateAsync({
+      order_type: orderType,
+      customer_id: customerId || undefined,
+      table_id: tableId || undefined,
+      notes: cart.state.notes,
+      items: cart.state.items.map((item) => {
+        const modifierIds: string[] = [];
+        return {
           menu_item_id: item.menu_item_id,
-          variant: item.variant,
+          variant: undefined,
           quantity: item.quantity,
           unit_price: item.price,
           notes: item.notes,
-          modifiers: item.modifiers?.map((m) => ({
-            modifier_option_id: "",
-            price: m.price,
-          })),
-        })),
+          ...(modifierIds.length > 0
+            ? { modifier_ids: modifierIds }
+            : {}),
+        };
+      }),
+    });
+
+    // Server-computed totals are authoritative (tax rate, service charge and
+    // discount clamping are applied backend-side via PricingService).
+    const orderData = orderResult.data.data;
+    const orderId = orderData.id;
+    const backendTotal = orderData.total_amount as number;
+
+    setCompletedCustomerName(orderData.customer?.name ?? "");
+    setCompletedTableNumber(orderData.table?.number ?? "");
+    setCompletedItems(
+      (orderData.items ?? []).map((i) => ({
+        id: i.id,
+        menu_item_id: i.menu_item_id,
+        name: i.menu_item_name,
+        price: i.unit_price,
+        quantity: i.quantity,
+      }))
+    );
+    setCompletedTotals({
+      subtotal: orderData.subtotal,
+      discountAmount: orderData.discount_amount ?? 0,
+      vatAmount: orderData.tax_amount ?? 0,
+      serviceChargeAmount: orderData.service_charge ?? 0,
+      totalAmount: backendTotal,
+    });
+    setCompletedDue(undefined);
+    setCompletedPrevPaid(undefined);
+
+    // Record net amounts only: the backend rejects overpayment, so each
+    // tendered line is capped at the running balance. The original tendered
+    // lines are kept for receipt display (cash tendered + change).
+    let remaining = Math.round(backendTotal * 100) / 100;
+    for (const payment of payments) {
+      const paymentAmount = Math.min(payment.amount, remaining);
+      if (paymentAmount <= 0) break;
+      await addPayment.mutateAsync({
+        id: orderId,
+        data: {
+          payment_method: payment.method,
+          amount: Math.round(paymentAmount * 100) / 100,
+          reference: payment.reference,
+        },
       });
+      remaining = Math.round((remaining - paymentAmount) * 100) / 100;
+    }
 
-      const orderId = orderResult.data.data.id;
+    setCompletedOrderNumber(orderData.order_number);
+    setCompletedPayments(payments);
+    setCompletedOrderType(
+      orderType as "dine_in" | "takeaway" | "delivery"
+    );
+    setPaymentOpen(false);
+    setReceiptOpen(true);
+    toast.success("Payment processed successfully");
+  }
 
-      for (const payment of payments) {
-        await addPayment.mutateAsync({
-          id: orderId,
-          data: {
-            payment_method: payment.method,
-            amount: payment.amount,
-            reference: payment.reference,
-          },
-        });
+  async function payExistingOrder(payments: PosPaymentLine[]) {
+    if (!existingOrder) return;
+    const orderId = existingOrder.id;
+    const backendTotal = existingOrder.total_amount;
+    const alreadyPaid = (existingOrder.payments ?? []).reduce(
+      (sum, p) => sum + (p.amount ?? 0),
+      0
+    );
+    const dueNow = Math.max(
+      0,
+      Math.round((backendTotal - alreadyPaid) * 100) / 100
+    );
+
+    setCompletedCustomerName(existingOrder.customer?.name ?? "");
+    setCompletedTableNumber(existingOrder.table?.number ?? "");
+    setCompletedItems(
+      (existingOrder.items ?? []).map((i) => ({
+        id: i.id,
+        menu_item_id: i.menu_item_id,
+        name: i.menu_item_name,
+        price: i.unit_price,
+        quantity: i.quantity,
+      }))
+    );
+    setCompletedTotals({
+      subtotal: existingOrder.subtotal,
+      discountAmount: existingOrder.discount_amount ?? 0,
+      vatAmount: existingOrder.tax_amount ?? 0,
+      serviceChargeAmount: existingOrder.service_charge ?? 0,
+      totalAmount: backendTotal,
+    });
+    setCompletedDue(dueNow);
+    setCompletedPrevPaid(alreadyPaid);
+
+    let remaining = dueNow;
+    for (const payment of payments) {
+      const paymentAmount = Math.min(payment.amount, remaining);
+      if (paymentAmount <= 0) break;
+      await addPayment.mutateAsync({
+        id: orderId,
+        data: {
+          payment_method: payment.method,
+          amount: Math.round(paymentAmount * 100) / 100,
+          reference: payment.reference,
+        },
+      });
+      remaining = Math.round((remaining - paymentAmount) * 100) / 100;
+    }
+
+    setCompletedOrderNumber(existingOrder.order_number);
+    setCompletedPayments(payments);
+    setCompletedOrderType(
+      existingOrder.order_type as "dine_in" | "takeaway" | "delivery"
+    );
+    setExistingOrderId(null);
+    setPaymentOpen(false);
+    setReceiptOpen(true);
+    toast.success("Payment processed successfully");
+  }
+
+  async function handleProcessPayment(
+    payments: PosPaymentLine[],
+    orderType: OrderType,
+    customerId?: string,
+    tableId?: string
+  ) {
+    try {
+      const validPayments = payments.filter((p) => p.amount > 0);
+      if (validPayments.length === 0) return;
+
+      if (existingOrder) {
+        await payExistingOrder(validPayments);
+      } else {
+        await payNewOrder(validPayments, orderType, customerId, tableId);
       }
-
-      setCompletedOrderNumber(orderResult.data.data.order_number);
-      setCompletedPayments(payments);
-      setPaymentOpen(false);
-      setReceiptOpen(true);
-      toast.success("Payment processed successfully");
-    } catch {
-      toast.error("Failed to process payment");
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (error as { message?: string })?.message ||
+        "Failed to process payment";
+      toast.error(message);
     }
   }
 
   function handleNewOrder() {
     cart.clearCart();
-    setCompletedOrderNumber("");
-    setCompletedPayments([]);
+    resetCompletedTransaction();
+    setExistingOrderId(null);
   }
+
+  const dialogTotals = useMemo(() => {
+    if (existingOrder) {
+      const alreadyPaid = (existingOrder.payments ?? []).reduce(
+        (sum, p) => sum + (p.amount ?? 0),
+        0
+      );
+      return {
+        totalAmount: Math.max(
+          0,
+          Math.round((existingOrder.total_amount - alreadyPaid) * 100) / 100
+        ),
+        subtotal: existingOrder.subtotal,
+        discountAmount: existingOrder.discount_amount,
+        vatAmount: existingOrder.tax_amount,
+        serviceChargeAmount: existingOrder.service_charge,
+      };
+    }
+    return {
+      totalAmount: cart.computed.totalAmount,
+      subtotal: cart.computed.subtotal,
+      discountAmount: cart.computed.discountAmount,
+      vatAmount: cart.computed.vatAmount,
+      serviceChargeAmount: cart.computed.serviceChargeAmount,
+    };
+  }, [existingOrder, cart.computed]);
+
+  const receiptItems: CartItemType[] =
+    completedItems.length > 0
+      ? completedItems
+      : existingOrder
+        ? existingOrder.items.map((i) => ({
+            id: i.id,
+            menu_item_id: i.menu_item_id,
+            name: i.menu_item_name,
+            price: i.unit_price,
+            quantity: i.quantity,
+          }))
+        : cart.state.items;
+
+  const receiptTotals =
+    completedTotals ??
+    (existingOrder
+      ? {
+          subtotal: existingOrder.subtotal,
+          discountAmount: existingOrder.discount_amount,
+          vatAmount: existingOrder.tax_amount,
+          serviceChargeAmount: existingOrder.service_charge,
+          totalAmount: existingOrder.total_amount,
+        }
+      : {
+          subtotal: cart.computed.subtotal,
+          discountAmount: cart.computed.discountAmount,
+          vatAmount: cart.computed.vatAmount,
+          serviceChargeAmount: cart.computed.serviceChargeAmount,
+          totalAmount: cart.computed.totalAmount,
+        });
+
+  const canReport = canAccessRevenueReport(user?.role);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <PosHeader
-        orderType={cart.state.orderType}
-        customerId={cart.state.customerId}
-        tableId={cart.state.tableId}
         itemCount={cart.computed.itemCount}
-        onSetOrderType={cart.setOrderType}
-        onSetCustomer={cart.setCustomer}
-        onSetTable={cart.setTable}
         onClearCart={cart.clearCart}
+        onReport={() => router.push("/reports")}
+        canReport={canReport}
       />
 
       <div className="flex flex-1 flex-col xl:flex-row overflow-hidden">
@@ -147,6 +363,10 @@ export default function PosPage() {
             onEditDiscount={() => setDiscountOpen(true)}
             onEditServiceCharge={handleServiceChargeInput}
             onPay={() => setPaymentOpen(true)}
+            existingOrder={existingOrder}
+            onSelectExistingOrder={() => setExistingDialogOpen(true)}
+            onClearExistingOrder={() => setExistingOrderId(null)}
+            onPayExisting={() => setPaymentOpen(true)}
           />
         </div>
       </div>
@@ -162,29 +382,42 @@ export default function PosPage() {
       <PaymentDialog
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
-        totalAmount={cart.computed.totalAmount}
-        discountAmount={cart.computed.discountAmount}
-        vatAmount={cart.computed.vatAmount}
-        serviceChargeAmount={cart.computed.serviceChargeAmount}
-        subtotal={cart.computed.subtotal}
+        totalAmount={dialogTotals.totalAmount}
+        discountAmount={dialogTotals.discountAmount}
+        vatAmount={dialogTotals.vatAmount}
+        serviceChargeAmount={dialogTotals.serviceChargeAmount}
+        subtotal={dialogTotals.subtotal}
         onProcessPayment={handleProcessPayment}
         isProcessing={createOrder.isPending || addPayment.isPending}
+        existingOrder={existingOrder}
       />
 
       <ReceiptDialog
         open={receiptOpen}
         onOpenChange={setReceiptOpen}
         orderNumber={completedOrderNumber}
-        items={cart.state.items}
-        subtotal={cart.computed.subtotal}
-        discount={cart.state.discount}
-        discountAmount={cart.computed.discountAmount}
-        vatAmount={cart.computed.vatAmount}
-        serviceChargeAmount={cart.computed.serviceChargeAmount}
-        totalAmount={cart.computed.totalAmount}
+        items={receiptItems}
+        subtotal={receiptTotals.subtotal}
+        discountAmount={receiptTotals.discountAmount}
+        vatAmount={receiptTotals.vatAmount}
+        serviceChargeAmount={receiptTotals.serviceChargeAmount}
+        totalAmount={receiptTotals.totalAmount}
         payments={completedPayments}
-        orderType={cart.state.orderType}
+        previouslyPaid={completedPrevPaid}
+        amountDueForChange={completedDue}
+        orderType={completedOrderType}
+        customerName={completedCustomerName || undefined}
+        tableNumber={completedTableNumber || undefined}
         onNewOrder={handleNewOrder}
+      />
+
+      <ExistingOrderDialog
+        open={existingDialogOpen}
+        onOpenChange={setExistingDialogOpen}
+        onSelect={(order) => {
+          setExistingOrderId(order.id);
+          setExistingDialogOpen(false);
+        }}
       />
     </div>
   );

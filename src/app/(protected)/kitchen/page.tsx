@@ -28,7 +28,7 @@ export default function KitchenPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [stationFilter, setStationFilter] = useState<string>("all");
 
-  const { all, updateStatus } = useKitchenOrders();
+  const { all, updateStatus, archive } = useKitchenOrders();
   const { isConnected } = useKitchenWebSocket();
 
   const kots = useMemo(() => all.data ?? [], [all.data]);
@@ -49,6 +49,8 @@ export default function KitchenPage() {
       received: "in_progress",
       in_progress: "ready",
       ready: null,
+      completed: null,
+      voided: null,
     };
     const next = nextStatus[kot.status];
     if (!next) return;
@@ -63,6 +65,16 @@ export default function KitchenPage() {
         onError: () => toast.error("Failed to update KOT status"),
       }
     );
+  }
+
+  function handleArchive(kot: Kot) {
+    archive.mutate(kot.id, {
+      onSuccess: () => {
+        toast.success(`${kot.kot_number} archived`);
+        setDetailOpen(false);
+      },
+      onError: () => toast.error("Failed to archive KOT"),
+    });
   }
 
   function handleViewDetail(kot: Kot) {
@@ -156,11 +168,16 @@ export default function KitchenPage() {
           <div className="flex items-center justify-center h-full">
             <LoadingSpinner size="lg" />
           </div>
+        ) : filteredKots.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <p>No active kitchen orders</p>
+          </div>
         ) : (
           <KanbanBoard
             kots={filteredKots}
             onStatusAdvance={handleStatusAdvance}
             onViewDetail={handleViewDetail}
+            onArchive={handleArchive}
           />
         )}
       </div>
@@ -170,6 +187,7 @@ export default function KitchenPage() {
         kot={detailKot}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        onArchive={handleArchive}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { TableLoadingRows, TableEmptyRow } from "@/components/shared";
 import { RoleBadge } from "./RoleBadge";
-import type { ShiftSchedule, Staff } from "@/lib/types";
+import type { ShiftSchedule, Staff, StaffRole } from "@/lib/types";
 
 interface ShiftScheduleTableProps {
   shifts: ShiftSchedule[];
@@ -13,6 +13,8 @@ interface ShiftScheduleTableProps {
   weekStart: Date;
   onWeekChange: (date: Date) => void;
   onAddShift: () => void;
+  /** Opens a View Shift dialog for the clicked schedule. */
+  onViewSchedule?: (shift: ShiftSchedule, staffMember?: Staff) => void;
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -23,6 +25,15 @@ const SHIFT_COLORS: Record<string, string> = {
   evening: "bg-purple-100 text-purple-800 border-purple-200",
   night: "bg-indigo-100 text-indigo-800 border-indigo-200",
 };
+
+function shiftColor(name?: string | null): string {
+  if (!name) return "";
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(SHIFT_COLORS)) {
+    if (lower.includes(key)) return SHIFT_COLORS[key];
+  }
+  return "bg-muted text-muted-foreground border-border";
+}
 
 function getWeekDates(start: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => {
@@ -43,6 +54,7 @@ export function ShiftScheduleTable({
   weekStart,
   onWeekChange,
   onAddShift,
+  onViewSchedule,
 }: ShiftScheduleTableProps) {
   const weekDates = getWeekDates(weekStart);
   const weekEnd = new Date(weekStart);
@@ -108,8 +120,8 @@ export function ShiftScheduleTable({
               displayStaff.map((s) => (
                 <tr key={s.id} className="hover:bg-muted/30">
                   <td className="px-4 py-2">
-                    <p className="font-medium text-xs">{s.first_name} {s.last_name}</p>
-                    <RoleBadge role={s.role} />
+                    <p className="font-medium text-xs">{s.user?.name ?? s.employee_id ?? "—"}</p>
+                    <RoleBadge role={(s.user?.role ?? "waiter") as StaffRole} />
                   </td>
                   {weekDates.map((d, i) => {
                     const dateStr = formatDate(d);
@@ -120,10 +132,21 @@ export function ShiftScheduleTable({
                     return (
                       <td key={i} className={`px-1 py-1 text-center ${isToday ? "bg-primary/5" : ""}`}>
                         {dayShift ? (
-                          <div className={`rounded border px-1.5 py-1 text-xs ${SHIFT_COLORS[dayShift.shift] ?? ""}`}>
-                            <p className="font-medium capitalize">{dayShift.shift}</p>
-                            <p className="text-[10px] opacity-70">{dayShift.start_time}–{dayShift.end_time}</p>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onViewSchedule?.(dayShift, s)}
+                            title="View shift details"
+                            className={`w-full rounded border px-1.5 py-1 text-xs transition-colors hover:opacity-80 ${shiftColor(dayShift.shift?.name)}`}
+                          >
+                            <p className="font-medium truncate" title={dayShift.shift?.name ?? undefined}>
+                              {dayShift.shift?.name ?? "Shift"}
+                            </p>
+                            {dayShift.shift?.start_time && (
+                              <p className="text-[10px] opacity-70">
+                                {dayShift.shift.start_time}–{dayShift.shift.end_time}
+                              </p>
+                            )}
+                          </button>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}

@@ -14,27 +14,25 @@ import { CHART_TOOLTIP_STYLE } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 
 const STATUS_COLORS: Record<string, string> = {
+  draft: "#94a3b8",
   pending: "#3b82f6",
-  on_hold: "#eab308",
   confirmed: "#6366f1",
   preparing: "#f59e0b",
   ready: "#10b981",
-  served: "#8b5cf6",
+  served: "#14b8a6",
   completed: "#22c55e",
   cancelled: "#ef4444",
-  voided: "#6b7280",
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
   pending: "Pending",
-  on_hold: "On Hold",
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready",
   served: "Served",
   completed: "Completed",
   cancelled: "Cancelled",
-  voided: "Voided",
 };
 
 export function OrderStatusChart({ data }: { data: DashboardSummary }) {
@@ -76,7 +74,7 @@ export function OrderStatusChart({ data }: { data: DashboardSummary }) {
                 verticalAlign="bottom"
                 height={36}
                 iconType="circle"
-                iconSize={8}
+                iconSize={12}
                 formatter={(value: string) => (
                   <span className="text-xs text-muted-foreground">{value}</span>
                 )}

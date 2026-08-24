@@ -12,14 +12,9 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api/client";
 import type { User } from "@/lib/types";
 
-function setCookie(name: string, value: string, days: number) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; same-site=lax`;
-}
-
-function removeCookie(name: string) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-}
+const LOGIN_EVENT = "rms:force-logout";
+const TOKEN_REFRESH_THRESHOLD_MS = 60_000;
+const ROLE_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days, matches auth_token
 
 interface AuthContextType {
   user: User | null;
@@ -37,26 +32,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
   const mountedRef = useRef(true);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshingRef = useRef(false);
+  const scheduleRefreshRef = useRef<(expiresInSeconds: number) => void>(() => {});
+
+  const setRoleCookie = useCallback((role: string) => {
+    document.cookie = `rms_role=${role}; path=/; max-age=${ROLE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+  }, []);
+
+  const clearRoleCookie = useCallback(() => {
+    document.cookie = "rms_role=; path=/; max-age=0; SameSite=Lax";
+  }, []);
+
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    clearRoleCookie();
+  }, [clearRoleCookie]);
+
+  const scheduleRefreshImpl = useCallback(
+    (expiresInSeconds: number) => {
+      if (expiresInSeconds <= 0) return;
+
+      const refreshAt = Date.now() + Math.max(expiresInSeconds * 1000 - TOKEN_REFRESH_THRESHOLD_MS, 1000);
+
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+
+      const delay = refreshAt - Date.now();
+      if (delay > 0) {
+        refreshTimerRef.current = setTimeout(() => {
+          if (mountedRef.current && !refreshingRef.current) {
+            refreshingRef.current = true;
+             api
+               .post("/auth/refresh")
+               .then((res) => {
+                 refreshingRef.current = false;
+                 const data = res.data.data;
+                 if (data?.user?.role) {
+                   setUser(data.user);
+                   setRoleCookie(data.user.role);
+                 }
+                 if (data?.expires_in) {
+                   scheduleRefreshRef.current(data.expires_in);
+                 }
+               })
+              .catch(() => {
+                refreshingRef.current = false;
+                clearAuth();
+                router.push("/login");
+              });
+          }
+        }, delay);
+      }
+    },
+     [clearAuth, router, setUser, setRoleCookie]
+  );
+
+  useEffect(() => {
+    scheduleRefreshRef.current = scheduleRefreshImpl;
+  }, [scheduleRefreshImpl]);
+
+  const scheduleRefresh = (expiresInSeconds: number) => {
+    scheduleRefreshRef.current(expiresInSeconds);
+  };
 
   const refreshUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        setUser(null);
-        return;
-      }
       const response = await api.get("/auth/profile");
       if (mountedRef.current) {
-        setUser(response.data.data);
+        const userData = response.data.data;
+        setUser(userData);
+        setRoleCookie(userData.role);
       }
     } catch {
-      localStorage.removeItem("auth_token");
-      removeCookie("auth_token");
       if (mountedRef.current) {
-        setUser(null);
+        clearAuth();
       }
     }
-  }, []);
+  }, [clearAuth, setRoleCookie]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -72,8 +126,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mountedRef.current = false;
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
     };
   }, [refreshUser]);
+
+  useEffect(() => {
+    function handleForceLogout() {
+      clearAuth();
+      router.push("/login");
+    }
+
+    window.addEventListener(LOGIN_EVENT, handleForceLogout);
+    return () => window.removeEventListener(LOGIN_EVENT, handleForceLogout);
+  }, [clearAuth, router]);
 
   const login = async (email: string, password: string, rememberMe = false) => {
     const response = await api.post("/auth/login", {
@@ -81,10 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       remember: rememberMe,
     });
-    const { token, user: userData } = response.data.data;
-    localStorage.setItem("auth_token", token);
-    setCookie("auth_token", token, rememberMe ? 30 : 1);
+    const { user: userData, expires_in } = response.data.data;
     setUser(userData);
+    setRoleCookie(userData.role);
+
+    if (expires_in) {
+      scheduleRefresh(expires_in);
+    }
+
     router.push("/dashboard");
   };
 
@@ -92,9 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post("/auth/logout");
     } finally {
-      localStorage.removeItem("auth_token");
-      removeCookie("auth_token");
-      setUser(null);
+      clearAuth();
       router.push("/login");
     }
   };
@@ -121,4 +190,10 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
+}
+
+export function forceLogout() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
+  }
 }

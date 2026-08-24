@@ -37,9 +37,8 @@ describe("PaymentDialog", () => {
     expect(screen.getByText("Subtotal")).toBeInTheDocument();
     expect(screen.getByText("₱510")).toBeInTheDocument();
     expect(screen.getByText("₱60")).toBeInTheDocument();
-    expect(screen.getAllByText("₱500")).toHaveLength(2);
+    expect(screen.getAllByText("₱500")).toHaveLength(1);
     expect(screen.getByText("₱0")).toBeInTheDocument();
-    expect(screen.getByText("Remaining")).toBeInTheDocument();
   });
 
   it("keeps Process Payment disabled until the total is fully paid", async () => {
@@ -75,7 +74,7 @@ describe("PaymentDialog", () => {
     const onProcessPayment = vi.fn();
     renderWithProviders(<PaymentDialog {...baseProps} onProcessPayment={onProcessPayment} />);
 
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(screen.getByRole("button", { name: "Add Method" }));
 
     const amountInputs = screen.getAllByPlaceholderText("0.00");
     expect(amountInputs).toHaveLength(2);
@@ -93,17 +92,17 @@ describe("PaymentDialog", () => {
     expect(payments.map((p) => p.amount)).toEqual([300, 200]);
   });
 
-  it("auto-fills the remaining amount", async () => {
+  it("blocks payment when amount is insufficient and shows validation", async () => {
     const user = userEvent.setup();
     renderWithProviders(<PaymentDialog {...baseProps} />);
 
-    await user.click(screen.getByRole("button", { name: "Auto-fill" }));
+    await user.type(screen.getByPlaceholderText("0.00"), "100");
 
-    expect(screen.getAllByText("₱500")).toHaveLength(2);
+    const processButton = screen.getByRole("button", { name: "Process Payment" });
+    expect(processButton).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Process Payment" })
-    ).toBeEnabled();
-    expect(screen.queryByText("Remaining")).not.toBeInTheDocument();
+      screen.getByText(/does not cover the total/i)
+    ).toBeInTheDocument();
   });
 
   it("disables the process button while processing", () => {

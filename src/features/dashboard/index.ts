@@ -1,4 +1,5 @@
 export { RevenueCards } from "./RevenueCards";
+export { ForecastKpis } from "./ForecastKpis";
 export { SalesSummary } from "./SalesSummary";
 export { RevenueChart } from "./RevenueChart";
 export { OrderStatusChart } from "./OrderStatusChart";

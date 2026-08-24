@@ -27,15 +27,17 @@ export function PaymentForm({
   isLoading,
 }: PaymentFormProps) {
   const [method, setMethod] = useState<PaymentMethod>("cash");
-  const [amount, setAmount] = useState(remainingAmount);
+  const [amount, setAmount] = useState<string>("");
   const [reference, setReference] = useState("");
+
+  const numericAmount = amount === "" ? remainingAmount : parseFloat(amount) || 0;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (amount <= 0 || amount > remainingAmount) return;
+    if (numericAmount <= 0 || numericAmount > remainingAmount) return;
     onSubmit({
       payment_method: method,
-      amount,
+      amount: numericAmount,
       reference: reference.trim() || undefined,
     });
   }
@@ -56,9 +58,11 @@ export function PaymentForm({
           <SelectContent>
             <SelectItem value="cash">Cash</SelectItem>
             <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
             <SelectItem value="digital_wallet">Digital Wallet</SelectItem>
+            <SelectItem value="gift_card">Gift Card</SelectItem>
+            <SelectItem value="loyalty_points">Loyalty Points</SelectItem>
             <SelectItem value="room_charge">Room Charge</SelectItem>
-            <SelectItem value="corporate_account">Corporate Account</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -72,7 +76,8 @@ export function PaymentForm({
           max={remainingAmount}
           step={0.01}
           value={amount}
-          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder={formatCurrency(remainingAmount)}
         />
       </div>
 
@@ -91,7 +96,7 @@ export function PaymentForm({
       <div className="flex justify-end gap-2 pt-2">
         <Button
           type="submit"
-          disabled={isLoading || amount <= 0 || amount > remainingAmount}
+          disabled={isLoading || numericAmount <= 0 || numericAmount > remainingAmount}
         >
           {isLoading && <LoadingSpinner size="sm" className="mr-2" />}
           Process Payment

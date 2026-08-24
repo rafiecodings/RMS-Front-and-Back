@@ -70,10 +70,10 @@ export default function EditMenuItemPage({
       <PageHeader
         title="Edit Menu Item"
         description={`Editing ${item.name}`}
-        action={
-          <Button variant="outline" size="sm" render={<Link href={`/menu/items/${id}`} />}>
+         action={
+          <Button variant="outline" size="sm" render={<Link href="/menu/items" />}>
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Back
+            Back to Menu Items
           </Button>
         }
       />

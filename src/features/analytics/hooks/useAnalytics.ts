@@ -3,20 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api/client";
 import type { ApiResponse } from "@/lib/types";
-import type {
-  RevenueAnalytics,
-  SalesTrends,
-  PeakHours,
-  InventoryUsage,
-  CustomerAnalytics,
-  AnalyticsFilters,
-} from "../types";
+import type { AnalyticsFilters, ForecastHorizon } from "../types";
 import {
   normalizeRevenueAnalytics,
   normalizeSalesAnalytics,
   normalizePeakHours,
   normalizeInventoryUsage,
   normalizeCustomerAnalytics,
+  normalizeLowStockProjection,
 } from "../normalizers";
 
 export function useRevenueAnalytics(filters?: AnalyticsFilters) {
@@ -71,5 +65,18 @@ export function useCustomerAnalytics(filters?: AnalyticsFilters) {
         .get<ApiResponse<unknown>>("/analytics/customers", { params: filters })
         .then((res) => normalizeCustomerAnalytics(res.data.data)),
     staleTime: 60000,
+  });
+}
+
+export function useLowStockProjection(horizon: ForecastHorizon = 7) {
+  return useQuery({
+    queryKey: ["analytics", "low-stock-projection", horizon],
+    queryFn: () =>
+      api
+        .get<ApiResponse<unknown>>("/analytics/low-stock-projection", {
+          params: { horizon },
+        })
+        .then((res) => normalizeLowStockProjection(res.data.data)),
+    staleTime: 5 * 60 * 1000,
   });
 }

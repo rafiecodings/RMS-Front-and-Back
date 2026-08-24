@@ -28,8 +28,11 @@ export function useMenuCategories() {
   const create = useMutation({
     mutationFn: (data: MenuCategoryFormData) =>
       api.post<ApiResponse<MenuCategory>>("/menu/categories", data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] });
+      // Menu-item rows embed a category name snapshot — keep them fresh.
+      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+    },
   });
 
   const update = useMutation({
@@ -41,14 +44,18 @@ export function useMenuCategories() {
       data: Partial<MenuCategoryFormData>;
     }) =>
       api.put<ApiResponse<MenuCategory>>(`/menu/categories/${id}`, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+    },
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/menu/categories/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["menu-items"] });
+    },
   });
 
   return { list, create, update, remove };

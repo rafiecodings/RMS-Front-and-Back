@@ -13,6 +13,7 @@ import {
   Play,
   CheckCircle,
   Eye,
+  Archive,
 } from "lucide-react";
 import type { Kot, KotStatus, KotPriority } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,8 @@ const STATUS_BORDER: Record<KotStatus, string> = {
   received: "border-l-blue-500",
   in_progress: "border-l-amber-500",
   ready: "border-l-emerald-500",
+  completed: "border-l-gray-400",
+  voided: "border-l-red-400 opacity-60",
 };
 
 const PRIORITY_BORDER: Record<KotPriority, string> = {
@@ -40,23 +43,34 @@ interface KotCardProps {
   kot: Kot;
   onStatusAdvance: (kot: Kot) => void;
   onViewDetail: (kot: Kot) => void;
+  onArchive: (kot: Kot) => void;
 }
 
-export function KotCard({ kot, onStatusAdvance, onViewDetail }: KotCardProps) {
+export function KotCard({ kot, onStatusAdvance, onViewDetail, onArchive }: KotCardProps) {
   const TypeIcon = (kot.order?.order_type ? TYPE_ICONS[kot.order.order_type] : null) ?? UtensilsCrossed;
   const tableNumber = kot.order?.table?.number;
   const nextStatus: Record<KotStatus, KotStatus | null> = {
     received: "in_progress",
     in_progress: "ready",
     ready: null,
+    completed: null,
+    voided: null,
   };
   const nextLabel: Record<KotStatus, string> = {
     received: "Start Preparing",
     in_progress: "Mark Ready",
     ready: "Complete",
+    completed: "Archive",
+    voided: "Voided",
   };
 
   const canAdvance = nextStatus[kot.status] !== null;
+  const canArchive = kot.status === "ready" || kot.status === "completed";
+  const isTerminal =
+    kot.status === "ready" ||
+    kot.status === "completed" ||
+    kot.status === "voided";
+  const stopAt = isTerminal ? (kot.completed_at ?? kot.updated_at) : undefined;
 
   return (
     <Card
@@ -97,20 +111,20 @@ export function KotCard({ kot, onStatusAdvance, onViewDetail }: KotCardProps) {
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <PriorityBadge priority={kot.priority} />
-            <OrderTimer createdAt={kot.created_at} />
+            <OrderTimer createdAt={kot.created_at} status={kot.status} stopAt={stopAt} />
           </div>
         </div>
 
-        {/* Items */}
+         {/* Items */}
         <div className="space-y-1">
-          {kot.items.map((item) => (
+          {(kot.items ?? []).map((item) => (
             <div
               key={item.id}
               className="flex items-start justify-between text-xs"
             >
               <div className="min-w-0 flex-1">
                 <span className="font-medium">
-                  {item.quantity}× {item.menu_item_name}
+                  {item.quantity}× {item.name ?? item.menu_item_name}
                 </span>
                 {item.variant && (
                   <span className="text-muted-foreground ml-1">
@@ -146,29 +160,46 @@ export function KotCard({ kot, onStatusAdvance, onViewDetail }: KotCardProps) {
         <Separator />
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs"
+            className="h-9 text-xs shrink-0"
             onClick={() => onViewDetail(kot)}
           >
-            <Eye className="h-3 w-3 mr-1" />
+            <Eye className="h-3.5 w-3.5 mr-1" />
             Details
           </Button>
 
           {canAdvance && (
             <Button
               size="sm"
-              className="h-7 text-xs"
+              className={cn(
+                "h-9 flex-1 text-xs font-semibold",
+                kot.status === "received"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              )}
               onClick={() => onStatusAdvance(kot)}
             >
               {kot.status === "received" ? (
-                <Play className="h-3 w-3 mr-1" />
+                <Play className="h-3.5 w-3.5 mr-1" />
               ) : (
-                <CheckCircle className="h-3 w-3 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />
               )}
               {nextLabel[kot.status]}
+            </Button>
+          )}
+
+          {canArchive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 flex-1 text-xs"
+              onClick={() => onArchive(kot)}
+            >
+              <Archive className="h-3.5 w-3.5 mr-1" />
+              Archive
             </Button>
           )}
         </div>

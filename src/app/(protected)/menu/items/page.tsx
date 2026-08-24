@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import Link from "next/link";
-import { PageHeader, ConfirmDialog, SearchInput } from "@/components/shared";
+import { PageHeader, ConfirmDialog, SearchInput, ErrorState, TablePagination } from "@/components/shared";
 import {
   MenuItemList,
   MenuItemCard,
   MenuItemForm,
+  MenuItemDetail,
   MenuStats,
 } from "@/features/menu";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, LayoutGrid, List } from "lucide-react";
 import { useMenuCategories, useMenuItems } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { MenuItem, MenuItemFormData } from "@/lib/types";
 import { toast } from "sonner";
+
+function apiError(error: unknown, fallback: string): string {
+  const data = (error as { response?: { data?: { message?: string } } })
+    ?.response?.data;
+  return data?.message ?? fallback;
+}
+
+type MenuItemModal =
+  | { mode: "add" }
+  | { mode: "edit"; item: MenuItem }
+  | { mode: "view"; item: MenuItem }
+  | null;
 
 export default function MenuItemsPage() {
   const [search, setSearch] = useState("");
@@ -37,10 +51,12 @@ export default function MenuItemsPage() {
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [view, setView] = useState<"list" | "grid">("list");
-  const [quickFormOpen, setQuickFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<MenuItem | null>(null);
+  const [activeModal, setActiveModal] = useState<MenuItemModal>(null);
   const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { user } = useAuth();
+  const canEditMenu = canEdit(user?.role, "menu");
 
   const categories = useMenuCategories();
 
@@ -68,27 +84,26 @@ export default function MenuItemsPage() {
     }, DEBOUNCE_DELAY);
   }
 
-  function handleQuickCreate(data: MenuItemFormData) {
+  function handleCreate(data: MenuItemFormData) {
     create.mutate(data, {
       onSuccess: () => {
         toast.success("Menu item created");
-        setQuickFormOpen(false);
+        setActiveModal(null);
       },
-      onError: () => toast.error("Failed to create menu item"),
+      onError: (e) => toast.error(apiError(e, "Failed to create menu item")),
     });
   }
 
-  function handleQuickEdit(data: MenuItemFormData) {
-    if (!editTarget) return;
+  function handleEdit(data: MenuItemFormData) {
+    if (activeModal?.mode !== "edit") return;
     update.mutate(
-      { id: editTarget.id, data },
+      { id: activeModal.item.id, data },
       {
         onSuccess: () => {
           toast.success("Menu item updated");
-          setEditTarget(null);
-          setQuickFormOpen(false);
+          setActiveModal(null);
         },
-        onError: () => toast.error("Failed to update menu item"),
+        onError: (e) => toast.error(apiError(e, "Failed to update menu item")),
       }
     );
   }
@@ -100,8 +115,21 @@ export default function MenuItemsPage() {
         toast.success("Menu item deleted");
         setDeleteTarget(null);
       },
-      onError: () => toast.error("Failed to delete menu item"),
+      onError: (e) => toast.error(apiError(e, "Failed to delete menu item")),
     });
+  }
+
+  function handleToggleAvailability(item: MenuItem) {
+    update.mutate(
+      { id: item.id, data: { is_available: !item.is_available } },
+      {
+        onSuccess: () =>
+          toast.success(
+            item.is_available ? "Item marked unavailable" : "Item marked available"
+          ),
+        onError: (e) => toast.error(apiError(e, "Failed to update item")),
+      }
+    );
   }
 
   const categoryList = categories.list.data ?? [];
@@ -112,10 +140,12 @@ export default function MenuItemsPage() {
         title="Menu Items"
         description="Manage your restaurant menu"
         action={
-          <Button size="sm" render={<Link href="/menu/items/new" />}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Item
-          </Button>
+          canEditMenu ? (
+            <Button size="sm" onClick={() => setActiveModal({ mode: "add" })}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Item
+            </Button>
+          ) : undefined
         }
       />
 
@@ -189,15 +219,25 @@ export default function MenuItemsPage() {
 
         <Tabs value={view} onValueChange={(v) => v && setView(v as "list" | "grid")}>
           <TabsContent value="list">
-            <MenuItemList
-              items={items}
-              isLoading={list.isLoading}
-              onDelete={(item) => setDeleteTarget(item)}
-            />
+            {list.isError ? (
+              <ErrorState message="Failed to load menu items. Please try again." />
+            ) : (
+              <MenuItemList
+                items={items}
+                isLoading={list.isLoading}
+                onView={(item) => setActiveModal({ mode: "view", item })}
+                onEdit={canEditMenu ? (item) => setActiveModal({ mode: "edit", item }) : undefined}
+                onDelete={canEditMenu ? (item) => setDeleteTarget(item) : undefined}
+                onToggleAvailability={canEditMenu ? handleToggleAvailability : undefined}
+                canEditItem={canEditMenu}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="grid">
-            {list.isLoading ? (
+            {list.isError ? (
+              <ErrorState message="Failed to load menu items. Please try again." />
+            ) : list.isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">Loading...</p>
               </div>
@@ -216,74 +256,57 @@ export default function MenuItemsPage() {
         </Tabs>
 
         {meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {(meta.current_page - 1) * meta.per_page + 1}–
-              {Math.min(meta.current_page * meta.per_page, meta.total)} of{" "}
-              {meta.total}
-            </p>
-            <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </Button>
-              {Array.from({ length: Math.min(meta.last_page, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={page === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-              {meta.last_page > 5 && (
-                <span className="flex items-center px-1 text-muted-foreground">
-                  …
-                </span>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= meta.last_page}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <TablePagination
+            currentPage={meta.current_page}
+            totalPages={meta.last_page}
+            onPageChange={setPage}
+          />
         )}
       </div>
 
       <Dialog
-        open={quickFormOpen}
+        open={activeModal?.mode === "add" || activeModal?.mode === "edit"}
         onOpenChange={(open) => {
-          if (!open) {
-            setQuickFormOpen(false);
-            setEditTarget(null);
-          }
+          if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editTarget ? "Edit Item" : "Quick Add Item"}
+              {activeModal?.mode === "edit" ? "Edit Item" : "Add Item"}
             </DialogTitle>
           </DialogHeader>
-          <MenuItemForm
-            initialData={editTarget ?? undefined}
-            categories={categoryList}
-            onSubmit={editTarget ? handleQuickEdit : handleQuickCreate}
-            isLoading={create.isPending || update.isPending}
-            submitLabel={editTarget ? "Update Item" : "Create Item"}
-          />
+          {activeModal?.mode === "add" || activeModal?.mode === "edit" ? (
+            <MenuItemForm
+              initialData={activeModal.mode === "edit" ? activeModal.item : undefined}
+              categories={categoryList}
+              onSubmit={activeModal.mode === "edit" ? handleEdit : handleCreate}
+              isLoading={create.isPending || update.isPending}
+              submitLabel={activeModal.mode === "edit" ? "Update Item" : "Create Item"}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={activeModal?.mode === "view"}
+        onOpenChange={(open) => {
+          if (!open) setActiveModal(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Menu Item Details</DialogTitle>
+          </DialogHeader>
+          {activeModal?.mode === "view" ? (
+            <MenuItemDetail
+              item={activeModal.item}
+              canEdit={canEditMenu}
+              onEdit={() =>
+                setActiveModal({ mode: "edit", item: activeModal.item })
+              }
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 

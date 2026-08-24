@@ -28,9 +28,9 @@ interface PaymentHistoryTableProps {
 const METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
   card: "Card",
-  digital_wallet: "Digital Wallet",
-  room_charge: "Room Charge",
-  corporate_account: "Corporate Account",
+  bank_transfer: "Bank Transfer",
+  gift_card: "Gift Card",
+  loyalty_points: "Loyalty Points",
 };
 
 export function PaymentHistoryTable({
@@ -64,9 +64,9 @@ export function PaymentHistoryTable({
             <SelectItem value="all">All Methods</SelectItem>
             <SelectItem value="cash">Cash</SelectItem>
             <SelectItem value="card">Card</SelectItem>
-            <SelectItem value="digital_wallet">Digital Wallet</SelectItem>
-            <SelectItem value="room_charge">Room Charge</SelectItem>
-            <SelectItem value="corporate_account">Corporate Account</SelectItem>
+            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+            <SelectItem value="gift_card">Gift Card</SelectItem>
+            <SelectItem value="loyalty_points">Loyalty Points</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -5,27 +5,12 @@ import type {
   SalesReport,
   DailyRevenueData,
   RevenueByType,
-  RevenueByPayment,
-  SalesByCategory,
-  TopSalesItem,
   MenuPerformanceReport,
   MenuItemPerformance,
-  CategoryPerformance,
-  ModifierUsage,
   InventoryReport,
-  StockValuation,
-  ConsumptionVariance,
-  WastageSummary,
-  TopSupplier,
   StaffReport,
-  AttendanceSummary,
-  StaffPerformanceRanking,
-  ShiftCoverage,
-  ClockSummary,
   TaxReport,
-  TaxBreakdown,
   MonthlyTax,
-  TaxByOrderType,
 } from "./types";
 
 interface RawRevenueReport extends Record<string, unknown> {
@@ -42,11 +27,18 @@ export function normalizeRevenueReport(raw: unknown): RevenueReport {
   const totalOrders = safeNumber(summary.total_orders);
   const aov = safeNumber(summary.avg_order_value);
 
+  // Backend returns null when there is no comparable previous period.
+  const growthRaw = summary.revenue_growth;
+  const growth =
+    growthRaw === null || growthRaw === undefined || growthRaw === ""
+      ? null
+      : safeNumber(growthRaw);
+
   return {
     total_revenue: totalRevenue,
     total_orders: totalOrders,
     average_order_value: aov > 0 ? aov : totalOrders > 0 ? totalRevenue / totalOrders : 0,
-    revenue_growth: 0,
+    revenue_growth: growth,
     daily_revenue: daily.map(
       (d): DailyRevenueData => ({
         date: safeString(d.date),
@@ -54,32 +46,43 @@ export function normalizeRevenueReport(raw: unknown): RevenueReport {
         orders: safeNumber(d.orders),
       }),
     ),
-    revenue_by_type: [],
-    revenue_by_payment: [],
   };
 }
 
 interface RawSalesReport extends Record<string, unknown> {
   period?: unknown;
+  items_sold?: unknown;
+  sales_growth?: unknown;
   by_order_type?: Array<{ type?: unknown; revenue?: unknown; orders?: unknown }>;
   by_payment_method?: Array<{ method?: unknown; revenue?: unknown; orders?: unknown }>;
-  hourly_distribution?: unknown;
+  hourly_distribution?: Array<{ hour?: unknown; orders?: unknown; revenue?: unknown }>;
 }
 
 export function normalizeSalesReport(raw: unknown): SalesReport {
   const r = safeObject<RawSalesReport>(raw);
   const byType = safeArray<{ type?: unknown; revenue?: unknown; orders?: unknown }>(r.by_order_type);
+  const byPayment = safeArray<{ method?: unknown; revenue?: unknown; orders?: unknown }>(
+    r.by_payment_method,
+  );
+  const hourly = safeArray<{ hour?: unknown; orders?: unknown; revenue?: unknown }>(
+    r.hourly_distribution,
+  );
+
   const totalSales = byType.reduce((sum, x) => sum + safeNumber(x.revenue), 0);
   const totalOrders = byType.reduce((sum, x) => sum + safeNumber(x.orders), 0);
   const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
 
+  const growthRaw = r.sales_growth;
+  const growth =
+    growthRaw === null || growthRaw === undefined || growthRaw === ""
+      ? null
+      : safeNumber(growthRaw);
+
   return {
     total_sales: totalSales,
-    total_items_sold: 0,
+    total_items_sold: safeNumber(r.items_sold),
     average_ticket: averageTicket,
-    sales_growth: 0,
-    sales_by_day: [],
-    sales_by_category: [],
+    sales_growth: growth,
     revenue_by_type: byType.map(
       (x): RevenueByType => ({
         order_type: safeString(x.type) as OrderType,
@@ -87,18 +90,35 @@ export function normalizeSalesReport(raw: unknown): SalesReport {
         percentage: totalSales > 0 ? (safeNumber(x.revenue) / totalSales) * 100 : 0,
       }),
     ),
-    top_items: [],
-    bottom_items: [],
+    revenue_by_payment: (() => {
+      const paymentTotal = byPayment.reduce((s, x) => s + safeNumber(x.revenue), 0);
+      return byPayment.map((x) => ({
+        method: safeString(x.method),
+        revenue: safeNumber(x.revenue),
+        count: safeNumber(x.orders),
+        percentage: paymentTotal > 0 ? (safeNumber(x.revenue) / paymentTotal) * 100 : 0,
+      }));
+    })(),
+    hourly_distribution: hourly.map((h) => ({
+      hour: safeNumber(h.hour),
+      orders: safeNumber(h.orders),
+      revenue: safeNumber(h.revenue),
+    })),
+    sales_by_category: [],
   };
 }
 
 interface RawMenuPerformanceReport extends Record<string, unknown> {
   period?: unknown;
+  total_menu_items?: unknown;
+  active_items?: unknown;
   top_items?: Array<{
     menu_item_id?: unknown;
     name?: unknown;
+    category?: unknown;
     total_quantity?: unknown;
     total_revenue?: unknown;
+    order_count?: unknown;
   }>;
 }
 
@@ -107,118 +127,146 @@ export function normalizeMenuPerformanceReport(raw: unknown): MenuPerformanceRep
   const items = safeArray<{
     menu_item_id?: unknown;
     name?: unknown;
+    category?: unknown;
     total_quantity?: unknown;
     total_revenue?: unknown;
+    order_count?: unknown;
   }>(r.top_items);
 
   return {
-    total_menu_items: 0,
-    active_items: 0,
-    average_margin: 0,
+    total_menu_items: safeNumber(r.total_menu_items),
+    active_items: safeNumber(r.active_items),
     item_performance: items.map(
       (it): MenuItemPerformance => ({
         id: safeString(it.menu_item_id),
         name: safeString(it.name),
-        category: "",
+        category: safeString(it.category),
         quantity_sold: safeNumber(it.total_quantity),
         revenue: safeNumber(it.total_revenue),
-        cost: 0,
-        margin: 0,
-        margin_percentage: 0,
-        popularity_score: 0,
+        order_count: safeNumber(it.order_count),
+        cost: null,
+        margin: null,
+        margin_percentage: null,
       }),
     ),
-    category_performance: [],
-    modifier_usage: [],
   };
 }
 
 interface RawInventoryReport extends Record<string, unknown> {
-  period?: unknown;
   summary?: Record<string, unknown>;
-  low_stock_items?: unknown;
+  wastage_by_reason?: Array<{
+    reason?: unknown;
+    count?: unknown;
+    quantity?: unknown;
+    cost?: unknown;
+  }>;
 }
 
 export function normalizeInventoryReport(raw: unknown): InventoryReport {
   const r = safeObject<RawInventoryReport>(raw);
   const summary = safeObject(r.summary);
+  const reasons = safeArray<{
+    reason?: unknown;
+    count?: unknown;
+    quantity?: unknown;
+    cost?: unknown;
+  }>(r.wastage_by_reason);
 
   return {
     total_ingredients: safeNumber(summary.total_ingredients),
     total_stock_value: safeNumber(summary.total_stock_value),
     low_stock_count: safeNumber(summary.low_stock_count),
-    stock_valuation: [],
-    consumption_variance: [],
     wastage_summary: {
-      total_wastage_count: 0,
-      total_wastage_cost: 0,
-      by_reason: [],
+      total_wastage_count: safeNumber(summary.wastage_count),
+      total_wastage_cost: safeNumber(summary.wastage_cost),
+      by_reason: reasons.map((w) => ({
+        reason: safeString(w.reason),
+        count: safeNumber(w.count),
+        quantity: safeNumber(w.quantity),
+        cost: safeNumber(w.cost),
+      })),
     },
-    top_suppliers: [],
+    low_stock_items: safeArray<{
+      id?: unknown;
+      name?: unknown;
+      current_stock?: unknown;
+      minimum_stock?: unknown;
+      unit_cost?: unknown;
+      unit?: unknown;
+    }>(r.low_stock_items).map((i) => ({
+      id: safeString(i.id),
+      name: safeString(i.name),
+      current_stock: safeNumber(i.current_stock),
+      minimum_stock: safeNumber(i.minimum_stock),
+      unit_cost: safeNumber(i.unit_cost),
+      unit: safeString(i.unit),
+    })),
   };
 }
 
 interface RawStaffReport extends Record<string, unknown> {
-  period?: unknown;
-  staff_performance?: Array<{
+  total_staff?: unknown;
+  active_staff?: unknown;
+  attendance_summary?: Record<string, unknown>;
+  performance_ranking?: Array<{
     staff_id?: unknown;
     name?: unknown;
     position?: unknown;
-    total_orders?: unknown;
-    total_sales?: unknown;
-    avg_rating?: unknown;
+    role?: unknown;
+    orders_handled?: unknown;
+    revenue_generated?: unknown;
+    avg_ticket?: unknown;
+    shifts_scheduled?: unknown;
+    attendance_rate?: unknown;
   }>;
+}
+
+function nullableRate(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  return safeNumber(value);
 }
 
 export function normalizeStaffReport(raw: unknown): StaffReport {
   const r = safeObject<RawStaffReport>(raw);
-  const perf = safeArray<{
+  const attSummary = safeObject(r.attendance_summary);
+  const ranking = safeArray<{
     staff_id?: unknown;
     name?: unknown;
     position?: unknown;
-    total_orders?: unknown;
-    total_sales?: unknown;
-    avg_rating?: unknown;
-  }>(r.staff_performance);
-
-  const performance_ranking: StaffPerformanceRanking[] = perf.map(
-    (p): StaffPerformanceRanking => ({
-      id: safeString(p.staff_id),
-      name: safeString(p.name),
-      role: safeString(p.position),
-      orders_handled: safeNumber(p.total_orders),
-      revenue_generated: safeNumber(p.total_sales),
-      average_rating: safeNumber(p.avg_rating),
-      attendance_rate: 0,
-      performance_score: 0,
-    }),
-  );
+    role?: unknown;
+    orders_handled?: unknown;
+    revenue_generated?: unknown;
+    avg_ticket?: unknown;
+    shifts_scheduled?: unknown;
+    attendance_rate?: unknown;
+  }>(r.performance_ranking);
 
   return {
-    total_staff: perf.length,
-    active_staff: perf.length,
-    total_labor_cost: 0,
-    labor_cost_percentage: 0,
+    total_staff: safeNumber(r.total_staff),
+    active_staff: safeNumber(r.active_staff),
     attendance_summary: {
-      total_records: 0,
-      present: 0,
-      absent: 0,
-      late: 0,
-      on_leave: 0,
-      attendance_rate: 0,
-    } as AttendanceSummary,
-    performance_ranking,
-    shift_coverage: [],
-    clock_summary: {
-      average_hours_per_day: 0,
-      overtime_hours: 0,
-      total_worked_hours: 0,
-    } as ClockSummary,
+      total_records: safeNumber(attSummary.total_records),
+      present: safeNumber(attSummary.present),
+      absent: safeNumber(attSummary.absent),
+      late: safeNumber(attSummary.late),
+      on_leave: safeNumber(attSummary.on_leave),
+      attendance_rate: nullableRate(attSummary.attendance_rate),
+    },
+    performance_ranking: ranking.map((p) => ({
+      id: safeString(p.staff_id),
+      name: safeString(p.name),
+      position: safeString(p.position),
+      role: safeString(p.role),
+      orders_handled: safeNumber(p.orders_handled),
+      revenue_generated: safeNumber(p.revenue_generated),
+      avg_ticket: safeNumber(p.avg_ticket),
+      shifts_scheduled: safeNumber(p.shifts_scheduled),
+      attendance_rate: nullableRate(p.attendance_rate),
+    })),
   };
 }
 
 interface RawTaxReport extends Record<string, unknown> {
-  period?: unknown;
   summary?: Record<string, unknown>;
   daily?: Array<{ date?: unknown; tax_collected?: unknown }>;
 }
@@ -239,14 +287,11 @@ export function normalizeTaxReport(raw: unknown): TaxReport {
 
   return {
     total_tax_collected: safeNumber(summary.total_tax_collected),
-    tax_breakdown: [],
     monthly_tax: Array.from(monthlyMap.entries()).map(
       ([month, tax_collected]): MonthlyTax => ({
         month,
         tax_collected,
-        taxable_sales: 0,
       }),
     ),
-    tax_by_order_type: [],
   };
 }

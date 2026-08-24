@@ -12,7 +12,6 @@ import {
   useOrders,
   useMenuItems,
   useCustomers,
-  useFloorPlans,
   useTables,
 } from "@/lib/hooks";
 import { toast } from "sonner";
@@ -30,18 +29,14 @@ export default function EditOrderPage({
   const { update } = useOrders();
   const { list: miList } = useMenuItems({ per_page: 200 });
   const { list: custList } = useCustomers({ per_page: 200 });
-  const { list: fpList } = useFloorPlans();
+  const { list: tableList } = useTables();
 
   const menuItems = miList.data?.data?.data ?? [];
   const customers = custList.data?.data?.data ?? [];
-  const floorPlans = fpList.data ?? [];
-
-  const firstFloorPlanId = floorPlans[0]?.id;
-  const { list: tableList } = useTables(firstFloorPlanId);
   const tables = tableList.data ?? [];
 
   const canEdit =
-    order && (order.status === "pending" || order.status === "confirmed");
+    order && (order.status === "draft" || order.status === "pending" || order.status === "confirmed");
 
   function handleSubmit(data: OrderFormData) {
     update.mutate(
@@ -56,7 +51,7 @@ export default function EditOrderPage({
     );
   }
 
-  if (orderLoading || miList.isLoading || custList.isLoading || fpList.isLoading) {
+  if (orderLoading || miList.isLoading || custList.isLoading || tableList.isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <LoadingSpinner size="lg" />
@@ -87,12 +82,12 @@ export default function EditOrderPage({
         <PageHeader
           title="Cannot Edit Order"
           description={`Order ${order.order_number} is currently "${order.status}" and can no longer be edited.`}
-          action={
-            <Button variant="outline" size="sm" render={<Link href={`/orders/${id}`} />}>
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back to Order
-            </Button>
-          }
+         action={
+          <Button variant="outline" size="sm" render={<Link href="/orders" />}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Orders
+          </Button>
+        }
         />
       </div>
     );
@@ -117,10 +112,10 @@ export default function EditOrderPage({
       <PageHeader
         title="Edit Order"
         description={`Editing ${order.order_number}`}
-        action={
-          <Button variant="outline" size="sm" render={<Link href={`/orders/${id}`} />}>
+         action={
+          <Button variant="outline" size="sm" render={<Link href="/orders" />}>
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Back
+            Back to Orders
           </Button>
         }
       />

@@ -3,6 +3,7 @@ export { KpiCard } from "./components/KpiCard";
 export { DrillDownChart } from "./components/DrillDownChart";
 export { RevenueTrendChart } from "./components/RevenueTrendChart";
 export { BestSellingItems } from "./components/BestSellingItems";
+export { ForecastChart } from "./components/ForecastChart";
 export { PeakHoursHeatmap, PeakHoursBar } from "./components/PeakHoursHeatmap";
 export {
   TopConsumedChart,

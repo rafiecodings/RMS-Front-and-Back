@@ -55,7 +55,9 @@ export function KitchenQueue({ data }: { data: DashboardSummary }) {
                   key={order.id}
                   className={cn(
                     "flex items-start gap-3 rounded-lg border p-3 transition-colors",
-                    order.priority === "rush" &&
+                    (order.priority === "rush" ||
+                      order.priority === "urgent" ||
+                      order.priority === "high") &&
                       "border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-950/20"
                   )}
                 >
@@ -64,12 +66,14 @@ export function KitchenQueue({ data }: { data: DashboardSummary }) {
                       <span className="text-sm font-semibold">
                         {order.order_number}
                       </span>
-                      {order.priority === "rush" && (
+                      {(order.priority === "rush" ||
+                        order.priority === "urgent" ||
+                        order.priority === "high") && (
                         <Flame className="h-3.5 w-3.5 text-red-500" />
                       )}
                       <Badge
                         variant="secondary"
-                        className={cn("text-[10px] px-1.5 py-0", status.className)}
+                        className={cn("text-xs px-1.5 py-0", status.className)}
                       >
                         {status.label}
                       </Badge>

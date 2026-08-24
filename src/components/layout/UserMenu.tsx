@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { RoleBadge } from "@/features/staff";
+import type { StaffRole } from "@/lib/types";
 import {
   User,
   Settings,
@@ -27,13 +29,6 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
-
-function getRoleLabel(role?: string): string {
-  if (!role) return "";
-  return role
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 export function UserMenu() {
@@ -56,9 +51,7 @@ export function UserMenu() {
         </Avatar>
         <div className="hidden lg:flex flex-col items-start leading-tight text-left">
           <span className="text-sm font-medium text-foreground">{user.name}</span>
-          <span className="text-[11px] text-muted-foreground">
-            {getRoleLabel(user.role)}
-          </span>
+          <RoleBadge role={user.role as StaffRole} />
         </div>
         <ChevronDown className="hidden lg:block h-3.5 w-3.5 text-muted-foreground/60" />
       </DropdownMenuTrigger>
@@ -93,3 +86,4 @@ export function UserMenu() {
     </DropdownMenu>
   );
 }
+

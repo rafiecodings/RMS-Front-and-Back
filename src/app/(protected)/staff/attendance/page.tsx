@@ -10,7 +10,7 @@ export default function AttendancePage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const today = new Date().toISOString().split("T")[0];
+  const [today] = useState(() => new Date().toISOString().split("T")[0]);
 
   const attendanceQuery = useAttendance({
     page,
@@ -57,6 +57,8 @@ export default function AttendancePage() {
     );
   }
 
+  const todayDisplay = new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -74,7 +76,7 @@ export default function AttendancePage() {
 
       <div className="rounded-lg border bg-card p-4">
         <p className="text-sm text-muted-foreground">
-          Today: {new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          Today: {todayDisplay}
         </p>
       </div>
 

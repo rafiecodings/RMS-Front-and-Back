@@ -40,15 +40,15 @@ export function SalesSummary({ data }: { data: DashboardSummary }) {
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="rounded-lg bg-muted/50 p-2.5">
             <p className="text-lg font-bold">{sales.transaction_count}</p>
-            <p className="text-[10px] text-muted-foreground">Transactions</p>
+            <p className="text-sm text-muted-foreground">Transactions</p>
           </div>
           <div className="rounded-lg bg-muted/50 p-2.5">
             <p className="text-lg font-bold">{formatCurrency(sales.average_ticket)}</p>
-            <p className="text-[10px] text-muted-foreground">Avg. Ticket</p>
+            <p className="text-sm text-muted-foreground">Avg. Ticket</p>
           </div>
           <div className="rounded-lg bg-muted/50 p-2.5">
             <p className="text-lg font-bold">{data.orders.total_today}</p>
-            <p className="text-[10px] text-muted-foreground">Orders</p>
+            <p className="text-sm text-muted-foreground">Orders</p>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export function SalesSummary({ data }: { data: DashboardSummary }) {
                     <span className="font-medium">{formatCurrency(item.revenue)}</span>
                   </div>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${config?.color || "bg-gray-400"}`}
                     style={{ width: `${pct}%` }}
@@ -103,7 +103,7 @@ export function SalesSummary({ data }: { data: DashboardSummary }) {
                     <p className="text-xs font-medium truncate capitalize">
                       {item.method.replace(/_/g, " ")}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {formatCurrency(item.revenue)}
                     </p>
                   </div>

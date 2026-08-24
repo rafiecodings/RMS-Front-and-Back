@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,8 @@ interface ShiftFormProps {
 export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: ShiftFormProps) {
   const today = defaultDate ?? new Date().toISOString().split("T")[0];
   const { data: shifts = [] } = useStaffShifts();
+  // Only active staff can be scheduled (backend enforces this too).
+  const schedulableStaff = staffList.filter((s) => s.is_active);
 
   const [form, setForm] = useState<ShiftScheduleFormData>({
     staff_id: "",
@@ -44,22 +47,26 @@ export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: Shift
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Staff Member *</label>
+        <Label className="text-sm font-medium">Staff Member *</Label>
         <Select value={form.staff_id} onValueChange={(v) => setForm((p) => ({ ...p, staff_id: v ?? "" }))}>
           <SelectTrigger>
             <SelectValue placeholder="Select staff member" />
           </SelectTrigger>
           <SelectContent>
-            {staffList.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.user?.name ?? s.employee_id}</SelectItem>
-            ))}
+            {schedulableStaff.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">No active staff available</div>
+            ) : (
+              schedulableStaff.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.user?.name ?? s.employee_id}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Date *</label>
+          <Label className="text-sm font-medium">Date *</Label>
           <Input
             type="date"
             value={form.date}
@@ -68,7 +75,7 @@ export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: Shift
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Shift *</label>
+          <Label className="text-sm font-medium">Shift *</Label>
           <Select value={form.shift_id} onValueChange={handleShiftChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select shift" />
@@ -83,7 +90,7 @@ export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: Shift
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Notes</label>
+        <Label className="text-sm font-medium">Notes</Label>
         <Input
           value={form.notes ?? ""}
           onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value || undefined }))}

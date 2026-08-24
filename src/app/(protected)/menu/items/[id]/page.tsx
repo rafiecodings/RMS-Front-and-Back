@@ -7,6 +7,8 @@ import { MenuItemDetail } from "@/features/menu";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useMenuItems } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 
 export default function MenuItemDetailPage({
   params,
@@ -15,6 +17,8 @@ export default function MenuItemDetailPage({
 }) {
   const { id } = use(params);
   const { list } = useMenuItems();
+  const { user } = useAuth();
+  const canEditMenu = canEdit(user?.role, "menu");
 
   const items = list.data?.data?.data ?? [];
   const item = items.find((i) => i.id === id);
@@ -55,7 +59,7 @@ export default function MenuItemDetailPage({
           </Button>
         }
       />
-      <MenuItemDetail item={item} />
+      <MenuItemDetail item={item} canEdit={canEditMenu} />
     </div>
   );
 }

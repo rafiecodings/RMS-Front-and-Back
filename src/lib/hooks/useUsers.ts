@@ -10,6 +10,17 @@ import type {
   User,
 } from "@/lib/types";
 
+export function useUser() {
+  return useQuery({
+    queryKey: ["user", "profile"],
+    queryFn: () =>
+      api
+        .get<ApiResponse<User>>("/auth/profile")
+        .then((res) => res.data.data),
+    staleTime: 60_000,
+  });
+}
+
 export function useUsers(params?: QueryParams) {
   const queryClient = useQueryClient();
 

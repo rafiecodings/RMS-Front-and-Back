@@ -1,8 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Crown, UserCheck, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { Users, UserCheck, Receipt, CalendarCheck } from "lucide-react";
 import type { Customer } from "@/lib/types";
 
 function StatCard({
@@ -37,9 +36,12 @@ function StatCard({
 
 export function CustomerStats({ customers }: { customers: Customer[] }) {
   const total = customers.length;
-  const vip = customers.filter((c) => c.customer_type === "vip").length;
-  const active = customers.filter((c) => c.is_active).length;
-  const totalRevenue = customers.reduce((sum, c) => sum + c.total_spent, 0);
+  const walkIn = customers.filter((c) => c.customer_type === "walk_in").length;
+  const totalOrders = customers.reduce((sum, c) => sum + (c.total_orders ?? 0), 0);
+  const totalReservations = customers.reduce(
+    (sum, c) => sum + (c.total_reservations ?? 0),
+    0
+  );
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -50,23 +52,24 @@ export function CustomerStats({ customers }: { customers: Customer[] }) {
         iconColor="bg-blue-500/10 text-blue-600"
       />
       <StatCard
-        title="VIP Customers"
-        value={String(vip)}
-        icon={Crown}
-        iconColor="bg-amber-500/10 text-amber-600"
-      />
-      <StatCard
-        title="Active Customers"
-        value={String(active)}
+        title="Walk-in Customers"
+        value={String(walkIn)}
         icon={UserCheck}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />
       <StatCard
-        title="Total Revenue"
-        value={formatCurrency(totalRevenue)}
-        icon={DollarSign}
-        iconColor="bg-purple-500/10 text-purple-600"
+        title="Total Orders"
+        value={String(totalOrders)}
+        icon={Receipt}
+        iconColor="bg-violet-500/10 text-violet-600"
+      />
+      <StatCard
+        title="Total Reservations"
+        value={String(totalReservations)}
+        icon={CalendarCheck}
+        iconColor="bg-amber-500/10 text-amber-600"
       />
     </div>
   );
 }
+

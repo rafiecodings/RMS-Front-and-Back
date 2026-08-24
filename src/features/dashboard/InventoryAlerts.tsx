@@ -90,7 +90,7 @@ export function InventoryAlerts({ data }: { data: DashboardSummary }) {
                       </span>
                       <Badge
                         variant="secondary"
-                        className={cn("text-[10px] px-1.5 py-0", config.badge)}
+                        className={cn("text-xs px-1.5 py-0", config.badge)}
                       >
                         {alert.severity === "out_of_stock"
                           ? "Out of stock"

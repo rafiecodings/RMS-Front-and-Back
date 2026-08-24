@@ -7,7 +7,7 @@ import { PageHeader, LoadingSpinner } from "@/components/shared";
 import { TableForm } from "@/features/tables";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useTables, useFloorPlans } from "@/lib/hooks";
+import { useTables } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { TableFormData } from "@/lib/types";
 
@@ -19,14 +19,9 @@ export default function EditTablePage({
   const { id } = use(params);
   const router = useRouter();
   const { list, update } = useTables();
-  const { list: fpList } = useFloorPlans();
 
   const tables = list.data ?? [];
-  const floorPlans = fpList.data ?? [];
   const table = tables.find((t) => t.id === id);
-  const floorPlan = table
-    ? floorPlans.find((fp) => fp.id === table.floor_plan_id)
-    : null;
 
   function handleSubmit(data: TableFormData) {
     update.mutate(
@@ -70,11 +65,9 @@ export default function EditTablePage({
     <div>
       <PageHeader
         title={`Edit Table T${table.number}`}
-        description={
-          floorPlan ? `Editing in ${floorPlan.name}` : "Update table details"
-        }
+        description="Update table details"
         action={
-          <Button variant="outline" size="sm" render={<Link href={`/tables/${id}`} />}>
+          <Button variant="outline" size="sm" render={<Link href="/tables" />}>
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             Back
           </Button>

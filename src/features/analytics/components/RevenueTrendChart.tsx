@@ -119,7 +119,7 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
       </Card>
 
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Revenue Trend</DialogTitle>
           </DialogHeader>

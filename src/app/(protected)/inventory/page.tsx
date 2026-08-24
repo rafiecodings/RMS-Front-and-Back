@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared";
 import { useIngredients, useStockMovements } from "@/lib/hooks";
@@ -11,21 +11,10 @@ export default function InventoryPage() {
   const { list: ingredientsList } = useIngredients({ per_page: 200 });
   const statsLoading = ingredientsList.isLoading;
   const ingredients = useMemo(() => ingredientsList.data?.data?.data ?? [], [ingredientsList.data]);
-  const [now] = useState(() => Date.now());
 
   const lowStock = ingredients.filter(
     (i: { current_stock: number; minimum_stock: number }) => i.current_stock <= i.minimum_stock
   ).length;
-
-  const expiringSoon = useMemo(
-    () =>
-      ingredients.filter((i: { expiry_date?: string }) => {
-        if (!i.expiry_date) return false;
-        const expiryMs = new Date(i.expiry_date).getTime();
-        return expiryMs > now && expiryMs - now < 7 * 24 * 60 * 60 * 1000;
-      }).length,
-    [ingredients, now]
-  );
 
   const totalValue = ingredients.reduce(
     (sum: number, i: { current_stock: number; cost_per_unit: number }) => sum + i.current_stock * i.cost_per_unit,
@@ -44,7 +33,7 @@ export default function InventoryPage() {
       />
 
       <IngredientStats
-        stats={{ total: ingredients.length, lowStock, expiringSoon, totalValue }}
+        stats={{ total: ingredients.length, lowStock, totalValue }}
         isLoading={statsLoading}
       />
 

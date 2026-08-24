@@ -3,16 +3,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/lib/api/client";
 import type { ApiResponse } from "@/lib/types";
-import type {
-  RevenueReport,
-  SalesReport,
-  MenuPerformanceReport,
-  InventoryReport,
-  StaffReport,
-  TaxReport,
-  ReportFilters,
-  ExportPayload,
-} from "../types";
+import type { ReportFilters, ExportPayload } from "../types";
+import { resolveReportRange } from "../utils/resolveReportRange";
 import {
   normalizeRevenueReport,
   normalizeSalesReport,
@@ -22,18 +14,17 @@ import {
   normalizeTaxReport,
 } from "../normalizers";
 
+/**
+ * Single contract with the backend: presets are expanded into explicit
+ * start_date/end_date here; the opaque `period` value is never sent.
+ */
 function buildReportParams(filters?: ReportFilters): Record<string, string> {
-  const params: Record<string, string> = {};
-  if (filters?.period && filters.period !== "custom") {
-    params.period = filters.period;
+  if (!filters) {
+    return resolveReportRange("this_month");
   }
-  if (filters?.date_range?.from) {
-    params.start_date = filters.date_range.from;
-  }
-  if (filters?.date_range?.to) {
-    params.end_date = filters.date_range.to;
-  }
-  if (filters?.group_by) {
+  const range = resolveReportRange(filters.period, filters.date_range);
+  const params: Record<string, string> = { ...range };
+  if (filters.group_by) {
     params.group_by = filters.group_by;
   }
   return params;
@@ -105,11 +96,36 @@ export function useTaxReport(filters?: ReportFilters) {
   });
 }
 
+/**
+ * CSV/JSON export. The backend streams a real file (CSV with UTF-8 BOM) or a
+ * JSON payload — never a "pending" stub.
+ */
 export function useExportReport() {
   return useMutation({
-    mutationFn: (payload: ExportPayload) =>
-      api
-        .post("/reports/export", payload, { responseType: "blob" })
-        .then((res) => res.data),
+    mutationFn: async (payload: ExportPayload) => {
+      const res = await api.post("/reports/export", payload, {
+        responseType: payload.format === "json" ? "json" : "blob",
+      });
+
+      if (payload.format === "json") {
+        return new Blob([JSON.stringify(res.data?.data ?? {}, null, 2)], {
+          type: "application/json",
+        });
+      }
+
+      // Guard against an error JSON body being saved as a .csv.
+      if (res.data instanceof Blob && res.data.type.includes("json")) {
+        const text = await res.data.text();
+        let message = "Export failed";
+        try {
+          message = JSON.parse(text)?.message ?? message;
+        } catch {
+          /* keep default */
+        }
+        throw new Error(message);
+      }
+
+      return res.data as Blob;
+    },
   });
 }

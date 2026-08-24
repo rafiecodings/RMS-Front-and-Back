@@ -5,10 +5,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Building2,
-  Receipt,
-  Tags,
-  Users,
-  Shield,
   Settings,
   ArrowLeft,
 } from "lucide-react";
@@ -16,10 +12,6 @@ import {
 const NAV_ITEMS = [
   { href: "/settings", label: "Overview", icon: Settings },
   { href: "/settings/restaurant", label: "Restaurant Info", icon: Building2 },
-  { href: "/settings/taxes", label: "Taxes", icon: Receipt },
-  { href: "/settings/discounts", label: "Discounts", icon: Tags },
-  { href: "/settings/users", label: "Users", icon: Users },
-  { href: "/settings/roles", label: "Roles & Permissions", icon: Shield },
   { href: "/settings/preferences", label: "System Preferences", icon: Settings },
 ];
 

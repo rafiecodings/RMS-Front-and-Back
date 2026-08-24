@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Send } from "lucide-react";
 import type { OrderStatus } from "@/lib/types";
 
 interface OrderStatusSelectProps {
@@ -15,28 +10,15 @@ interface OrderStatusSelectProps {
   disabled?: boolean;
 }
 
-const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["confirmed", "cancelled"],
-  on_hold: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
-  preparing: ["ready", "cancelled"],
-  ready: ["served"],
-  served: ["completed"],
-  completed: [],
-  cancelled: [],
-  voided: [],
-};
-
 const STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: "Draft",
   pending: "Pending",
-  on_hold: "On Hold",
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready",
   served: "Served",
   completed: "Completed",
   cancelled: "Cancelled",
-  voided: "Voided",
 };
 
 export function OrderStatusSelect({
@@ -44,34 +26,45 @@ export function OrderStatusSelect({
   onStatusChange,
   disabled,
 }: OrderStatusSelectProps) {
-  const nextOptions = NEXT_STATUSES[currentStatus];
-
-  if (nextOptions.length === 0) {
+  if (currentStatus === "draft" || currentStatus === "pending") {
     return (
-      <div className="text-sm text-muted-foreground italic">
-        {STATUS_LABELS[currentStatus]} — no further actions
-      </div>
+      <Button size="sm" onClick={() => onStatusChange("confirmed")} disabled={disabled}>
+        <Send className="h-4 w-4 mr-1.5" />
+        Confirm Order
+      </Button>
     );
   }
 
+  if (currentStatus === "ready") {
+    return (
+      <Button
+        size="sm"
+        onClick={() => onStatusChange("served")}
+        disabled={disabled}
+      >
+        <CheckCircle2 className="h-4 w-4 mr-1.5" />
+        Mark Served
+      </Button>
+    );
+  }
+
+  if (currentStatus === "served") {
+    return (
+      <Button
+        size="sm"
+        onClick={() => onStatusChange("completed")}
+        disabled={disabled}
+      >
+        <CheckCircle2 className="h-4 w-4 mr-1.5" />
+        Mark Completed
+      </Button>
+    );
+  }
+
+  // confirmed/preparing are handled by the kitchen; completed/cancelled are terminal
   return (
-    <Select
-      value=""
-      onValueChange={(val) => {
-        if (val) onStatusChange(val as OrderStatus);
-      }}
-      disabled={disabled}
-    >
-      <SelectTrigger className="w-full sm:w-[200px]">
-        <SelectValue placeholder={`Move to...`} />
-      </SelectTrigger>
-      <SelectContent>
-        {nextOptions.map((s) => (
-          <SelectItem key={s} value={s}>
-            {s === "cancelled" ? "✕ Cancel Order" : `→ ${STATUS_LABELS[s]}`}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="text-sm text-muted-foreground italic">
+      {STATUS_LABELS[currentStatus]} — no further actions
+    </div>
   );
 }

@@ -1,15 +1,18 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { use } from "react";
 import { EmptyState, LoadingSpinner } from "@/components/shared";
 import { PurchaseOrderDetail } from "@/features/inventory";
 import { usePurchaseOrder, usePurchaseOrders } from "@/lib/hooks";
 import type { PurchaseOrderStatus } from "@/lib/types";
 import { toast } from "sonner";
 
-export default function PurchaseOrderDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
+export default function PurchaseRequestDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
 
   const { data: order, isLoading } = usePurchaseOrder(id);
   const { updateStatus } = usePurchaseOrders();
@@ -25,8 +28,8 @@ export default function PurchaseOrderDetailPage() {
   if (!order) {
     return (
       <EmptyState
-        title="Purchase order not found"
-        description="This purchase order may have been deleted."
+        title="Purchase request not found"
+        description="This purchase request may have been deleted."
       />
     );
   }
@@ -35,7 +38,7 @@ export default function PurchaseOrderDetailPage() {
     updateStatus.mutate(
       { id, status },
       {
-        onSuccess: () => toast.success(`PO status updated to ${status}`),
+        onSuccess: () => toast.success(`Request status updated to ${status}`),
         onError: (e: Error) => toast.error(e.message || "Failed to update status"),
       }
     );

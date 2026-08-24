@@ -5,69 +5,24 @@ import api from "@/lib/api/client";
 import { unwrapArray } from "@/lib/utils/api";
 import type {
   ApiResponse,
-  FloorPlan,
-  FloorPlanFormData,
   Table,
   TableFormData,
 } from "@/lib/types";
 
-export function useFloorPlans() {
+export function useTables() {
   const queryClient = useQueryClient();
 
   const list = useQuery({
-    queryKey: ["floor-plans"],
+    queryKey: ["tables"],
     queryFn: () =>
       api
-        .get<ApiResponse<FloorPlan[]>>("/floor-plans")
-        .then((res) => unwrapArray<FloorPlan>(res.data)),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const create = useMutation({
-    mutationFn: (data: FloorPlanFormData) =>
-      api.post<ApiResponse<FloorPlan>>("/floor-plans", data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
-  });
-
-  const update = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Partial<FloorPlanFormData>;
-    }) =>
-      api.put<ApiResponse<FloorPlan>>(`/floor-plans/${id}`, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
-  });
-
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/floor-plans/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["floor-plans"] }),
-  });
-
-  return { list, create, update, remove };
-}
-
-export function useTables(floorPlanId?: string) {
-  const queryClient = useQueryClient();
-
-  const list = useQuery({
-    queryKey: ["tables", floorPlanId ?? "all"],
-    queryFn: () =>
-      api
-        .get<ApiResponse<Table[]>>("/tables", {
-          params: floorPlanId ? { floor_plan_id: floorPlanId } : {},
-        })
+        .get<ApiResponse<Table[]>>("/tables")
         .then((res) => unwrapArray<Table>(res.data)),
     staleTime: 30_000,
   });
 
   const create = useMutation({
-    mutationFn: (data: TableFormData & { floor_plan_id: string }) =>
+    mutationFn: (data: TableFormData) =>
       api.post<ApiResponse<Table>>("/tables", data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables"] }),
   });

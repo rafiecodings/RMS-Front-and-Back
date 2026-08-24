@@ -77,9 +77,10 @@ describe("IngredientTable", () => {
 
     expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons[0]).toBeDisabled();
-    await user.click(buttons[1]);
+    // Prev is disabled on page 1.
+    expect(screen.getByRole("button", { name: /previous/i })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "2" }));
 
     expect(onPageChange).toHaveBeenCalledWith(2);
   });

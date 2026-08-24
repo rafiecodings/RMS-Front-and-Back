@@ -67,7 +67,9 @@ export interface KitchenOrder {
   items: { name: string; quantity: number; notes?: string }[];
   status: "received" | "in_progress" | "ready";
   elapsed_minutes: number;
-  priority: "normal" | "rush";
+  // KOT priorities are normal|low|high|urgent backend-side; the dashboard
+  // highlights anything above normal.
+  priority: "low" | "normal" | "high" | "urgent" | "rush";
 }
 
 export interface TopSellingItem {
@@ -109,7 +111,7 @@ export interface RecentOrder {
   customer_name: string | null;
   table_number: string | null;
   order_type: "dine_in" | "takeaway" | "delivery";
-  status: "pending" | "confirmed" | "preparing" | "ready" | "served" | "completed" | "cancelled" | "voided" | "on_hold";
+  status: "draft" | "pending" | "confirmed" | "preparing" | "ready" | "served" | "completed" | "cancelled";
   total: number;
   items_count: number;
   created_at: string;

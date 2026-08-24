@@ -8,22 +8,12 @@ import {
   LoadingSpinner,
   ConfirmDialog,
 } from "@/components/shared";
-import {
-  OrderDetail,
-  OrderStatusSelect,
-  PaymentForm,
-} from "@/features/orders";
+import { OrderDetail, OrderStatusSelect } from "@/features/orders";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useOrder, useOrders } from "@/lib/hooks";
 import { toast } from "sonner";
-import type { OrderStatus, PaymentFormData } from "@/lib/types";
+import type { OrderStatus } from "@/lib/types";
 
 export default function OrderDetailPage({
   params,
@@ -31,12 +21,11 @@ export default function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
   const { data: order, isLoading } = useOrder(id);
-  const { updateStatus, addPayment, cancel } = useOrders();
+  const { updateStatus, cancel } = useOrders();
 
   function handleStatusChange(status: OrderStatus) {
     if (!order) return;
@@ -52,20 +41,6 @@ export default function OrderDetailPage({
         onSuccess: () =>
           toast.success(`Order updated to ${status.replace(/_/g, " ")}`),
         onError: () => toast.error("Failed to update order status"),
-      }
-    );
-  }
-
-  function handlePayment(data: PaymentFormData) {
-    if (!order) return;
-    addPayment.mutate(
-      { id: order.id, data },
-      {
-        onSuccess: () => {
-          toast.success("Payment processed");
-          setPaymentOpen(false);
-        },
-        onError: () => toast.error("Failed to process payment"),
       }
     );
   }
@@ -110,8 +85,6 @@ export default function OrderDetailPage({
     );
   }
 
-  const totalPaid = order.payments.reduce((sum, p) => sum + p.amount, 0);
-  const balance = order.total_amount - totalPaid;
   const isTerminal = order.status === "completed" || order.status === "cancelled";
 
   return (
@@ -127,15 +100,6 @@ export default function OrderDetailPage({
                 disabled={updateStatus.isPending}
               />
             )}
-            {balance > 0 && !isTerminal && (
-              <Button
-                size="sm"
-                onClick={() => setPaymentOpen(true)}
-              >
-                <CreditCard className="h-4 w-4 mr-1.5" />
-                Pay
-              </Button>
-            )}
             <Button variant="outline" size="sm" render={<Link href="/orders" />}>
               <ArrowLeft className="h-4 w-4 mr-1.5" />
               Back
@@ -144,24 +108,6 @@ export default function OrderDetailPage({
         }
       />
       <OrderDetail order={order} />
-
-      <Dialog
-        open={paymentOpen}
-        onOpenChange={(open) => {
-          setPaymentOpen(open);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Process Payment</DialogTitle>
-          </DialogHeader>
-          <PaymentForm
-            remainingAmount={balance}
-            onSubmit={handlePayment}
-            isLoading={addPayment.isPending}
-          />
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={cancelTarget}

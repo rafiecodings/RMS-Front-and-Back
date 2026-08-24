@@ -17,7 +17,6 @@ interface OrderTimelineProps {
     confirmed_at?: string;
     preparing_at?: string;
     ready_at?: string;
-    served_at?: string;
     completed_at?: string;
     cancelled_at?: string;
     cancellation_reason?: string;
@@ -25,7 +24,7 @@ interface OrderTimelineProps {
 }
 
 const STATUS_FLOW: { status: OrderStatus; label: string }[] = [
-  { status: "pending", label: "Pending" },
+  { status: "draft", label: "Draft" },
   { status: "confirmed", label: "Confirmed" },
   { status: "preparing", label: "Preparing" },
   { status: "ready", label: "Ready" },

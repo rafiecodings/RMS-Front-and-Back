@@ -7,18 +7,18 @@ import { usePurchaseOrders } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { PurchaseOrderFormData } from "@/lib/types";
 
-export default function NewPurchaseOrderPage() {
+export default function NewPurchaseRequestPage() {
   const router = useRouter();
   const { create } = usePurchaseOrders();
 
   function handleSubmit(data: PurchaseOrderFormData) {
     create.mutate(data, {
       onSuccess: () => {
-        toast.success("Purchase order created successfully");
+        toast.success("Purchase request created successfully");
         router.push("/inventory/purchase-orders");
       },
       onError: (error: Error) => {
-        toast.error(error.message || "Failed to create purchase order");
+        toast.error(error.message || "Failed to create purchase request");
       },
     });
   }
@@ -26,8 +26,8 @@ export default function NewPurchaseOrderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="New Purchase Order"
-        description="Create a purchase order for a supplier"
+        title="New Purchase Request"
+        description="Request supplies from Supply Chain"
       />
       <PurchaseOrderForm onSubmit={handleSubmit} isLoading={create.isPending} />
     </div>

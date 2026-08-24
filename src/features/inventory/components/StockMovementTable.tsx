@@ -10,8 +10,8 @@ interface StockMovementTableProps {
 }
 
 const TYPE_STYLES: Record<string, string> = {
-  in: "bg-emerald-100 text-emerald-800",
-  out: "bg-red-100 text-red-800",
+  inward: "bg-emerald-100 text-emerald-800",
+  outward: "bg-red-100 text-red-800",
   adjustment: "bg-blue-100 text-blue-800",
   wastage: "bg-amber-100 text-amber-800",
 };
@@ -38,14 +38,14 @@ export function StockMovementTable({ movements, isLoading }: StockMovementTableP
           ) : (
             movements.map((m) => (
               <tr key={m.id} className="hover:bg-muted/30">
-                <td className="px-4 py-2">{m.ingredient?.name ?? `Ingredient ${m.ingredient_id.slice(0, 8)}`}</td>
+                <td className="px-4 py-2">{m.ingredient?.name ?? "Unknown Ingredient"}</td>
                 <td className="px-4 py-2 text-center">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TYPE_STYLES[m.type] ?? ""}`}>
-                    {m.type === "in" ? "Inward" : m.type === "out" ? "Outward" : m.type === "adjustment" ? "Adjustment" : "Wastage"}
+                    {m.type === "inward" ? "Inward" : m.type === "outward" ? "Outward" : m.type === "adjustment" ? "Adjustment" : "Wastage"}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right tabular-nums">
-                  {m.type === "out" || m.type === "wastage" ? "-" : "+"}{m.quantity}
+                  {m.type === "outward" || m.type === "wastage" ? "-" : "+"}{m.quantity}
                 </td>
                 <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">{m.notes ?? "—"}</td>
                 <td className="px-4 py-2 text-muted-foreground">

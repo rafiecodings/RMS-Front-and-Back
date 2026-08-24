@@ -10,8 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
-import { safeNumber } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import type { StaffPerformanceRanking } from "../types";
 
 interface StaffPerformanceTableProps {
@@ -24,7 +23,7 @@ export function StaffPerformanceTable({ data }: StaffPerformanceTableProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-semibold">Staff Performance Ranking</CardTitle>
         <span className="text-xs text-muted-foreground">
-          {data.length} staff members
+          Ranked by revenue generated
         </span>
       </CardHeader>
       <CardContent>
@@ -42,8 +41,9 @@ export function StaffPerformanceTable({ data }: StaffPerformanceTableProps) {
                   <TableHead>Role</TableHead>
                   <TableHead className="text-right">Orders</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">Rating</TableHead>
-                  <TableHead className="text-right">Score</TableHead>
+                  <TableHead className="text-right">Avg Ticket</TableHead>
+                  <TableHead className="text-right">Attendance</TableHead>
+                  <TableHead className="text-right">Shifts</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -54,33 +54,27 @@ export function StaffPerformanceTable({ data }: StaffPerformanceTableProps) {
                     </TableCell>
                     <TableCell className="font-medium">{staff.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {staff.role.replace(/_/g, " ")}
-                      </Badge>
+                      {staff.role ? (
+                        <Badge variant="outline" className="capitalize">
+                          {staff.role.replace(/_/g, " ")}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{staff.position || "—"}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">{staff.orders_handled}</TableCell>
                     <TableCell className="text-right">
-                      ₱{safeNumber(staff.revenue_generated).toLocaleString()}
+                      {formatCurrency(staff.revenue_generated)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {safeNumber(staff.average_rating).toFixed(1)}
-                      </div>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatCurrency(staff.avg_ticket)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        <div className="h-2 w-16 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-emerald-500"
-                            style={{ width: `${Math.min(100, safeNumber(staff.performance_score))}%` }}
-                          />
-                        </div>
-                        <span className="ml-2 text-xs font-medium">
-                          {safeNumber(staff.performance_score).toFixed(0)}
-                        </span>
-                      </div>
+                    <TableCell className="text-right tabular-nums">
+                      {staff.attendance_rate != null
+                        ? `${staff.attendance_rate.toFixed(1)}%`
+                        : "—"}
                     </TableCell>
+                    <TableCell className="text-right">{staff.shifts_scheduled}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

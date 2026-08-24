@@ -1,24 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, ErrorState } from "@/components/shared";
 import {
   ReportFilters,
   ReportSummaryCard,
   SalesByCategoryChart,
   RevenueByTypeChart,
+  RevenueByPaymentChart,
   TopItemsTable,
   ExportButton,
 } from "@/features/reports";
-import { useSalesReport } from "@/features/reports/hooks/useReports";
+import { useSalesReport, useMenuPerformanceReport } from "@/features/reports/hooks/useReports";
 import type { ReportPeriod, DateRange } from "@/features/reports/types";
 import { LoadingSpinner } from "@/components/shared";
 
 export default function SalesReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const filters = { period, date_range: dateRange };
 
-  const { data: report, isLoading } = useSalesReport({ period, date_range: dateRange });
+  const { data: report, isLoading, isError } = useSalesReport(filters);
+  // Real top/bottom sellers come from the menu-performance dataset.
+  const { data: menuReport, isLoading: menuLoading } = useMenuPerformanceReport(filters);
+
+  const items = menuReport?.item_performance ?? [];
+  const topItems = items.slice(0, 10).map((i) => ({
+    id: i.id,
+    name: i.name,
+    category: i.category,
+    quantity_sold: i.quantity_sold,
+    revenue: i.revenue,
+    average_price: i.quantity_sold > 0 ? i.revenue / i.quantity_sold : 0,
+  }));
+  // Least revenue among the items that actually sold in the period.
+  const bottomItems = [...items]
+    .sort((a, b) => a.revenue - b.revenue)
+    .slice(0, 10)
+    .map((i) => ({
+      id: i.id,
+      name: i.name,
+      category: i.category,
+      quantity_sold: i.quantity_sold,
+      revenue: i.revenue,
+      average_price: i.quantity_sold > 0 ? i.revenue / i.quantity_sold : 0,
+    }));
 
   return (
     <div className="space-y-6">
@@ -41,11 +67,16 @@ export default function SalesReportsPage() {
         onDateRangeChange={setDateRange}
       />
 
-      {isLoading ? (
+      {isLoading || menuLoading ? (
         <LoadingSpinner />
+      ) : isError ? (
+        <ErrorState
+          message="Failed to load the sales report. Please try again."
+          className="mb-4"
+        />
       ) : report ? (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <ReportSummaryCard
               title="Total Sales"
               value={report.total_sales}
@@ -74,8 +105,24 @@ export default function SalesReportsPage() {
             <RevenueByTypeChart data={report.revenue_by_type} />
           </div>
 
-          <TopItemsTable data={report.top_items} title="Top Selling Items" variant="top" />
-          <TopItemsTable data={report.bottom_items} title="Bottom Selling Items" variant="bottom" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <RevenueByPaymentChart data={report.revenue_by_payment} />
+            <TopItemsTable
+              data={report.hourly_distribution.map((h) => ({
+                id: String(h.hour),
+                name: `${String(h.hour).padStart(2, "0")}:00 – ${String(h.hour).padStart(2, "0")}:59`,
+                category: "",
+                quantity_sold: h.orders,
+                revenue: h.revenue,
+                average_price: h.orders > 0 ? h.revenue / h.orders : 0,
+              }))}
+              title="Busiest Hours (by orders)"
+              variant="top"
+            />
+          </div>
+
+          <TopItemsTable data={topItems} title="Top Selling Items" variant="top" />
+          <TopItemsTable data={bottomItems} title="Lowest Selling Items" variant="bottom" />
         </>
       ) : (
         <div className="rounded-lg border bg-card p-6 shadow-sm">

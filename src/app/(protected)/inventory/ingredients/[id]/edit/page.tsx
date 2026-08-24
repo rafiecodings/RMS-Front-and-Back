@@ -58,6 +58,9 @@ export default function EditIngredientPage() {
         initialData={ingredient}
         onSubmit={handleSubmit}
         isLoading={update.isPending}
+        existingNames={ingredients
+          .filter((i) => i.id !== id)
+          .map((i) => i.name)}
       />
     </div>
   );

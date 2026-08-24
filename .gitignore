@@ -2,7 +2,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,16 +12,16 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 /test-results/
 /playwright-report/
 
 # next.js
-/.next/
+**/.next/
 /out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -46,6 +46,8 @@ yarn-error.log*
 next-env.d.ts
 
 # ---- backend (Laravel) ----
+**/vendor/
+storage/logs/*.log
 .env.backup
 .env.production
 .phpactor.json
@@ -57,7 +59,7 @@ next-env.d.ts
 /.vscode
 /.zed
 /auth.json
-/public/build
+/publicbuild/
 /public/hot
 /public/storage
 /storage/*.key

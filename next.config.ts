@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://rms-backend-dj5q.onrender.com"
+    : "http://127.0.0.1:8000");
 
 const nextConfig: NextConfig = {
   async rewrites() {

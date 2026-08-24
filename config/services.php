@@ -1,0 +1,55 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Third Party Services
+    |--------------------------------------------------------------------------
+    |
+    | This file is for storing the credentials for third party services such
+    | as Mailgun, Postmark, AWS and more. This file provides the de facto
+    | location for this type of information, allowing packages to have
+    | a conventional file to locate the various service credentials.
+    |
+    */
+
+    'postmark' => [
+        'key' => env('POSTMARK_API_KEY'),
+    ],
+
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
+    ],
+
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'slack' => [
+        'notifications' => [
+            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+        ],
+    ],
+
+    // Gemini AI insights. Server-side only — the key must never reach the
+    // frontend or any NEXT_PUBLIC_ variable.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.7-flash'),
+    ],
+
+    // TimechoAI time-series forecasting (Timer family). Server-side only.
+    'timecho' => [
+        'api_key' => env('TIMECHO_API_KEY'),
+        'base_url' => env('TIMECHO_BASE_URL', 'https://ai.timecho.com'),
+        'forecast_path' => env('TIMECHO_FORECAST_PATH', '/ai/api/v1/forecast'),
+        // Informational only — the REST forecast endpoint documents no
+        // model-selection field; the service default (auto) is used.
+        'model' => env('TIMECHO_MODEL'),
+    ],
+
+];

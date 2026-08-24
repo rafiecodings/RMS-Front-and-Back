@@ -1,0 +1,56 @@
+"use client";
+
+import { use } from "react";
+import { EmptyState, LoadingSpinner } from "@/components/shared";
+import { PurchaseOrderDetail } from "@/features/inventory";
+import { usePurchaseOrder, usePurchaseOrders } from "@/lib/hooks";
+import type { PurchaseOrderStatus } from "@/lib/types";
+import { toast } from "sonner";
+
+export default function PurchaseRequestDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+
+  const { data: order, isLoading } = usePurchaseOrder(id);
+  const { updateStatus } = usePurchaseOrders();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <EmptyState
+        title="Purchase request not found"
+        description="This purchase request may have been deleted."
+      />
+    );
+  }
+
+  function handleStatusChange(status: PurchaseOrderStatus) {
+    updateStatus.mutate(
+      { id, status },
+      {
+        onSuccess: () => toast.success(`Request status updated to ${status}`),
+        onError: (e: Error) => toast.error(e.message || "Failed to update status"),
+      }
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PurchaseOrderDetail
+        order={order}
+        onStatusChange={handleStatusChange}
+        isUpdating={updateStatus.isPending}
+      />
+    </div>
+  );
+}

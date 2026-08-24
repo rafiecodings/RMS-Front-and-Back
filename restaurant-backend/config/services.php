@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    // Gemini AI insights. Server-side only — the key must never reach the
+    // frontend or any NEXT_PUBLIC_ variable.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.7-flash'),
+    ],
+
+    // TimechoAI time-series forecasting (Timer family). Server-side only.
+    'timecho' => [
+        'api_key' => env('TIMECHO_API_KEY'),
+        'base_url' => env('TIMECHO_BASE_URL', 'https://ai.timecho.com'),
+        'forecast_path' => env('TIMECHO_FORECAST_PATH', '/ai/api/v1/forecast'),
+        // Informational only — the REST forecast endpoint documents no
+        // model-selection field; the service default (auto) is used.
+        'model' => env('TIMECHO_MODEL'),
+    ],
+
 ];

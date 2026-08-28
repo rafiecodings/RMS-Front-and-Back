@@ -49,15 +49,14 @@ export function OrderStatusSelect({
   }
 
   if (currentStatus === "served") {
+    // Completion is a settlement outcome reached ONLY via POS payment
+    // (POST /orders/{id}/payments). A direct "Mark Completed" would be
+    // rejected by the backend, so we steer staff to the till instead of
+    // offering a button that always errors.
     return (
-      <Button
-        size="sm"
-        onClick={() => onStatusChange("completed")}
-        disabled={disabled}
-      >
-        <CheckCircle2 className="h-4 w-4 mr-1.5" />
-        Mark Completed
-      </Button>
+      <div className="text-sm text-muted-foreground italic">
+        Served — awaiting payment to complete
+      </div>
     );
   }
 

@@ -29,8 +29,10 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+        working-directory: restaurant-frontend
 
       - name: "TypeScript type check (error budget: 31 pre-existing)"
+        working-directory: restaurant-frontend
         run: |
           npx tsc --noEmit 2>&1 | tee /tmp/tsc.log || true
           count=$(grep -c "error TS" /tmp/tsc.log || true)

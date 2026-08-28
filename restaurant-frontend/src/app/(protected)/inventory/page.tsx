@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { PageHeader, LoadingSkeleton } from "@/components/shared";
 import { useIngredients, useStockMovements, useReplenishmentRequests } from "@/lib/hooks";
+import { useAuth } from "@/providers/AuthProvider";
 import { StockMovementTable } from "@/features/inventory";
 import {
   getStockStatus,
@@ -18,7 +19,6 @@ import {
   ArrowUpCircle,
   DollarSign,
   ClipboardList,
-  Sparkles,
 } from "lucide-react";
 
 interface IngredientRow {
@@ -36,6 +36,8 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEK_AGO_MS = Date.now() - WEEK_MS;
 
 export default function InventoryPage() {
+  const { user } = useAuth();
+  const canRequestReplenishment = user?.role === "inventory_staff";
   const { list: ingredientsList } = useIngredients({ per_page: 200 });
   const statsLoading = ingredientsList.isLoading;
   const ingredients = useMemo(
@@ -155,22 +157,6 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Cross-link to the canonical forecasting hub */}
-      <Link href="/analytics" className="group block">
-        <div className="flex items-center gap-4 rounded-lg border border-dashed p-4 transition-colors hover:bg-muted/50">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
-            <Sparkles className="h-6 w-6" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold">AI Inventory Risk</h3>
-            <p className="text-xs text-muted-foreground">
-              Projected ingredient demand, depletion dates, and recommended replenishment
-            </p>
-          </div>
-          <span className="text-sm font-medium text-primary group-hover:underline">View Forecast</span>
-        </div>
-      </Link>
-
       {/* Inventory monitoring table */}
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
@@ -183,16 +169,17 @@ export default function InventoryPage() {
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Recent Usage</th>
               <th className="px-4 py-3 font-medium">Last Movement</th>
+              {canRequestReplenishment && <th className="px-4 py-3 font-medium">Action</th>}
             </tr>
           </thead>
           <tbody>
             {statsLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td>
+                <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td>
               </tr>
             ) : enriched.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">
                   No ingredients tracked yet.
                 </td>
               </tr>
@@ -224,6 +211,18 @@ export default function InventoryPage() {
                       ? new Date(i.lastMovement).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
                       : "No movement"}
                   </td>
+                  {canRequestReplenishment && (
+                    <td className="px-4 py-3">
+                      {i.status === "low" || i.status === "out" ? (
+                        <Link
+                          className="text-sm font-medium text-primary hover:underline"
+                          href={`/inventory/replenishment?ingredient_id=${encodeURIComponent(i.id)}&quantity=${encodeURIComponent(String(Math.max(0.001, (Number(i.maximum_stock) > 0 ? Number(i.maximum_stock) : Number(i.minimum_stock) * 2) - Number(i.current_stock))))}&priority=${i.status === "out" ? "urgent" : "high"}`}
+                        >
+                          Request Replenishment
+                        </Link>
+                      ) : "—"}
+                    </td>
+                  )}
                 </tr>
               ))
             )}

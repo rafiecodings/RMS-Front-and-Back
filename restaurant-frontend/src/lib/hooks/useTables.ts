@@ -33,11 +33,6 @@ export function useTables() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables"] }),
   });
 
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/tables/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables"] }),
-  });
-
   const archive = useMutation({
     mutationFn: (id: string) => api.delete(`/tables/${id}/archive`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables"] }),
@@ -48,5 +43,5 @@ export function useTables() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tables"] }),
   });
 
-  return { list, create, update, remove, archive, restore };
+  return { list, create, update, archive, restore };
 }

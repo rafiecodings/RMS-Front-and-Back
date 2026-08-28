@@ -19,13 +19,6 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
 
-const ITEM_STATUS_STYLES: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-700",
-  preparing: "bg-amber-100 text-amber-700",
-  ready: "bg-emerald-100 text-emerald-700",
-  cancelled: "bg-red-100 text-red-700",
-};
-
 interface OrderDetailProps {
   order: Order;
 }
@@ -87,15 +80,6 @@ export function OrderDetail({ order }: OrderDetailProps) {
                           ({item.variant})
                         </span>
                       )}
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[9px] px-1 py-0",
-                          ITEM_STATUS_STYLES[item.status]
-                        )}
-                      >
-                        {item.status}
-                      </Badge>
                     </div>
                     {item.modifiers && item.modifiers.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -129,13 +113,13 @@ export function OrderDetail({ order }: OrderDetailProps) {
               </div>
               {order.tax_amount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax</span>
+                  <span className="text-muted-foreground">VAT (inclusive)</span>
                   <span>{formatCurrency(order.tax_amount)}</span>
                 </div>
               )}
               {order.discount_amount > 0 && (
                 <div className="flex justify-between text-emerald-600">
-                  <span>Discount</span>
+                  <span>{order.applied_discount?.name ?? "Discount"}</span>
                   <span>-{formatCurrency(order.discount_amount)}</span>
                 </div>
               )}

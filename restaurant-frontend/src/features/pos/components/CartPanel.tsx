@@ -6,7 +6,7 @@ import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import type { CartItem as CartItemType, PosDiscount } from "../types";
+import type { CartItem as CartItemType } from "../types";
 import type { Order } from "@/lib/types";
 import { formatCurrency, formatLabel } from "@/lib/utils";
 import { useTaxRate } from "@/features/settings/hooks/useSettings";
@@ -14,7 +14,6 @@ import { useTaxRate } from "@/features/settings/hooks/useSettings";
 interface CartPanelProps {
   items: CartItemType[];
   subtotal: number;
-  discount?: PosDiscount;
   discountAmount: number;
   vatAmount: number;
   serviceChargeAmount: number;
@@ -24,9 +23,6 @@ interface CartPanelProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
   onUpdateNotes: (id: string, notes: string) => void;
-  onEditDiscount: () => void;
-  onEditServiceCharge: () => void;
-  onPay: () => void;
   onReport?: () => void;
   existingOrder?: Order | null;
   onSelectExistingOrder?: () => void;
@@ -37,7 +33,6 @@ interface CartPanelProps {
 export function CartPanel({
   items,
   subtotal,
-  discount,
   discountAmount,
   vatAmount,
   serviceChargeAmount,
@@ -47,9 +42,6 @@ export function CartPanel({
   onUpdateQuantity,
   onRemove,
   onUpdateNotes,
-  onEditDiscount,
-  onEditServiceCharge,
-  onPay,
   onReport,
   existingOrder,
   onSelectExistingOrder,
@@ -137,10 +129,18 @@ export function CartPanel({
               </div>
               {existingOrder.discount_amount > 0 && (
                 <div className="flex justify-between text-destructive">
-                  <span>Discount</span>
+                  <span>{existingOrder.applied_discount?.name ?? "Discount / Promotion"}</span>
                   <span>-{formatCurrency(existingOrder.discount_amount)}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">VATable Sales</span>
+                <span>
+                  {formatCurrency(
+                    Math.max(0, existingOrder.total_amount - existingOrder.tax_amount)
+                  )}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">VAT ({taxRate}%)</span>
                 <span>{formatCurrency(existingOrder.tax_amount)}</span>
@@ -201,26 +201,21 @@ export function CartPanel({
             <CartSummary
               subtotal={subtotal}
               discountAmount={discountAmount}
-              discount={discount}
               vatAmount={vatAmount}
               serviceChargeAmount={serviceChargeAmount}
               serviceChargePercent={serviceChargePercent}
               totalAmount={totalAmount}
-              onEditDiscount={onEditDiscount}
-              onEditServiceCharge={onEditServiceCharge}
             />
 
             <Button
               className="w-full h-11 text-base font-bold"
-              onClick={onPay}
+              disabled
             >
-              Pay{" "}
-              {new Intl.NumberFormat("en-PH", {
-                style: "currency",
-                currency: "PHP",
-                minimumFractionDigits: 0,
-              }).format(totalAmount)}
+              Serve Order Before Payment
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Place and serve this cart through Orders, then use Pay Existing.
+            </p>
 
             {onReport && (
               <Button

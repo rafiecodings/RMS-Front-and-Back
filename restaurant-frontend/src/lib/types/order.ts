@@ -20,6 +20,13 @@ export interface Order {
   subtotal: number;
   tax_amount: number;
   discount_amount: number;
+  applied_discount?: {
+    id?: string | null;
+    name: string;
+    code?: string | null;
+    type: "percentage" | "fixed";
+    value: number;
+  } | null;
   service_charge: number;
   total_amount: number;
   notes?: string;
@@ -99,7 +106,6 @@ export interface Payment {
 export type PaymentMethod =
   | "cash"
   | "card"
-  | "bank_transfer"
   | "e_wallet";
 
 export interface OrderFormData {

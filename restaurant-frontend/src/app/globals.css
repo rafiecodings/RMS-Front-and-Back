@@ -165,3 +165,30 @@
     @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  [data-receipt-print],
+  [data-receipt-print] * {
+    visibility: visible !important;
+  }
+
+  [data-receipt-print] {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    width: 80mm !important;
+    min-height: 0 !important;
+    padding: 4mm !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}

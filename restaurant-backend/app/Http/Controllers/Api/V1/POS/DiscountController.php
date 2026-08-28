@@ -48,6 +48,10 @@ class DiscountController extends Controller
             'is_active' => $d->is_active,
             'applies_to' => $d->applies_to,
             'description' => $d->description,
+            'promotion_kind' => $d->promotion_kind,
+            'eligibility_type' => $d->eligibility_type,
+            'minimum_loyalty_tier' => $d->minimum_loyalty_tier,
+            'verification_required' => $d->verification_required,
             'created_at' => $d->created_at?->toISOString(),
             'updated_at' => $d->updated_at?->toISOString(),
         ]);
@@ -76,11 +80,16 @@ class DiscountController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'is_active' => 'sometimes|boolean',
-            'applies_to' => 'sometimes|string|in:all,menu_items,combos',
+            'applies_to' => 'sometimes|string|in:all,menu_items,categories,combos',
             'description' => 'nullable|string|max:1000',
+            'promotion_kind' => 'required|string|in:automatic,verified',
+            'eligibility_type' => 'sometimes|string|in:all,registered_customer,loyalty_tier',
+            'minimum_loyalty_tier' => 'nullable|required_if:eligibility_type,loyalty_tier|string|in:Member,Bronze,Silver,Gold,Platinum',
+            'verification_required' => 'sometimes|boolean',
         ]);
 
         $validated['used_count'] = 0;
+        $validated['verification_required'] = $validated['promotion_kind'] === 'verified';
 
         $discount = Discount::create($validated);
 
@@ -99,6 +108,10 @@ class DiscountController extends Controller
             'is_active' => $discount->is_active,
             'applies_to' => $discount->applies_to,
             'description' => $discount->description,
+            'promotion_kind' => $discount->promotion_kind,
+            'eligibility_type' => $discount->eligibility_type,
+            'minimum_loyalty_tier' => $discount->minimum_loyalty_tier,
+            'verification_required' => $discount->verification_required,
             'created_at' => $discount->created_at?->toISOString(),
             'updated_at' => $discount->updated_at?->toISOString(),
         ], 'Discount created successfully.');
@@ -127,6 +140,10 @@ class DiscountController extends Controller
             'is_active' => $discount->is_active,
             'applies_to' => $discount->applies_to,
             'description' => $discount->description,
+            'promotion_kind' => $discount->promotion_kind,
+            'eligibility_type' => $discount->eligibility_type,
+            'minimum_loyalty_tier' => $discount->minimum_loyalty_tier,
+            'verification_required' => $discount->verification_required,
             'created_at' => $discount->created_at?->toISOString(),
             'updated_at' => $discount->updated_at?->toISOString(),
         ]);
@@ -151,9 +168,17 @@ class DiscountController extends Controller
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after:start_date',
             'is_active' => 'sometimes|boolean',
-            'applies_to' => 'sometimes|string|in:all,menu_items,combos',
+            'applies_to' => 'sometimes|string|in:all,menu_items,categories,combos',
             'description' => 'nullable|string|max:1000',
+            'promotion_kind' => 'sometimes|string|in:automatic,verified',
+            'eligibility_type' => 'sometimes|string|in:all,registered_customer,loyalty_tier',
+            'minimum_loyalty_tier' => 'nullable|required_if:eligibility_type,loyalty_tier|string|in:Member,Bronze,Silver,Gold,Platinum',
+            'verification_required' => 'sometimes|boolean',
         ]);
+
+        if (($validated['promotion_kind'] ?? $discount->promotion_kind) === 'verified') {
+            $validated['verification_required'] = true;
+        }
 
         $discount->update($validated);
 
@@ -172,6 +197,10 @@ class DiscountController extends Controller
             'is_active' => $discount->is_active,
             'applies_to' => $discount->applies_to,
             'description' => $discount->description,
+            'promotion_kind' => $discount->promotion_kind,
+            'eligibility_type' => $discount->eligibility_type,
+            'minimum_loyalty_tier' => $discount->minimum_loyalty_tier,
+            'verification_required' => $discount->verification_required,
             'created_at' => $discount->created_at?->toISOString(),
             'updated_at' => $discount->updated_at?->toISOString(),
         ], 'Discount updated successfully.');
@@ -187,6 +216,6 @@ class DiscountController extends Controller
 
         $discount->delete();
 
-        return $this->noContent('Discount deleted successfully.');
+        return $this->noContent('Promotion archived successfully.');
     }
 }

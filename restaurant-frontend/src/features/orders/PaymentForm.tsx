@@ -58,11 +58,7 @@ export function PaymentForm({
           <SelectContent>
             <SelectItem value="cash">Cash</SelectItem>
             <SelectItem value="card">Card</SelectItem>
-            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-            <SelectItem value="digital_wallet">Digital Wallet</SelectItem>
-            <SelectItem value="gift_card">Gift Card</SelectItem>
-            <SelectItem value="loyalty_points">Loyalty Points</SelectItem>
-            <SelectItem value="room_charge">Room Charge</SelectItem>
+            <SelectItem value="e_wallet">E-Wallet</SelectItem>
           </SelectContent>
         </Select>
       </div>

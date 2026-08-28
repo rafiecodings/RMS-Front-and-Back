@@ -37,6 +37,7 @@ export interface QueryParams {
   sort?: string;
   order?: "asc" | "desc";
   customer_type?: string;
+  is_active?: boolean;
   status?: string;
   reservation_date?: string;
   reservation_time?: string;

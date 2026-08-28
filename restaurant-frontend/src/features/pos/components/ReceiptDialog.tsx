@@ -22,6 +22,7 @@ interface ReceiptDialogProps {
   items: CartItem[];
   subtotal: number;
   discountAmount: number;
+  discountName?: string;
   vatAmount: number;
   serviceChargeAmount: number;
   totalAmount: number;
@@ -43,6 +44,7 @@ export function ReceiptDialog({
   items,
   subtotal,
   discountAmount,
+  discountName,
   vatAmount,
   serviceChargeAmount,
   totalAmount,
@@ -60,6 +62,10 @@ export function ReceiptDialog({
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const dueNow = amountDueForChange ?? totalAmount;
   const change = Math.max(0, Math.round((totalPaid - dueNow) * 100) / 100);
+  const vatableSales = Math.max(
+    0,
+    Math.round((totalAmount - vatAmount) * 100) / 100
+  );
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", {
@@ -84,7 +90,7 @@ export function ReceiptDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md print:max-w-none print:p-0">
-        <div className="print:p-4">
+        <div data-receipt-print className="print:p-4">
           <DialogHeader className="print:text-center">
             <DialogTitle className="print:text-lg">Receipt</DialogTitle>
           </DialogHeader>
@@ -126,12 +132,14 @@ export function ReceiptDialog({
                   item.modifiers?.reduce((m, mod) => m + mod.price, 0) ?? 0;
                 const lineTotal = (item.price + modifierTotal) * item.quantity;
                 return (
-                  <div key={item.id} className="flex justify-between">
-                    <span className="flex-1">
-                      {item.quantity}× {item.name}
-                      {item.variant && ` (${item.variant})`}
+                  <div key={item.id} className="grid grid-cols-[1fr_auto] gap-x-3">
+                    <span className="min-w-0 break-words font-medium">
+                      {item.name}{item.variant && ` (${item.variant})`}
                     </span>
                     <span className="font-medium">{formatCurrency(lineTotal)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.quantity} × {formatCurrency(item.price + modifierTotal)}
+                    </span>
                   </div>
                 );
               })}
@@ -146,10 +154,14 @@ export function ReceiptDialog({
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-destructive">
-                  <span>Discount</span>
+                  <span>{discountName ?? "Discount / Promotion"}</span>
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">VATable Sales</span>
+                <span>{formatCurrency(vatableSales)}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">VAT ({taxRate}%)</span>
                 <span>{formatCurrency(vatAmount)}</span>

@@ -27,7 +27,8 @@ class KOTController extends Controller
         }
 
         if ($status = $request->input('status')) {
-            $query->where('status', $status);
+            $statuses = array_filter(array_map('trim', explode(',', $status)));
+            $query->whereIn('status', $statuses);
         }
 
         if ($station = $request->input('station')) {
@@ -53,11 +54,21 @@ class KOTController extends Controller
             'order' => $t->order ? [
                 'id' => $t->order->id,
                 'order_number' => $t->order->order_number,
+                'order_type' => $t->order->order_type,
+                'notes' => $t->order->notes,
                 'table' => $t->order->table ? [
                     'number' => $t->order->table->number,
                 ] : null,
             ] : null,
             'items_count' => $t->items->count(),
+            'items' => $t->items->map(fn (KotTicketItem $item) => [
+                'id' => $item->id,
+                'order_item_id' => $item->order_item_id,
+                'name' => $item->name,
+                'quantity' => $item->quantity,
+                'notes' => $item->notes,
+                'status' => $item->status,
+            ]),
             'created_at' => $t->created_at?->toISOString(),
             'updated_at' => $t->updated_at?->toISOString(),
         ]);
@@ -130,6 +141,22 @@ class KOTController extends Controller
             'status' => 'required|string|in:received,pending,in_progress,ready,completed,voided',
         ]);
 
+        $allowedTransitions = [
+            'received' => ['in_progress'],
+            'pending' => ['in_progress'],
+            'in_progress' => ['ready'],
+            'ready' => [],
+            'completed' => [],
+            'voided' => [],
+        ];
+
+        if (! in_array($validated['status'], $allowedTransitions[$ticket->status] ?? [], true)) {
+            return $this->error(
+                "KOT cannot move from {$ticket->status} to {$validated['status']}.",
+                409
+            );
+        }
+
         $data = ['status' => $validated['status']];
 
         if ($validated['status'] === 'in_progress') {
@@ -139,6 +166,14 @@ class KOTController extends Controller
         }
 
         $ticket->update($data);
+
+        $itemStatus = $validated['status'] === 'in_progress' ? 'in_progress' : 'ready';
+        $orderItemStatus = $validated['status'] === 'in_progress' ? 'preparing' : 'ready';
+        $ticket->items()->update(['status' => $itemStatus]);
+        OrderItem::whereIn(
+            'id',
+            $ticket->items()->whereNotNull('order_item_id')->pluck('order_item_id')
+        )->update(['status' => $orderItemStatus]);
 
         // Keep the parent order in lockstep with the kitchen board:
         //   Start Preparing → order preparing
@@ -234,8 +269,6 @@ class KOTController extends Controller
         if (!$ticket) {
             return $this->notFound('KOT ticket not found.');
         }
-
-        $ticket->update(['status' => 'in_progress', 'started_at' => now()]);
 
         return $this->success([
             'id' => $ticket->id,

@@ -174,7 +174,7 @@ class InvoiceController extends Controller
 
     public function receipt(string $id): JsonResponse
     {
-        $invoice = Invoice::with(['order.customer', 'order.table', 'order.items.menuItem', 'payments'])
+        $invoice = Invoice::with(['order.customer', 'order.table', 'order.items.menuItem', 'payments.processor'])
             ->find($id);
 
         if (!$invoice) {
@@ -197,6 +197,7 @@ class InvoiceController extends Controller
             'invoice' => [
                 'invoice_number' => $invoice->invoice_number,
                 'order_number' => $invoice->order?->order_number,
+                'order_type' => $invoice->order?->order_type,
                 'table' => $invoice->order?->table?->number,
                 'customer_name' => $invoice->order?->customer?->name,
                 'created_at' => $invoice->created_at?->toISOString(),
@@ -210,7 +211,14 @@ class InvoiceController extends Controller
             'totals' => [
                 'subtotal' => (float) $invoice->subtotal,
                 'tax' => (float) $invoice->tax_amount,
+                'vatable_sales' => round((float) $invoice->total - (float) $invoice->tax_amount, 2),
                 'discount' => (float) $invoice->discount_amount,
+                'applied_discount' => $invoice->order?->applied_discount_name ? [
+                    'name' => $invoice->order->applied_discount_name,
+                    'code' => $invoice->order->applied_discount_code,
+                    'type' => $invoice->order->applied_discount_type,
+                    'value' => (float) $invoice->order->applied_discount_value,
+                ] : null,
                 'service_charge' => (float) $invoice->service_charge,
                 'total' => (float) $invoice->total,
                 'paid' => (float) $invoice->amount_paid,
@@ -219,6 +227,11 @@ class InvoiceController extends Controller
             'payments' => $invoice->payments->map(fn ($p) => [
                 'method' => $p->payment_method,
                 'amount' => (float) $p->amount,
+                'reference' => $p->reference_number,
+                'cashier' => $p->processor?->name,
+                'change' => $p->payment_method === 'cash'
+                    ? max(0, round((float) $p->amount - (float) $invoice->total, 2))
+                    : 0,
             ]),
         ]);
     }

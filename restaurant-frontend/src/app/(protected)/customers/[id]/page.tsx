@@ -30,8 +30,10 @@ export default function CustomerDetailPage({
         setShowArchiveDialog(false);
         refetch();
       },
-      onError: () => {
-        toast.error("Failed to archive customer");
+      onError: (error) => {
+        const message = (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message;
+        toast.error(message ?? "Failed to archive customer");
       },
     });
   }

@@ -215,7 +215,11 @@ export function useUnpaidOrders() {
     queryFn: () =>
       api
         .get<PaginatedResponse<Order>>("/orders", {
-          params: { payment_status: "unpaid,partial", per_page: 200 },
+          params: {
+            status: "served",
+            payment_status: "unpaid,partial",
+            per_page: 200,
+          },
         })
         .then((res) => normalizePaginated(res.data)),
     staleTime: 10_000,

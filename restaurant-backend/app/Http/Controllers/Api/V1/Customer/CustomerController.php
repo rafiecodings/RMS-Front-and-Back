@@ -23,10 +23,6 @@ class CustomerController extends Controller
             });
         }
 
-        if ($type = $request->input('customer_type')) {
-            $query->where('customer_type', $type);
-        }
-
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
@@ -42,9 +38,10 @@ class CustomerController extends Controller
             'address' => $c->address,
             'birthday' => $c->birthday,
             'dietary_restrictions' => $c->dietary_restrictions,
-            'customer_type' => $c->customer_type,
+            'customer_type' => 'registered',
             'loyalty_points' => $c->loyalty_points,
             'total_orders' => $c->orders()->count(),
+            'total_reservations' => $c->reservations()->count(),
             'total_spent' => (float) $c->total_spent,
             'visit_count' => $c->visit_count,
             'loyalty_tier' => $c->loyaltyTier(),
@@ -74,7 +71,6 @@ class CustomerController extends Controller
             'address' => 'nullable|string|max:1000',
             'birthday' => 'nullable|date',
             'dietary_restrictions' => 'nullable|string|max:1000',
-            'customer_type' => 'sometimes|string|in:walk_in,registered,vip,regular,corporate',
             'notes' => 'nullable|string|max:2000',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -82,6 +78,7 @@ class CustomerController extends Controller
         $validated['loyalty_points'] = 0;
         $validated['total_spent'] = 0;
         $validated['visit_count'] = 0;
+        $validated['customer_type'] = 'registered';
 
         $customer = Customer::create($validated);
 
@@ -93,9 +90,10 @@ class CustomerController extends Controller
             'address' => $customer->address,
             'birthday' => $customer->birthday,
             'dietary_restrictions' => $customer->dietary_restrictions,
-            'customer_type' => $customer->customer_type,
+            'customer_type' => 'registered',
             'loyalty_points' => $customer->loyalty_points,
             'total_orders' => $customer->orders()->count(),
+            'total_reservations' => $customer->reservations()->count(),
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
             'notes' => $customer->notes,
@@ -108,7 +106,10 @@ class CustomerController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $customer = Customer::find($id);
+        $customer = Customer::with(['reservations' => fn ($query) => $query
+            ->with('table')
+            ->orderByDesc('reservation_date')
+            ->orderByDesc('reservation_time')])->find($id);
 
         if (!$customer) {
             return $this->notFound('Customer not found.');
@@ -122,13 +123,26 @@ class CustomerController extends Controller
             'address' => $customer->address,
             'birthday' => $customer->birthday,
             'dietary_restrictions' => $customer->dietary_restrictions,
-            'customer_type' => $customer->customer_type,
+            'customer_type' => 'registered',
             'loyalty_points' => $customer->loyalty_points,
             'total_orders' => $customer->orders()->count(),
+            'total_reservations' => $customer->reservations()->count(),
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
             'notes' => $customer->notes,
             'loyalty_tier' => $customer->loyaltyTier(),
+            'reservations' => $customer->reservations->map(fn ($reservation) => [
+                'id' => $reservation->id,
+                'reservation_number' => $reservation->reservation_number,
+                'party_size' => $reservation->party_size,
+                'reservation_date' => $reservation->reservation_date?->toDateString(),
+                'reservation_time' => $reservation->reservation_time,
+                'status' => $reservation->status,
+                'table' => $reservation->table ? [
+                    'id' => $reservation->table->id,
+                    'number' => $reservation->table->number,
+                ] : null,
+            ])->values(),
             'is_active' => $customer->is_active,
             'created_at' => $customer->created_at?->toISOString(),
             'updated_at' => $customer->updated_at?->toISOString(),
@@ -150,15 +164,11 @@ class CustomerController extends Controller
             'address' => 'nullable|string|max:1000',
             'birthday' => 'nullable|date',
             'dietary_restrictions' => 'nullable|string|max:1000',
-            // Aligned with store(): only anonymous walk-in vs registered
-            // customer are meaningful; vip/regular/corporate kept for legacy
-            // rows but not advertised.
-            'customer_type' => 'sometimes|string|in:walk_in,registered,vip,regular,corporate',
             // Loyalty is auto-derived from completed visits — never editable.
             'notes' => 'nullable|string|max:2000',
             'is_active' => 'sometimes|boolean',
         ]);
-        unset($validated['loyalty_points'], $validated['visit_count'], $validated['total_spent']);
+        unset($validated['customer_type'], $validated['loyalty_points'], $validated['visit_count'], $validated['total_spent']);
 
         $customer->update($validated);
 
@@ -167,7 +177,7 @@ class CustomerController extends Controller
             'name' => $customer->name,
             'email' => $customer->email,
             'phone' => $customer->phone,
-            'customer_type' => $customer->customer_type,
+            'customer_type' => 'registered',
             'loyalty_points' => $customer->loyalty_points,
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
@@ -257,7 +267,7 @@ class CustomerController extends Controller
             'total_spent' => $totalSpent,
             'visit_count' => $customer->visit_count,
             'total_orders' => $totalOrders,
-            'customer_type' => $customer->customer_type,
+            'customer_type' => 'registered',
         ]);
     }
 

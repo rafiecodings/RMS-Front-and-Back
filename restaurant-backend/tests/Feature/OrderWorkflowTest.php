@@ -205,6 +205,77 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals('paid', $completed->payment_status);
     }
 
+    public function test_payment_is_restricted_to_served_orders_and_scoped_methods(): void
+    {
+        $pending = $this->createOrder('pending', 'unpaid');
+
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$pending->id}/payments", [
+                'payment_method' => 'cash',
+                'amount' => 100,
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only served orders can be paid. Complete the kitchen and serving workflow first.'
+            );
+
+        $served = $this->createOrder('served', 'unpaid');
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$served->id}/payments", [
+                'payment_method' => 'bank_transfer',
+                'amount' => 100,
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_kitchen_list_accepts_status_lists_and_includes_ticket_items(): void
+    {
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$order->id}/status", ['status' => 'confirmed'])
+            ->assertOk();
+
+        $this->actingAs($this->user)
+            ->getJson('/api/v1/kot?status=received,in_progress&per_page=200')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.status', 'received')
+            ->assertJsonPath('data.items.0.order.order_type', 'dine_in')
+            ->assertJsonCount(1, 'data.items.0.items')
+            ->assertJsonPath('data.items.0.items.0.name', 'Rice Bowl');
+    }
+
+    public function test_kitchen_status_transition_updates_ticket_items_and_order(): void
+    {
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$order->id}/status", ['status' => 'confirmed'])
+            ->assertOk();
+
+        $ticket = KotTicket::where('order_id', $order->id)->firstOrFail();
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$ticket->id}/status", ['status' => 'in_progress'])
+            ->assertOk();
+
+        $this->assertEquals('preparing', $order->refresh()->status);
+        $this->assertEquals('in_progress', $ticket->items()->firstOrFail()->status);
+        $this->assertEquals('preparing', $order->items()->firstOrFail()->status);
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$ticket->id}/status", ['status' => 'ready'])
+            ->assertOk();
+
+        $this->assertEquals('ready', $order->refresh()->status);
+        $this->assertEquals('ready', $ticket->items()->firstOrFail()->status);
+        $this->assertEquals('ready', $order->items()->firstOrFail()->status);
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$ticket->id}/status", ['status' => 'in_progress'])
+            ->assertStatus(409);
+    }
+
     private function createOrder(string $status, string $paymentStatus): Order
     {
         return Order::create([

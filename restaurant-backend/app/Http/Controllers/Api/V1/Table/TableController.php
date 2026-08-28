@@ -84,13 +84,16 @@ class TableController extends Controller
             return $this->error('No floor plan exists yet. Create a floor plan before adding tables.', 422);
         }
 
+        $normalizedNumber = trim($validated['number']);
         $exists = Table::where('floor_plan_id', $floorPlanId)
-            ->where('number', $validated['number'])
+            ->whereRaw('LOWER(number) = ?', [strtolower($normalizedNumber)])
             ->exists();
 
         if ($exists) {
-            return $this->error("Table \"{$validated['number']}\" already exists. Please use a different table number.", 409);
+            return $this->error("Table \"{$normalizedNumber}\" already exists. Please use a different table number.", 409);
         }
+
+        $validated['number'] = $normalizedNumber;
 
         $table = Table::create(array_merge($validated, [
             'floor_plan_id' => $floorPlanId,
@@ -171,9 +174,11 @@ class TableController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
-        if (isset($validated['number']) && isset($validated['floor_plan_id'])) {
-            $exists = Table::where('floor_plan_id', $validated['floor_plan_id'])
-                ->where('number', $validated['number'])
+        if (isset($validated['number'])) {
+            $validated['number'] = trim($validated['number']);
+            $floorPlanId = $validated['floor_plan_id'] ?? $table->floor_plan_id;
+            $exists = Table::where('floor_plan_id', $floorPlanId)
+                ->whereRaw('LOWER(number) = ?', [strtolower($validated['number'])])
                 ->where('id', '!=', $id)
                 ->exists();
             if ($exists) {

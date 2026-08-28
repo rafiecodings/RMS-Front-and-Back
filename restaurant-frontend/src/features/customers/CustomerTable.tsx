@@ -16,10 +16,6 @@ import { Users } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const CUSTOMER_TYPE_BADGE: Record<string, string> = {
-  walk_in: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
-
 interface CustomerTableProps {
   customers: Customer[];
   isLoading?: boolean;
@@ -59,9 +55,10 @@ export function CustomerTable({
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>Loyalty Tier</TableHead>
             <TableHead className="text-right">Orders</TableHead>
             <TableHead className="text-right">Visits</TableHead>
+            <TableHead className="text-right">Reservations</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -80,12 +77,9 @@ export function CustomerTable({
               <TableCell>
                 <Badge
                   variant="secondary"
-                  className={cn(
-                    "text-[10px] px-1.5 py-0",
-                    CUSTOMER_TYPE_BADGE[customer.customer_type] ?? CUSTOMER_TYPE_BADGE.walk_in
-                  )}
+                  className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0"
                 >
-                  {customer.customer_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {customer.loyalty_tier ?? "Member"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
@@ -93,6 +87,9 @@ export function CustomerTable({
               </TableCell>
               <TableCell className="text-right">
                 {customer.visit_count ?? 0}
+              </TableCell>
+              <TableCell className="text-right">
+                {customer.total_reservations ?? 0}
               </TableCell>
               <TableCell>
                 <Badge
@@ -113,7 +110,7 @@ export function CustomerTable({
                   viewLabel="View Details"
                   editHref={canEdit ? `/customers/${customer.id}/edit` : undefined}
                   onAction={onDelete ? () => onDelete(customer) : undefined}
-                  onArchive={onArchive ? () => onArchive(customer) : undefined}
+                  onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined}
                   archiveLabel="Archive"
                 />
               </TableCell>

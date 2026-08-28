@@ -18,11 +18,6 @@ import { cn, formatDate, formatLabel } from "@/lib/utils";
 import type { Customer, CustomerReservation } from "@/lib/types";
 import { EmptyState } from "@/components/shared";
 
-const CUSTOMER_TYPE_BADGE: Record<string, string> = {
-  walk_in: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-  regular: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-};
-
 const RESERVATION_STATUS_BADGE: Record<string, string> = {
   pending:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
@@ -104,12 +99,9 @@ export function CustomerDetail({
               <h2 className="text-xl font-bold">{customer.name}</h2>
               <Badge
                 variant="secondary"
-                className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  CUSTOMER_TYPE_BADGE[customer.customer_type]
-                )}
+                className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0"
               >
-                {formatLabel(customer.customer_type)}
+                Registered Customer
               </Badge>
               {!customer.is_active && (
                 <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0">

@@ -1,6 +1,6 @@
 export interface Table {
   id: string;
-  name: string;
+  name?: string;
   number: string;
   capacity: number;
   status: TableStatus;
@@ -33,11 +33,7 @@ export type TableStatus =
   | "maintenance";
 
 export interface TableFormData {
-  name: string;
   number: string;
   capacity: number;
   shape?: string;
-  zone?: string;
-  section?: string;
-  is_wheelchair_accessible: boolean;
 }

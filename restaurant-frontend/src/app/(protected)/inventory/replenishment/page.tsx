@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
 import { useReplenishmentRequests } from "@/lib/hooks/useReplenishment";
 import type { ReplenishmentFormData, ReplenishmentRequest } from "@/lib/hooks/useReplenishment";
@@ -85,15 +85,30 @@ function stockStatusLabel(current: number, minimum: number): string | null {
 export default function ReplenishmentPage() {
   const { user } = useAuth();
   const role = user?.role ?? "";
-  // Backend authoritatively gates: create = admin/manager/inventory_staff;
-  // approve/reject/processing/fulfilled = admin/manager.
+  // Inventory Staff own normal request submission. Manager/Admin review.
   const canApprove = ["admin", "manager"].includes(role);
-  const canCreate = ["admin", "manager", "inventory_staff"].includes(role);
+  const canCreate = role === "inventory_staff";
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const query = new URLSearchParams(window.location.search);
+      const requestedIngredient = query.get("ingredient_id");
+      const suggestedQuantity = query.get("quantity");
+      const suggestedPriority = query.get("priority");
+      if (requestedIngredient) setIngredientId(requestedIngredient);
+      if (suggestedQuantity) setQuantity(suggestedQuantity);
+      if (suggestedPriority === "normal" || suggestedPriority === "high" || suggestedPriority === "urgent") {
+        setPriority(suggestedPriority);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const params = statusFilter === "all" ? { per_page: 50 } : { status: statusFilter, per_page: 50 };
   const { list, create, updateStatus } = useReplenishmentRequests(params);

@@ -20,6 +20,10 @@ class Discount extends BaseModel
         'is_active',
         'applies_to',
         'description',
+        'promotion_kind',
+        'eligibility_type',
+        'minimum_loyalty_tier',
+        'verification_required',
     ];
 
     protected $casts = [
@@ -31,6 +35,7 @@ class Discount extends BaseModel
         'is_active' => 'boolean',
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'verification_required' => 'boolean',
     ];
 
     public function getTable(): string

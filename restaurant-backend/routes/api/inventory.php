@@ -64,7 +64,7 @@ Route::middleware(['auth:sanctum'])->prefix('inventory')->group(function () {
     Route::prefix('replenishment')->group(function () {
         Route::get('/', [ReplenishmentRequestController::class, 'index']);
         Route::post('/', [ReplenishmentRequestController::class, 'store'])->middleware('role:admin,manager,inventory_staff');
-        Route::patch('/{id}/status', [ReplenishmentRequestController::class, 'updateStatus'])->middleware('role:admin,manager');
+        Route::patch('/{id}/status', [ReplenishmentRequestController::class, 'updateStatus'])->middleware('role:admin,manager,inventory_staff');
         Route::delete('/{id}', [ReplenishmentRequestController::class, 'destroy'])->middleware('role:admin,manager');
     });
 });

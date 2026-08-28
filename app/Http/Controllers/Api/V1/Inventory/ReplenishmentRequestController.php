@@ -22,9 +22,9 @@ class ReplenishmentRequestController extends Controller
         'submitted' => ['draft'],
         'approved' => ['submitted'],
         'processing' => ['approved'],
-        'fulfilled' => ['processing', 'approved'],
-        'rejected' => ['draft', 'submitted', 'approved'],
-        'cancelled' => ['draft', 'submitted', 'approved'],
+        'fulfilled' => ['processing'],
+        'rejected' => ['submitted'],
+        'cancelled' => ['draft', 'submitted'],
     ];
 
     public function index(Request $request): JsonResponse
@@ -121,6 +121,15 @@ class ReplenishmentRequestController extends Controller
 
         $target = $validated['status'];
         $allowed = self::TRANSITIONS[$target] ?? [];
+
+        if ($request->user()->hasRole('inventory_staff')) {
+            if ($target !== 'submitted' || $replenishment->requested_by !== $request->user()->id) {
+                return $this->error(
+                    'Inventory Staff may only submit their own draft replenishment requests.',
+                    403
+                );
+            }
+        }
 
         if (! in_array($replenishment->status, $allowed, true)) {
             return $this->error(

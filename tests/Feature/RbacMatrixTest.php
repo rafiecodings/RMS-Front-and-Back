@@ -65,6 +65,7 @@ class RbacMatrixTest extends TestCase
 
         // A paid order + its invoice/payment for the payments/refund cases.
         $this->orderPaidId = $this->createOrder($admin);
+        Order::where('id', $this->orderPaidId)->update(['status' => 'served']);
         $pay = $this->actingAs($admin)
             ->postJson("/api/v1/orders/{$this->orderPaidId}/payments", [
                 'payment_method' => 'cash',

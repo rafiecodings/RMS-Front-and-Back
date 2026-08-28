@@ -19,8 +19,10 @@ class IngredientController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        if ($category = $request->input('category')) {
-            $query->where('category', $category);
+        if (($category = $request->input('category')) && strtolower(trim($category)) !== 'all') {
+            // Categories are stored as legacy free text. Normalize both sides
+            // with ANSI LOWER/TRIM so the same query works on SQLite and PostgreSQL.
+            $query->whereRaw('LOWER(TRIM(category)) = ?', [strtolower(trim($category))]);
         }
 
         if ($supplierId = $request->input('supplier_id')) {

@@ -53,7 +53,8 @@ class OrderController extends Controller
         }
 
         if ($status = $request->input('status')) {
-            $query->where('status', $status);
+            $statuses = array_filter(array_map('trim', explode(',', $status)));
+            $query->whereIn('status', $statuses);
         }
 
         if ($orderType = $request->input('order_type')) {
@@ -85,11 +86,20 @@ class OrderController extends Controller
             'subtotal' => (float) $o->subtotal,
             'tax_amount' => (float) $o->tax_amount,
             'discount_amount' => (float) $o->discount_amount,
+            'applied_discount' => $o->applied_discount_name ? [
+                'id' => $o->discount_id,
+                'name' => $o->applied_discount_name,
+                'code' => $o->applied_discount_code,
+                'type' => $o->applied_discount_type,
+                'value' => (float) $o->applied_discount_value,
+            ] : null,
             'service_charge' => (float) $o->service_charge,
             'total_amount' => (float) $o->total,
             'payment_status' => $o->payment_status,
             'payment_method' => $o->payment_method,
             'notes' => $o->notes,
+            'customer_id' => $o->customer_id,
+            'table_id' => $o->table_id,
             'customer' => $o->customer ? [
                 'id' => $o->customer->id,
                 'name' => $o->customer->name,
@@ -101,6 +111,7 @@ class OrderController extends Controller
                 'number' => $o->table->number,
             ] : null,
             'items_count' => $o->items->count(),
+            'placed_at' => $o->created_at?->toISOString(),
             'created_at' => $o->created_at?->toISOString(),
             'updated_at' => $o->updated_at?->toISOString(),
         ]);
@@ -132,6 +143,7 @@ class OrderController extends Controller
             'items.*.modifier_ids.*' => 'string|exists:menu_modifiers,id',
             'discount_id' => 'nullable|string|exists:discounts,id',
             'discount_code' => 'nullable|string|max:50',
+            'discount_verified' => 'nullable|boolean',
             'auto_apply_promotions' => 'nullable|boolean',
         ]);
 
@@ -178,16 +190,19 @@ class OrderController extends Controller
         // An explicit discount (by id or code) is honored as-is. Otherwise,
         // when the client opts in, the server selects the single best-eligible
         // active promotion (non-stacking) so pricing stays authoritative.
+        $promoCustomer = !empty($validated['customer_id'])
+            ? \App\Models\Customer::find($validated['customer_id'])
+            : null;
+
         if (!empty($validated['discount_id']) || !empty($validated['discount_code'])) {
             $discountResolution = $pricing->resolveDiscount(
                 $validated['discount_id'] ?? null,
                 $validated['discount_code'] ?? null,
                 $subtotal,
+                $promoCustomer,
+                (bool) ($validated['discount_verified'] ?? false),
             );
         } elseif (!empty($validated['auto_apply_promotions'])) {
-            $promoCustomer = !empty($validated['customer_id'])
-                ? \App\Models\Customer::find($validated['customer_id'])
-                : null;
             $discountResolution = $pricing->resolveBestPromotion($subtotal, $promoCustomer);
         } else {
             $discountResolution = ['discount' => null, 'amount' => 0.0, 'error' => null];
@@ -211,6 +226,11 @@ class OrderController extends Controller
                 'subtotal' => $totals['subtotal'],
                 'tax_amount' => $totals['tax_amount'],
                 'discount_amount' => $totals['discount_amount'],
+                'discount_id' => $discountResolution['discount']?->id,
+                'applied_discount_name' => $discountResolution['discount']?->name,
+                'applied_discount_code' => $discountResolution['discount']?->code,
+                'applied_discount_type' => $discountResolution['discount']?->type,
+                'applied_discount_value' => $discountResolution['discount']?->value,
                 'service_charge' => $totals['service_charge'],
                 'total' => $totals['total'],
                 'payment_status' => 'unpaid',
@@ -278,6 +298,13 @@ class OrderController extends Controller
             'subtotal' => (float) $result->subtotal,
             'tax_amount' => (float) $result->tax_amount,
             'discount_amount' => (float) $result->discount_amount,
+            'applied_discount' => $result->applied_discount_name ? [
+                'id' => $result->discount_id,
+                'name' => $result->applied_discount_name,
+                'code' => $result->applied_discount_code,
+                'type' => $result->applied_discount_type,
+                'value' => (float) $result->applied_discount_value,
+            ] : null,
             'service_charge' => (float) $result->service_charge,
             'total_amount' => (float) $result->total,
             'payment_status' => $result->payment_status,
@@ -328,6 +355,13 @@ class OrderController extends Controller
             'subtotal' => (float) $order->subtotal,
             'tax_amount' => (float) $order->tax_amount,
             'discount_amount' => (float) $order->discount_amount,
+            'applied_discount' => $order->applied_discount_name ? [
+                'id' => $order->discount_id,
+                'name' => $order->applied_discount_name,
+                'code' => $order->applied_discount_code,
+                'type' => $order->applied_discount_type,
+                'value' => (float) $order->applied_discount_value,
+            ] : null,
             'service_charge' => (float) $order->service_charge,
             'total_amount' => (float) $order->total,
             'payment_status' => $order->payment_status,
@@ -1025,10 +1059,17 @@ class OrderController extends Controller
             return $this->error('Cannot process payment for a ' . $order->status . ' order.', 409);
         }
 
+        if ($order->status !== 'served') {
+            return $this->error(
+                'Only served orders can be paid. Complete the kitchen and serving workflow first.',
+                409
+            );
+        }
+
         // Final capstone payment methods. Loyalty TIER is not a tender type;
         // gift cards / room charges are hotel scope and removed.
         $validated = $request->validate([
-            'payment_method' => 'required|string|in:cash,card,e_wallet,bank_transfer',
+            'payment_method' => 'required|string|in:cash,card,e_wallet',
             'amount' => 'required|numeric|min:0.01',
             'reference' => 'nullable|string|max:255',
         ]);

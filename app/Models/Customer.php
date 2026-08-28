@@ -31,6 +31,11 @@ class Customer extends BaseModel
         return $this->hasMany(Order::class);
     }
 
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
     /**
      * Loyalty tier derived STRICTLY from visit_count (never stored, never
      * manually editable):

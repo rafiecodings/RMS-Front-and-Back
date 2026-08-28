@@ -346,14 +346,11 @@ class ProductionDataSeeder extends Seeder
 
         $cities = ['Caloocan City', 'Baliwag', 'Manila', 'Quezon City', 'Mandaluyong', 'Makati', 'Pasig', 'Valenzuela', 'Malolos'];
 
-        $customerTypes = ['regular', 'regular', 'regular', 'walk_in', 'walk_in', 'vip'];
-
         for ($i = 1; $i <= 300; $i++) {
             $id = $this->uid('customer', $i);
             $this->ids['customers'][] = $id;
             $firstName = $this->randomFrom($firstNames);
             $lastName = $this->randomFrom($lastNames);
-            $customerType = $this->randomFrom($customerTypes);
             $createdAt = $this->randomTimestamp($this->sixMonthsAgo);
 
             DB::table('customers')->insert([
@@ -361,11 +358,11 @@ class ProductionDataSeeder extends Seeder
                 'name' => "$firstName $lastName",
                 'email' => strtolower($firstName . '.' . $lastName . $i . '@email.com'),
                 'phone' => $this->randomFrom(['0917', '0920', '0927', '0932', '0939']) . sprintf('%07d', mt_rand(0, 9999999)),
-                'customer_type' => $customerType,
-                'loyalty_points' => $customerType === 'vip' ? $this->randomInt(500, 5000) : $this->randomInt(0, 500),
+                'customer_type' => 'registered',
+                'loyalty_points' => 0,
                 'total_spent' => $this->randomFloat(0, 50000),
                 'visit_count' => $this->randomInt(0, 150),
-                'notes' => $customerType === 'vip' ? 'VIP Customer - priority seating' : null,
+                'notes' => null,
                 'is_active' => true,
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,

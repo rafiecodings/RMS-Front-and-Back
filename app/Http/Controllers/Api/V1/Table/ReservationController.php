@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Table;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
+use App\Models\Customer;
 use App\Models\Table;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,6 +47,8 @@ class ReservationController extends Controller
 
         $data = $reservations->getCollection()->map(fn (Reservation $r) => [
             'id' => $r->id,
+            'customer_id' => $r->customer_id,
+            'table_id' => $r->table_id,
             'reservation_number' => $r->reservation_number,
             'guest_name' => $r->guest_name,
             'guest_phone' => $r->guest_phone,
@@ -84,8 +87,8 @@ class ReservationController extends Controller
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'table_id' => 'nullable|exists:tables,id',
-            'guest_name' => 'required|string|max:255',
-            'guest_phone' => 'nullable|string|max:50',
+            'guest_name' => 'nullable|required_without:customer_id|string|max:255',
+            'guest_phone' => 'nullable|required_without:customer_id|string|max:50',
             'guest_email' => 'nullable|email|max:255',
             'party_size' => 'required|integer|min:1',
             'reservation_date' => 'required|date|after_or_equal:today',
@@ -93,6 +96,16 @@ class ReservationController extends Controller
             'source' => 'sometimes|string|in:phone,online,walk_in,app',
             'special_requests' => 'nullable|string|max:2000',
         ]);
+
+        if (! empty($validated['customer_id'])) {
+            $customer = Customer::where('is_active', true)->find($validated['customer_id']);
+            if (! $customer) {
+                return $this->error('Select an active registered customer.', 422);
+            }
+            $validated['guest_name'] = $customer->name;
+            $validated['guest_phone'] = $customer->phone;
+            $validated['guest_email'] = $customer->email;
+        }
 
         $validated['reservation_number'] = 'RES-' . strtoupper(uniqid());
         $validated['status'] = 'pending';
@@ -102,6 +115,8 @@ class ReservationController extends Controller
 
         return $this->created([
             'id' => $reservation->id,
+            'customer_id' => $reservation->customer_id,
+            'table_id' => $reservation->table_id,
             'reservation_number' => $reservation->reservation_number,
             'guest_name' => $reservation->guest_name,
             'guest_phone' => $reservation->guest_phone,
@@ -153,6 +168,8 @@ class ReservationController extends Controller
 
         return $this->success([
             'id' => $reservation->id,
+            'customer_id' => $reservation->customer_id,
+            'table_id' => $reservation->table_id,
             'reservation_number' => $reservation->reservation_number,
             'status' => $reservation->status,
             'archived_at' => $reservation->archived_at?->toISOString(),
@@ -264,7 +281,7 @@ class ReservationController extends Controller
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'table_id' => 'nullable|exists:tables,id',
-            'guest_name' => 'sometimes|string|max:255',
+            'guest_name' => 'nullable|string|max:255',
             'guest_phone' => 'nullable|string|max:50',
             'guest_email' => 'nullable|email|max:255',
             'party_size' => 'sometimes|integer|min:1',
@@ -274,11 +291,36 @@ class ReservationController extends Controller
             'special_requests' => 'nullable|string|max:2000',
         ]);
 
+        $customerId = array_key_exists('customer_id', $validated)
+            ? $validated['customer_id']
+            : $reservation->customer_id;
+
+        if ($customerId) {
+            $customer = Customer::where('is_active', true)->find($customerId);
+            if (! $customer) {
+                return $this->error('Select an active registered customer.', 422);
+            }
+            $validated['guest_name'] = $customer->name;
+            $validated['guest_phone'] = $customer->phone;
+            $validated['guest_email'] = $customer->email;
+        } else {
+            $guestName = $validated['guest_name'] ?? $reservation->guest_name;
+            $guestPhone = $validated['guest_phone'] ?? $reservation->guest_phone;
+            if (! is_string($guestName) || trim($guestName) === '') {
+                return $this->error('Guest name is required for a guest reservation.', 422);
+            }
+            if (! is_string($guestPhone) || trim($guestPhone) === '') {
+                return $this->error('Guest phone is required for a guest reservation.', 422);
+            }
+        }
+
         $reservation->update($validated);
         $reservation->load(['customer', 'table']);
 
         return $this->success([
             'id' => $reservation->id,
+            'customer_id' => $reservation->customer_id,
+            'table_id' => $reservation->table_id,
             'reservation_number' => $reservation->reservation_number,
             'guest_name' => $reservation->guest_name,
             'guest_phone' => $reservation->guest_phone,

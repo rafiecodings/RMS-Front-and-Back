@@ -90,7 +90,7 @@ class CapstoneUatSeeder extends Seeder
                 'name' => $name,
                 'email' => Str::slug($name).'@uat.local',
                 'phone' => '0917'.str_pad((string) random_int(1000000, 9999999), 7, '0'),
-                'customer_type' => $visits > 0 ? 'regular' : 'walk_in',
+                'customer_type' => 'registered',
                 'loyalty_points' => 0,
                 'total_spent' => $visits * 350,
                 'visit_count' => $visits,

@@ -50,6 +50,8 @@ class OrderWorkflowIntegrationTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
             ->assertStatus(409);
 
+        Order::where('id', $orderId)->update(['status' => 'served']);
+
         // Inventory already deducted at confirm (exactly once).
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
         $this->assertEquals(300, $ingredient->refresh()->current_stock);
@@ -111,6 +113,8 @@ class OrderWorkflowIntegrationTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
             ->assertStatus(200);
 
+        Order::where('id', $orderId)->update(['status' => 'served']);
+
         $this->actingAs($this->user)
             ->postJson("/api/v1/orders/{$orderId}/payments", [
                 'payment_method' => 'cash',
@@ -143,6 +147,8 @@ class OrderWorkflowIntegrationTest extends TestCase
         [$menuItem] = $this->createMenuItemWithRecipe(500);
 
         $orderId = $this->createOrderViaApi($menuItem);
+
+        Order::where('id', $orderId)->update(['status' => 'served']);
 
         $this->actingAs($this->user)
             ->postJson("/api/v1/orders/{$orderId}/payments", [

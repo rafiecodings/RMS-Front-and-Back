@@ -57,7 +57,7 @@ class CapstoneWorkflowTest extends TestCase
         $order = Order::create([
             'order_number' => 'ORD-'.uniqid(),
             'order_type' => 'takeaway',
-            'status' => 'pending',
+            'status' => 'served',
             'payment_status' => 'unpaid',
             'customer_id' => $customer->id,
             'subtotal' => 200,
@@ -142,7 +142,7 @@ class CapstoneWorkflowTest extends TestCase
             $order = Order::create([
                 'order_number' => 'ORD-'.uniqid(),
                 'order_type' => 'takeaway',
-                'status' => 'pending',
+                'status' => 'served',
                 'payment_status' => 'unpaid',
                 'customer_id' => $customer->id,
                 'subtotal' => 200,
@@ -234,5 +234,28 @@ class CapstoneWorkflowTest extends TestCase
         $this->actingAs($inventoryStaff)
             ->patchJson("/api/v1/inventory/replenishment/{$created->json('data.id')}/status", ['status' => 'approved'])
             ->assertStatus(403);
+    }
+
+    public function test_inventory_staff_can_submit_own_draft(): void
+    {
+        $inventoryStaff = $this->userWithRole('inventory_staff');
+        $ingredient = $this->ingredient();
+
+        $created = $this->actingAs($inventoryStaff)
+            ->postJson('/api/v1/inventory/replenishment', [
+                'ingredient_id' => $ingredient->id,
+                'quantity' => 300,
+                'status' => 'draft',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
+
+        $this->actingAs($inventoryStaff)
+            ->patchJson(
+                "/api/v1/inventory/replenishment/{$created->json('data.id')}/status",
+                ['status' => 'submitted']
+            )
+            ->assertOk()
+            ->assertJsonPath('data.status', 'submitted');
     }
 }

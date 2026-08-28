@@ -24,8 +24,6 @@ Route::middleware(['auth:sanctum', 'role:admin,manager,cashier'])->group(functio
         Route::get('/', [PaymentController::class, 'index']);
         Route::get('/stats', [PaymentController::class, 'stats']);
         Route::get('/refunds', [PaymentController::class, 'refunds']);
-        Route::post('/{invoiceId}/pay', [PaymentController::class, 'pay']);
-        Route::post('/{invoiceId}/split', [PaymentController::class, 'splitPayment']);
         Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund']);
     });
 

@@ -47,7 +47,7 @@ class CapstoneEndToEndTest extends TestCase
         $this->customer = Customer::create([
             'name' => 'Juan Dela Cruz',
             'phone' => '09181234567',
-            'customer_type' => 'regular',
+            'customer_type' => 'registered',
             'is_active' => true,
         ]);
 
@@ -149,6 +149,19 @@ class CapstoneEndToEndTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
             ->assertStatus(200);
 
+        $this->actingAs($this->user)
+            ->getJson('/api/v1/kot?status=received,in_progress,ready&per_page=200')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 0);
+
+        $this->actingAs($this->user)
+            ->getJson('/api/v1/orders?status=served&payment_status=unpaid,partial&per_page=200')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath('data.items.0.customer.name', 'Juan Dela Cruz')
+            ->assertJsonPath('data.items.0.table.number', '1')
+            ->assertJsonPath('data.items.0.items_count', 1);
+
         // --- Completion MUST be refused until the bill is settled ---
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
@@ -187,9 +200,20 @@ class CapstoneEndToEndTest extends TestCase
         $this->assertEquals($total, (float) $invoice->amount_paid);
 
         // --- Receipt available ---
-        $this->actingAs($this->user)
+        $receipt = $this->actingAs($this->user)
             ->getJson("/api/v1/invoices/{$invoice->id}/receipt")
             ->assertStatus(200);
+        $receipt
+            ->assertJsonPath('data.invoice.order_type', 'dine_in')
+            ->assertJsonPath('data.invoice.table', '1')
+            ->assertJsonPath('data.invoice.customer_name', 'Juan Dela Cruz')
+            ->assertJsonPath('data.items.0.name', 'E2E Rice Bowl')
+            ->assertJsonPath('data.payments.0.method', 'cash')
+            ->assertJsonPath('data.payments.0.cashier', $this->user->name);
+        $this->assertEquals(
+            round((float) $invoice->total - (float) $invoice->tax_amount, 2),
+            (float) $receipt->json('data.totals.vatable_sales')
+        );
 
         // --- Table freed on completion ---
         $this->assertEquals('available', Table::find($this->table->id)->status);
@@ -232,6 +256,45 @@ class CapstoneEndToEndTest extends TestCase
 
         $this->assertSame(1, (int) $customer->fresh()->visit_count);
         $this->assertEquals(300.0, (float) $this->ingredient->refresh()->current_stock);
+    }
+
+    public function test_walk_in_completes_full_workflow_without_customer_or_loyalty_mutation(): void
+    {
+        $customerCount = Customer::count();
+        $created = $this->actingAs($this->user)->postJson('/api/v1/orders', [
+            'order_type' => 'dine_in',
+            'table_id' => $this->table->id,
+            'items' => [['menu_item_id' => $this->menuItem->id, 'quantity' => 1]],
+        ]);
+        $created->assertCreated()->assertJsonPath('data.customer', null);
+        $orderId = $created->json('data.id');
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
+            ->assertOk();
+        $kot = KotTicket::where('order_id', $orderId)->firstOrFail();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$kot->id}/status", ['status' => 'in_progress'])
+            ->assertOk();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$kot->id}/status", ['status' => 'ready'])
+            ->assertOk();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
+            ->assertOk();
+
+        $order = Order::findOrFail($orderId);
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$orderId}/payments", [
+                'payment_method' => 'cash',
+                'amount' => (float) $order->total,
+            ])
+            ->assertCreated();
+
+        $this->assertNull($order->refresh()->customer_id);
+        $this->assertSame($customerCount, Customer::count());
+        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
+        $this->assertEquals('available', $this->table->refresh()->status);
     }
 
     private function createOrderViaApi(): string

@@ -92,7 +92,13 @@ class PricingService
      *
      * @return array{discount: Discount|null, amount: float, error: string|null}
      */
-    public function resolveDiscount(?string $discountId, ?string $code, float $subtotal): array
+    public function resolveDiscount(
+        ?string $discountId,
+        ?string $code,
+        float $subtotal,
+        ?Customer $customer = null,
+        bool $verified = false,
+    ): array
     {
         if ($discountId === null && $code === null) {
             return ['discount' => null, 'amount' => 0.0, 'error' => null];
@@ -136,6 +142,14 @@ class PricingService
             return ['discount' => null, 'amount' => 0.0, 'error' => 'Order subtotal is below the minimum required for this discount.'];
         }
 
+        if (! $this->customerIsEligible($discount, $customer)) {
+            return ['discount' => null, 'amount' => 0.0, 'error' => 'Customer is not eligible for this promotion.'];
+        }
+
+        if (($discount->promotion_kind === 'verified' || $discount->verification_required) && ! $verified) {
+            return ['discount' => null, 'amount' => 0.0, 'error' => 'This verified discount requires authorized cashier confirmation.'];
+        }
+
         $amount = $discount->type === 'fixed'
             ? (float) $discount->value
             : round($subtotal * ((float) $discount->value / 100), 2);
@@ -161,7 +175,9 @@ class PricingService
      */
     public function resolveBestPromotion(float $subtotal, ?Customer $customer = null): array
     {
-        $candidates = Discount::where('is_active', true)->get();
+        $candidates = Discount::where('is_active', true)
+            ->where('promotion_kind', 'automatic')
+            ->get();
 
         $best = null;
         $bestAmount = 0.0;
@@ -183,6 +199,9 @@ class PricingService
             // (specific menu item / category / loyalty tier) must be chosen
             // explicitly via discount_id / discount_code.
             if ($discount->applies_to !== null && $discount->applies_to !== 'all') {
+                continue;
+            }
+            if (! $this->customerIsEligible($discount, $customer)) {
                 continue;
             }
 
@@ -208,6 +227,32 @@ class PricingService
         }
 
         return ['discount' => $best, 'amount' => $bestAmount, 'error' => null];
+    }
+
+    private function customerIsEligible(Discount $discount, ?Customer $customer): bool
+    {
+        $eligibility = $discount->eligibility_type ?: 'all';
+
+        if ($eligibility === 'all') {
+            return true;
+        }
+
+        if ($customer === null || ! $customer->is_active) {
+            return false;
+        }
+
+        if ($eligibility === 'registered_customer') {
+            return true;
+        }
+
+        if ($eligibility !== 'loyalty_tier' || ! $discount->minimum_loyalty_tier) {
+            return false;
+        }
+
+        $tiers = ['Member' => 0, 'Bronze' => 1, 'Silver' => 2, 'Gold' => 3, 'Platinum' => 4];
+
+        return ($tiers[$customer->loyaltyTier()] ?? -1)
+            >= ($tiers[$discount->minimum_loyalty_tier] ?? PHP_INT_MAX);
     }
 
     /**

@@ -433,6 +433,25 @@ class OrderController extends Controller
                 );
             }
 
+            // CRITICAL: an order can never be preparing/ready with an empty
+            // kitchen. A KOT ticket must already exist (it is created at
+            // confirmation) before the order may reflect any kitchen progress.
+            // This keeps Order ↔ KOT ↔ Kitchen in lockstep: the kitchen board
+            // always owns preparing/ready, never a blind direct patch.
+            if (in_array($target, ['preparing', 'ready'], true)) {
+                $kotExists = \App\Models\KotTicket::where('order_id', $order->id)
+                    ->whereNotIn('status', ['voided'])
+                    ->exists();
+
+                if (! $kotExists) {
+                    return $this->error(
+                        "Cannot move this order to {$target} — no kitchen ticket exists. "
+                        .'Send the order to the kitchen first.',
+                        409
+                    );
+                }
+            }
+
             $allowed = self::TRANSITIONS[$current] ?? [];
             if (! in_array($target, $allowed, true)) {
                 return $this->error(

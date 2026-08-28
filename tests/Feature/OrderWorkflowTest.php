@@ -43,6 +43,27 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
     }
 
+    public function test_order_cannot_enter_preparing_without_kitchen_ticket(): void
+    {
+        // An order sitting in 'confirmed' with no KOT must NEVER reach
+        // 'preparing' — that would mean the kitchen board is empty while the
+        // order claims to be in progress (Order ↔ KOT ↔ Kitchen lockstep).
+        // A KOT is created only when an order is confirmed via the endpoint.
+        $order = $this->createOrderWithInventory('confirmed', 'unpaid');
+
+        $response = $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$order->id}/status", [
+                'status' => 'preparing',
+            ]);
+
+        $response->assertStatus(409);
+        $this->assertFalse(
+            KotTicket::where('order_id', $order->id)->exists(),
+            'No KOT should exist for this order.'
+        );
+        $this->assertEquals('confirmed', $order->refresh()->status);
+    }
+
     public function test_confirm_triggers_inventory_deduction(): void
     {
         $order = $this->createOrderWithInventory('pending', 'unpaid');

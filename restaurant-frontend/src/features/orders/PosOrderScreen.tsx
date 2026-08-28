@@ -48,7 +48,6 @@ interface CartLine {
 const ORDER_TYPE_ICONS: Record<OrderType, React.ComponentType<{ className?: string }>> = {
   dine_in: UtensilsCrossed,
   takeaway: ShoppingBag,
-  delivery: Truck,
 };
 
 interface PosOrderScreenProps {
@@ -218,7 +217,7 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
         {/* Order type + search */}
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <div className="grid grid-cols-3 gap-2 flex-1">
-            {(["dine_in", "takeaway", "delivery"] as OrderType[]).map((type) => {
+            {(["dine_in", "takeaway"] as OrderType[]).map((type) => {
               const Icon = ORDER_TYPE_ICONS[type];
               return (
                 <Button

@@ -1,4 +1,5 @@
 export { AnalyticsFilter } from "./components/AnalyticsFilter";
+export { AnalyticsDateRange } from "./components/AnalyticsDateRange";
 export { KpiCard } from "./components/KpiCard";
 export { DrillDownChart } from "./components/DrillDownChart";
 export { RevenueTrendChart } from "./components/RevenueTrendChart";

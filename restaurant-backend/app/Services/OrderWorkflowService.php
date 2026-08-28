@@ -51,14 +51,23 @@ class OrderWorkflowService
         });
     }
 
+    /**
+     * Consume recipe inventory for an order exactly ONCE.
+     *
+     * This is intended to run when the order is CONFIRMED (kitchen ticket
+     * generated). Settlement (payment) and the completed-status transition
+     * must NOT deduct again — idempotency is enforced by the existing
+     * outward StockMovement guard below, so a retry or a later completion
+     * is a safe no-op.
+     *
+     * If stock is genuinely insufficient the caller (confirm) catches
+     * InsufficientStockException and fails the confirmation gracefully
+     * before kitchen preparation begins.
+     */
     public function deductInventoryForCompletedOrder(Order $order, User $user): array
     {
         if (in_array($order->status, ['cancelled', 'voided'], true)) {
             return ['skipped' => true, 'reason' => 'Order is cancelled or voided.'];
-        }
-
-        if (! in_array($order->payment_status, ['paid', 'partial'], true)) {
-            return ['skipped' => true, 'reason' => 'Payment not settled.'];
         }
 
         $alreadyDeducted = StockMovement::where('reference_type', 'order')

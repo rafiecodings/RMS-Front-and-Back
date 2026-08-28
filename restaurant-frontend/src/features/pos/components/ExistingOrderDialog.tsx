@@ -14,6 +14,7 @@ import { LoadingSpinner } from "@/components/shared";
 import { Search, Receipt } from "lucide-react";
 import { useUnpaidOrders } from "@/lib/hooks";
 import { formatCurrency, formatLabel } from "@/lib/utils";
+import { customerDisplayName, tableDisplayName } from "@/lib/utils/orderDisplay";
 import type { Order } from "@/lib/types";
 
 const EXCLUDED_STATUSES = ["cancelled", "completed"];
@@ -107,10 +108,8 @@ export function ExistingOrderDialog({
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground capitalize">
                     {order.order_type.replace(/_/g, " ")}
-                    {order.table
-                      ? ` · Table ${order.table.number}`
-                      : ""}
-                    {order.customer ? ` · ${order.customer.name}` : ""}
+                    {tableDisplayName(order) ? ` · ${tableDisplayName(order)}` : ""}
+                    {` · ${customerDisplayName(order)}`}
                   </p>
                 </div>
                 <div className="ml-3 shrink-0 text-right">

@@ -26,13 +26,8 @@ const formSchema = z.object({
   name: z.string().min(1, "Restaurant name is required"),
   description: z.string().optional(),
   address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State / Province is required"),
-  postal_code: z.string().min(1, "Postal code is required"),
-  country: z.string().min(1, "Country is required"),
   phone: z.string().min(1, "Phone is required"),
   email: z.string().email("Invalid email"),
-  tax_id: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -103,13 +98,8 @@ export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
       name: "",
       description: "",
       address: "",
-      city: "",
-      state: "",
-      postal_code: "",
-      country: "",
       phone: "",
       email: "",
-      tax_id: "",
     },
   });
 
@@ -124,13 +114,8 @@ export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
       name: settings.name ?? "",
       description: settings.description ?? "",
       address: settings.address ?? "",
-      city: settings.city ?? "",
-      state: settings.state ?? "",
-      postal_code: settings.postal_code ?? "",
-      country: settings.country ?? "",
       phone: settings.phone ?? "",
       email: settings.email ?? "",
-      tax_id: settings.tax_id ?? "",
     });
   }, [settings, form]);
 
@@ -149,7 +134,7 @@ export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
           <p><span className="text-muted-foreground">Name:</span> {settings.name || "Not provided"}</p>
           <p><span className="text-muted-foreground">Phone:</span> {settings.phone || "Not provided"}</p>
           <p><span className="text-muted-foreground">Email:</span> {settings.email || "Not provided"}</p>
-          <p><span className="text-muted-foreground">Address:</span> {[settings.address, settings.city, settings.state, settings.postal_code, settings.country].filter(Boolean).join(", ") || "Not provided"}</p>
+          <p><span className="text-muted-foreground">Address:</span> {settings.address || "Not provided"}</p>
           <p className="text-xs text-muted-foreground mt-3">
             Only Admins can edit restaurant configuration.
           </p>
@@ -253,7 +238,7 @@ export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Contact & Address</CardTitle>
+            <CardTitle>Address</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
@@ -261,63 +246,9 @@ export function RestaurantInfoForm({ canEdit = false }: { canEdit?: boolean }) {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Street Address</FormLabel>
+                  <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State / Province</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="postal_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Postal Code</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="country"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
+                    <Textarea {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

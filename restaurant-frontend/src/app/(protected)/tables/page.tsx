@@ -30,6 +30,8 @@ import {
   CheckCircle,
   Sparkles,
   Wrench,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { useTables } from "@/lib/hooks";
 import type { Table as TableType, TableStatus, TableFormData } from "@/lib/types";
@@ -80,6 +82,9 @@ const STATUS_DOT: Record<TableStatus, string> = {
 export default function TablesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<TableType | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<TableType | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<TableType | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [viewTarget, setViewTarget] = useState<TableType | null>(null);
   const [showTableDialog, setShowTableDialog] = useState(false);
   const [editingTable, setEditingTable] = useState<TableType | null>(null);
@@ -91,10 +96,14 @@ export default function TablesPage() {
   const tables = useTables();
   const allTables = tables.list.data ?? [];
 
+  const visibleTables = showArchived
+    ? allTables
+    : allTables.filter((t) => t.is_active !== false);
+
   const filteredTables =
     statusFilter === "all"
-      ? allTables
-      : allTables.filter((t) => t.status === statusFilter);
+      ? visibleTables
+      : visibleTables.filter((t) => t.status === statusFilter);
 
   function handleStatusChange(table: TableType, status: TableStatus) {
     setStatusActionTarget({ table, status });
@@ -121,6 +130,34 @@ export default function TablesPage() {
         setDeleteTarget(null);
       },
       onError: () => toast.error("Failed to delete table"),
+    });
+  }
+
+  function handleArchiveTable() {
+    if (!archiveTarget) return;
+    tables.archive.mutate(archiveTarget.id, {
+      onSuccess: () => {
+        toast.success(`Table T${archiveTarget.number} archived`);
+        setArchiveTarget(null);
+      },
+      onError: (err) => {
+        const msg =
+          (err as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message || "Failed to archive table";
+        toast.error(msg);
+        setArchiveTarget(null);
+      },
+    });
+  }
+
+  function handleRestoreTable() {
+    if (!restoreTarget) return;
+    tables.restore.mutate(restoreTarget.id, {
+      onSuccess: () => {
+        toast.success(`Table T${restoreTarget.number} restored`);
+        setRestoreTarget(null);
+      },
+      onError: () => toast.error("Failed to restore table"),
     });
   }
 
@@ -168,7 +205,7 @@ export default function TablesPage() {
       />
 
       <div className="space-y-6">
-        <TableStats tables={allTables} />
+        <TableStats tables={visibleTables} />
 
         <div className="flex items-center gap-3">
           <Select
@@ -189,6 +226,16 @@ export default function TablesPage() {
           </Select>
         </div>
 
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            className="h-4 w-4"
+          />
+          Show archived
+        </label>
+
         <TableGridView
           tables={filteredTables}
           onStatusChange={handleStatusChange}
@@ -198,6 +245,8 @@ export default function TablesPage() {
             setShowTableDialog(true);
           }}
           onDelete={(t) => setDeleteTarget(t)}
+          onArchive={(t) => setArchiveTarget(t)}
+          onRestore={(t) => setRestoreTarget(t)}
         />
 
         {filteredTables.length === 0 && !tables.list.isLoading && (
@@ -230,6 +279,27 @@ export default function TablesPage() {
           confirmText="Confirm"
           onConfirm={handleStatusConfirm}
           isLoading={tables.update.isPending}
+        />
+
+        <ConfirmDialog
+          open={!!archiveTarget}
+          onOpenChange={(open) => !open && setArchiveTarget(null)}
+          title="Archive Table"
+          description={`Archive table T${archiveTarget?.number}? It will be hidden from active lists and cannot be assigned to new orders until restored.`}
+          confirmText="Archive"
+          variant="destructive"
+          onConfirm={handleArchiveTable}
+          isLoading={tables.archive.isPending}
+        />
+
+        <ConfirmDialog
+          open={!!restoreTarget}
+          onOpenChange={(open) => !open && setRestoreTarget(null)}
+          title="Restore Table"
+          description={`Restore table T${restoreTarget?.number}? It will reappear in active lists.`}
+          confirmText="Restore"
+          onConfirm={handleRestoreTable}
+          isLoading={tables.restore.isPending}
         />
 
         <Dialog
@@ -320,15 +390,19 @@ function TableGridView({
   tables,
   onStatusChange,
   onView,
-  onEdit,
-  onDelete,
-}: {
-  tables: TableType[];
-  onStatusChange?: (table: TableType, status: TableStatus) => void;
-  onView?: (table: TableType) => void;
-  onEdit?: (table: TableType) => void;
-  onDelete?: (table: TableType) => void;
-}) {
+          onEdit,
+          onDelete,
+          onArchive,
+          onRestore,
+        }: {
+          tables: TableType[];
+          onStatusChange?: (table: TableType, status: TableStatus) => void;
+          onView?: (table: TableType) => void;
+          onEdit?: (table: TableType) => void;
+          onDelete?: (table: TableType) => void;
+          onArchive?: (table: TableType) => void;
+          onRestore?: (table: TableType) => void;
+        }) {
   if (tables.length === 0) {
     return null;
   }
@@ -396,6 +470,21 @@ function TableGridView({
                   >
                     <Wrench className="h-3.5 w-3.5 mr-2" />
                     Mark Maintenance
+                  </DropdownMenuItem>
+                )}
+                {table.is_active !== false ? (
+                  <DropdownMenuItem
+                    onClick={() => onArchive?.(table)}
+                  >
+                    <Archive className="h-3.5 w-3.5 mr-2" />
+                    Archive
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => onRestore?.(table)}
+                  >
+                    <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
+                    Restore
                   </DropdownMenuItem>
                 )}
                 {onDelete && (

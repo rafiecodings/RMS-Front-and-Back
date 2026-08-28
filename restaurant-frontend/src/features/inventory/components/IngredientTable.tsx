@@ -10,17 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction } from "@/components/ui/card";
 import { Search, AlertTriangle, Eye, Pencil } from "lucide-react";
-import { TableLoadingRows, TableEmptyRow, TablePagination } from "@/components/shared";
-import { formatCurrency } from "@/lib/utils";
+import { TablePagination } from "@/components/shared";
+import { formatCurrency, cn } from "@/lib/utils";
+import { getStockStatus, STOCK_STATUS_BADGE, STOCK_STATUS_LABEL, type StockStatus } from "@/lib/utils/inventoryStatus";
 import type { Ingredient } from "@/lib/types";
 
 interface IngredientTableProps {
@@ -53,11 +47,12 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
-function stockStatus(ingredient: Ingredient) {
-  if (ingredient.current_stock <= 0) return { label: "Out of Stock", variant: "destructive" as const };
-  if (ingredient.current_stock <= ingredient.minimum_stock) return { label: "Low Stock", variant: "secondary" as const };
-  return { label: "In Stock", variant: "default" as const };
-}
+const STATUS_RING: Record<StockStatus, string> = {
+  healthy: "ring-emerald-200 dark:ring-emerald-800/50",
+  low: "ring-amber-200 dark:ring-amber-800/50",
+  out: "ring-red-200 dark:ring-red-800/50",
+  over: "ring-violet-200 dark:ring-violet-800/50",
+};
 
 export function IngredientTable({
   ingredients,
@@ -99,94 +94,100 @@ export function IngredientTable({
         </Select>
       </div>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
-              <TableHead className="text-right">Min</TableHead>
-              <TableHead className="text-right">Cost/Unit</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableLoadingRows colSpan={7} />
-            ) : ingredients.length === 0 ? (
-              <TableEmptyRow message="No ingredients found" colSpan={7} />
-            ) : (
-              ingredients.map((item) => {
-                const status = stockStatus(item);
-                const isLow = item.current_stock <= item.minimum_stock;
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {isLow && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground capitalize">
-                      {item.category ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.current_stock} {item.unit}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground tabular-nums">
-                      {item.minimum_stock}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(item.cost_per_unit)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Badge variant={status.variant} className="text-[10px] px-1.5 py-0">
-                          {status.label}
-                        </Badge>
-                        {!item.is_active && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {onView && (
-                          <Button variant="ghost" size="icon-sm" onClick={() => onView(item)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canEdit && onEdit && (
-                          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-40 rounded-xl border bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : ingredients.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border py-12">
+          <p className="text-muted-foreground">No ingredients found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {ingredients.map((item) => {
+            const status = getStockStatus(item.current_stock, item.minimum_stock, item.maximum_stock);
+            const isAlert = status === "low" || status === "out";
+            return (
+              <Card
+                key={item.id}
+                size="sm"
+                className={cn("ring-1 ring-inset", STATUS_RING[status])}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-1.5 truncate pr-2" title={item.name}>
+                    {isAlert && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+                    <span className="truncate">{item.name}</span>
+                  </CardTitle>
+                  <CardDescription className="capitalize">
+                    {item.category ?? "Uncategorized"}
+                  </CardDescription>
+                  <CardAction>
+                    <Badge
+                      variant="secondary"
+                      className={cn("text-[10px] px-1.5 py-0", STOCK_STATUS_BADGE[status])}
+                    >
+                      {STOCK_STATUS_LABEL[status]}
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
 
-      <TablePagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-      />
+                <CardContent className="space-y-1.5 text-sm">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-muted-foreground">Current Stock</span>
+                    <span className="font-semibold tabular-nums">
+                      {item.current_stock} {item.unit}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Min</span>
+                    <span className="tabular-nums text-muted-foreground">{item.minimum_stock}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Max</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {item.maximum_stock > 0 ? item.maximum_stock : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Cost / Unit</span>
+                    <span className="tabular-nums">{formatCurrency(item.cost_per_unit)}</span>
+                  </div>
+                  {!item.is_active && (
+                    <div className="pt-1">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        Inactive
+                      </Badge>
+                    </div>
+                  )}
+                </CardContent>
+
+                <CardFooter className="justify-end gap-1">
+                  {onView && (
+                    <Button variant="ghost" size="icon-sm" onClick={() => onView(item)} aria-label={`View ${item.name}`}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canEdit && onEdit && (
+                    <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)} aria-label={`Edit ${item.name}`}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {!isLoading && (
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      )}
     </div>
   );
 }
-
-

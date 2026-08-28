@@ -1,0 +1,11 @@
+{
+  "name": "rms-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RMS monorepo orchestration root - runs the Next.js frontend and Laravel backend together",
+  "scripts": {
+    "dev": "npm --prefix restaurant-frontend run dev",
+    "dev:web": "npm --prefix restaurant-frontend run dev:web",
+    "dev:api": "npm --prefix restaurant-frontend run dev:api"
+  }
+}

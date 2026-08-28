@@ -13,28 +13,39 @@ export default function NewEmployeePage() {
   const { create: createUser } = useUsers();
 
   async function handleSubmit(data: StaffFormData) {
-    if (!data.password) {
-      toast.error("Password is required");
-      return;
-    }
+    const enableAccess = data.enable_system_access ?? false;
+    const employeeId = `EMP-${Date.now().toString(36).toUpperCase()}`;
+    const staffPayload = {
+      ...data,
+      employee_id: employeeId,
+      position: data.position || data.role,
+    };
 
     try {
-      const userResult = await createUser.mutateAsync({
-        name: `${data.first_name} ${data.last_name}`.trim(),
-        email: data.email,
-        password: data.password,
-        password_confirmation: data.password,
-        role: data.role,
-      });
+      if (enableAccess) {
+        if (!data.password) {
+          toast.error("Password is required to enable system access");
+          return;
+        }
 
-      const userId = userResult.data.data.id;
+        const userResult = await createUser.mutateAsync({
+          name: `${data.first_name} ${data.last_name}`.trim(),
+          email: data.email,
+          password: data.password,
+          password_confirmation: data.password,
+          role: data.role,
+        });
 
-      await createStaff.mutateAsync({
-        ...data,
-        user_id: userId,
-        employee_id: `EMP-${Date.now().toString(36).toUpperCase()}`,
-        position: data.position || data.role,
-      });
+        const userId = userResult.data.data.id;
+
+        await createStaff.mutateAsync({
+          ...staffPayload,
+          user_id: userId,
+        });
+      } else {
+        // No login account: create the staff profile only (user_id stays null).
+        await createStaff.mutateAsync(staffPayload);
+      }
 
       toast.success("Staff member added successfully");
       router.push("/staff/employees");

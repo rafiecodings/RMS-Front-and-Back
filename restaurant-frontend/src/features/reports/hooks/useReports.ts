@@ -85,6 +85,17 @@ export function useStaffReport(filters?: ReportFilters) {
   });
 }
 
+export function useCustomerReport(filters?: ReportFilters) {
+  return useQuery({
+    queryKey: ['reports', 'customers', filters],
+    queryFn: () =>
+      api
+        .get<ApiResponse<unknown>>('/reports/customer-analytics', { params: buildReportParams(filters) })
+        .then((res) => res.data.data as import('../types').CustomerAnalyticsReport),
+    staleTime: 60000,
+  });
+}
+
 export function useTaxReport(filters?: ReportFilters) {
   return useQuery({
     queryKey: ["reports", "tax", filters],

@@ -15,10 +15,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::prefix('tables')->group(function () {
         Route::get('/', [TableController::class, 'index']);
-        Route::post('/', [TableController::class, 'store']);
+        // Literal segment must be registered BEFORE /{id} so it is not shadowed.
+        Route::get('/available', [TableController::class, 'available']);
+        Route::post('/', [TableController::class, 'store'])->middleware('role:admin,manager,waiter');
         Route::get('/{id}', [TableController::class, 'show'])->whereUuid('id');
-        Route::put('/{id}', [TableController::class, 'update'])->whereUuid('id');
+        Route::put('/{id}', [TableController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
         Route::patch('/{id}/status', [TableController::class, 'updateStatus'])->whereUuid('id');
+        // Archive (is_active=false) instead of destructive delete — historical
+        // orders/reservations keep their table reference.
+        Route::delete('/{id}/archive', [TableController::class, 'archive'])->middleware('role:admin,manager')->whereUuid('id');
+        Route::patch('/{id}/restore', [TableController::class, 'unarchive'])->middleware('role:admin,manager')->whereUuid('id');
         Route::post('/merge', [TableController::class, 'merge']);
         Route::post('/split', [TableController::class, 'split']);
         Route::post('/transfer', [TableController::class, 'transfer']);

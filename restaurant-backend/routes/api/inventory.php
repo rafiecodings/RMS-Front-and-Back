@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Analytics\DemandForecastController;
 use App\Http\Controllers\Api\V1\Inventory\IngredientController;
 use App\Http\Controllers\Api\V1\Inventory\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\Inventory\RecipeController;
+use App\Http\Controllers\Api\V1\Inventory\ReplenishmentRequestController;
 use App\Http\Controllers\Api\V1\Inventory\StockController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierController;
 use App\Http\Controllers\Api\V1\Inventory\WastageController;
@@ -56,4 +58,13 @@ Route::middleware(['auth:sanctum'])->prefix('inventory')->group(function () {
 
     Route::get('/expiry', [StockController::class, 'expiringItems']);
     Route::get('/reconciliation', [StockController::class, 'reconciliation']);
+    Route::get('/demand-forecast', [DemandForecastController::class, 'ingredients'])->middleware('role:admin,manager');
+
+    // Replenishment requests (lightweight restock asks — NOT procurement).
+    Route::prefix('replenishment')->group(function () {
+        Route::get('/', [ReplenishmentRequestController::class, 'index']);
+        Route::post('/', [ReplenishmentRequestController::class, 'store'])->middleware('role:admin,manager,inventory_staff');
+        Route::patch('/{id}/status', [ReplenishmentRequestController::class, 'updateStatus'])->middleware('role:admin,manager');
+        Route::delete('/{id}', [ReplenishmentRequestController::class, 'destroy'])->middleware('role:admin,manager');
+    });
 });

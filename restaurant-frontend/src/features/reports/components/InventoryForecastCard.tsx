@@ -29,11 +29,16 @@ export function InventoryForecastCard() {
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <PackageSearch className="h-4 w-4 text-primary" />
-          Inventory Restock Risk
-          <Badge variant="secondary" className="text-[10px]">Next {horizon} days</Badge>
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <PackageSearch className="h-4 w-4 text-primary" />
+            AI Inventory Forecast
+            <Badge variant="secondary" className="text-[10px]">Next {horizon} days</Badge>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Inventory Risk Forecast — projected demand vs. current stock
+          </p>
+        </div>
         <Button variant="ghost" size="icon-sm" onClick={() => refetch()} aria-label="Refresh forecast">
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>

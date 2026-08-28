@@ -25,7 +25,7 @@ class InvoiceController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('invoice_number', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(invoice_number) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $invoices = $query->orderBy('created_at', 'desc')

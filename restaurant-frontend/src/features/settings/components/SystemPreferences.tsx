@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -21,15 +22,6 @@ import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import { LoadingSpinner } from "@/components/shared";
 import type { SystemPreferencesFormData } from "../types";
 
-const TIMEZONES = [
-  "Asia/Manila",
-  "Asia/Singapore",
-  "Asia/Tokyo",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Europe/London",
-];
-
 const CURRENCIES = [
   { code: "PHP", symbol: "₱", label: "Philippine Peso" },
   { code: "USD", symbol: "$", label: "US Dollar" },
@@ -41,18 +33,18 @@ const CURRENCIES = [
 const formSchema = z.object({
   currency: z.string().min(1),
   currency_symbol: z.string().min(1),
-  timezone: z.string().min(1),
+  vat_enabled: z.boolean(),
+  vat_inclusive: z.boolean(),
   default_tax_rate: z.coerce.number().min(0).max(100),
-  default_service_charge: z.coerce.number().min(0).max(100),
   service_charge_enabled: z.boolean(),
-  allow_negative_inventory: z.boolean(),
+  default_service_charge: z.coerce.number().min(0).max(100),
+  order_prefix: z.string().max(20),
+  receipt_header: z.string().max(500),
+  receipt_footer: z.string().max(500),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Only settings that are actually consumed by the system are exposed:
-// tax rate + service charge (PricingService), currency/timezone (display),
-// allow_negative_inventory (stock checks). Legacy unused columns are hidden.
 export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
   const { data: settings, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();
@@ -62,11 +54,14 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
     defaultValues: {
       currency: "PHP",
       currency_symbol: "₱",
-      timezone: "Asia/Manila",
+      vat_enabled: true,
+      vat_inclusive: false,
       default_tax_rate: 12,
-      default_service_charge: 0,
       service_charge_enabled: false,
-      allow_negative_inventory: false,
+      default_service_charge: 0,
+      order_prefix: "ORD-",
+      receipt_header: "",
+      receipt_footer: "",
     },
   });
 
@@ -76,11 +71,14 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
     form.reset({
       currency: settings.currency || "PHP",
       currency_symbol: settings.currency_symbol || "₱",
-      timezone: settings.timezone || "Asia/Manila",
+      vat_enabled: settings.vat_enabled ?? true,
+      vat_inclusive: settings.vat_inclusive ?? false,
       default_tax_rate: settings.default_tax_rate,
-      default_service_charge: settings.default_service_charge,
       service_charge_enabled: settings.service_charge_enabled,
-      allow_negative_inventory: settings.allow_negative_inventory,
+      default_service_charge: settings.default_service_charge,
+      order_prefix: settings.order_prefix ?? "ORD-",
+      receipt_header: settings.receipt_header ?? "",
+      receipt_footer: settings.receipt_footer ?? "",
     });
   }, [settings, form]);
 
@@ -88,39 +86,47 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
 
   if (!canEdit && settings) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>System Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Currency:</span> {settings.currency || "Not provided"} ({settings.currency_symbol})</p>
-          <p><span className="text-muted-foreground">Timezone:</span> {settings.timezone || "Not provided"}</p>
-          <p><span className="text-muted-foreground">Tax Rate:</span> {settings.default_tax_rate}%</p>
-          <p>
-            <span className="text-muted-foreground">Service Charge:</span>{" "}
-            {settings.service_charge_enabled ? `${settings.default_service_charge}%` : "Disabled"}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Only Admins can edit system preferences.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">VAT:</span> {settings.vat_enabled ? `Enabled (${settings.default_tax_rate}%)` : "Disabled"}{settings.vat_inclusive ? " · Inclusive" : ""}</p>
+            <p><span className="text-muted-foreground">Service Charge:</span> {settings.service_charge_enabled ? `${settings.default_service_charge}%` : "Disabled"}</p>
+            <p><span className="text-muted-foreground">Currency:</span> {settings.currency || "Not provided"} ({settings.currency_symbol})</p>
+            <p className="text-xs text-muted-foreground mt-3">
+              Only Admins can edit billing settings.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Order / Receipt</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Order Prefix:</span> {settings.order_prefix || "Not provided"}</p>
+            <p><span className="text-muted-foreground">Receipt Header:</span> {settings.receipt_header || "—"}</p>
+            <p><span className="text-muted-foreground">Receipt Footer:</span> {settings.receipt_footer || "—"}</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   const onSubmit = (values: FormValues) => {
     updateMutation.mutate(values as SystemPreferencesFormData, {
-      onSuccess: () => toast.success("System preferences updated"),
+      onSuccess: () => toast.success("Settings updated"),
       onError: (error) => {
         const msg =
           (error as { response?: { data?: { message?: string } } })?.response?.data
             ?.message;
-        toast.error(msg || "Failed to update preferences");
+        toast.error(msg || "Failed to update settings");
       },
     });
   };
 
-  const taxRate = form.watch("default_tax_rate");
+  const vatEnabled = form.watch("vat_enabled");
   const scEnabled = form.watch("service_charge_enabled");
 
   return (
@@ -128,7 +134,7 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Currency & Timezone</CardTitle>
+            <CardTitle>Billing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -161,52 +167,46 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
               />
               <FormField
                 control={form.control}
-                name="timezone"
+                name="default_tax_rate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Restaurant Timezone</FormLabel>
+                    <FormLabel>VAT Rate (%)</FormLabel>
                     <FormControl>
-                      <select
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        {...field}
-                      >
-                        {TIMEZONES.map((tz) => (
-                          <option key={tz} value={tz}>
-                            {tz}
-                          </option>
-                        ))}
-                      </select>
+                      <Input type="number" min={0} max={100} step={0.01} {...field} disabled={!vatEnabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="default_tax_rate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Tax Rate (%)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} max={100} step={0.01} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-xs text-muted-foreground">
-                    Applied by the backend when pricing orders. Current configured
-                    rate: {taxRate}%
-                  </p>
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="vat_enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Enable VAT</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="vat_inclusive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={!vatEnabled} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">VAT Inclusive</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="service_charge_enabled"
@@ -225,7 +225,7 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
                 name="default_service_charge"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Default Service Charge (%)</FormLabel>
+                    <FormLabel>Service Charge Rate (%)</FormLabel>
                     <FormControl>
                       <Input type="number" min={0} max={100} step={0.01} {...field} />
                     </FormControl>
@@ -234,17 +234,50 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
                 )}
               />
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Order / Receipt</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="allow_negative_inventory"
+              name="order_prefix"
               render={({ field }) => (
-                <FormItem className="flex items-center gap-2">
+                <FormItem>
+                  <FormLabel>Order Prefix</FormLabel>
                   <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    <Input {...field} placeholder="ORD-" />
                   </FormControl>
-                  <FormLabel className="!mt-0">
-                    Allow orders when ingredient stock is insufficient
-                  </FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="receipt_header"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Receipt Header</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Printed at the top of receipts" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="receipt_footer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Receipt Footer</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Printed at the bottom of receipts" />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />

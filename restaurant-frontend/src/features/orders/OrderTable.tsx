@@ -37,7 +37,6 @@ const STATUS_STYLES: Record<string, string> = {
 const TYPE_ICONS: Partial<Record<OrderType, React.ComponentType<{ className?: string }>>> = {
   dine_in: UtensilsCrossed,
   takeaway: ShoppingBag,
-  delivery: Truck,
 };
 
 interface OrderTableProps {

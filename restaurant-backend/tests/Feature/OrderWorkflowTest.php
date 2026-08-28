@@ -43,13 +43,13 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
     }
 
-    public function test_completed_paid_triggers_inventory_deduction(): void
+    public function test_confirm_triggers_inventory_deduction(): void
     {
-        $order = $this->createOrderWithInventory('completed', 'paid');
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
 
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
+                'status' => 'confirmed',
             ]);
 
         $response->assertStatus(200);
@@ -65,18 +65,19 @@ class OrderWorkflowTest extends TestCase
                 'status' => 'completed',
             ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(409);
         $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
     }
 
     public function test_void_after_deduction_creates_reversal_movement(): void
     {
-        $order = $this->createOrderWithInventory('completed', 'paid');
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
 
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
-            ]);
+                'status' => 'confirmed',
+            ])
+            ->assertStatus(200);
 
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
 
@@ -91,19 +92,28 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals(1, StockMovement::where('reference_type', 'order_reversal')->where('reference_id', $order->id)->count());
     }
 
-    public function test_repeated_completed_request_does_not_double_deduct(): void
+    public function test_repeated_completion_does_not_double_deduct(): void
     {
-        $order = $this->createOrderWithInventory('completed', 'paid');
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$order->id}/status", [
+                'status' => 'confirmed',
+            ])
+            ->assertStatus(200);
+
+        // Subsequent completion attempts are refused and never rededuct.
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$order->id}/status", [
+                'status' => 'completed',
+            ])
+            ->assertStatus(409);
 
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$order->id}/status", [
                 'status' => 'completed',
-            ]);
-
-        $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
-            ]);
+            ])
+            ->assertStatus(409);
 
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
     }
@@ -115,11 +125,13 @@ class OrderWorkflowTest extends TestCase
             'allow_negative_inventory' => false,
         ]);
 
-        $order = $this->createOrderWithInventory('completed', 'paid', 10);
+        // Insufficient stock must be caught at CONFIRM (before the kitchen
+        // starts), not at payment.
+        $order = $this->createOrderWithInventory('pending', 'unpaid', 10);
 
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
+                'status' => 'confirmed',
             ]);
 
         $response->assertStatus(422);
@@ -139,6 +151,37 @@ class OrderWorkflowTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+    }
+
+    public function test_completion_only_reachable_via_payment(): void
+    {
+        // A direct status patch to "completed" from any pre-completion state
+        // (paid or not) must be rejected — settlement is a payment outcome.
+        foreach (['pending', 'confirmed', 'preparing', 'ready', 'served'] as $state) {
+            $order = $this->createOrder($state, 'unpaid');
+            $response = $this->actingAs($this->user)
+                ->patchJson("/api/v1/orders/{$order->id}/status", ['status' => 'completed']);
+            $response->assertStatus(409);
+            $this->assertEquals($state, Order::find($order->id)->status);
+        }
+
+        // Even a served + already-paid order cannot be completed by a patch.
+        $paid = $this->createOrder('served', 'paid');
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$paid->id}/status", ['status' => 'completed'])
+            ->assertStatus(409);
+
+        // Successful payment is what completes the order.
+        $order = $this->createOrder('served', 'unpaid');
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$order->id}/payments", [
+                'payment_method' => 'cash',
+                'amount' => 100,
+            ])
+            ->assertStatus(201);
+        $completed = Order::find($order->id);
+        $this->assertEquals('completed', $completed->status);
+        $this->assertEquals('paid', $completed->payment_status);
     }
 
     private function createOrder(string $status, string $paymentStatus): Order

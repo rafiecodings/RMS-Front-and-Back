@@ -12,6 +12,7 @@ import type {
   OrderFormData,
   OrderStatus,
   PaymentFormData,
+  RefundFormData,
 } from "@/lib/types";
 
 export function useOrders(
@@ -140,7 +141,61 @@ export function useOrders(
     },
   });
 
-  return { list, create, update, updateStatus, addPayment, cancel, archive };
+  const voidOrder = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post<ApiResponse<Order>>(`/orders/${id}/void`, { reason }),
+    onSuccess: (res) => {
+      const order = res.data.data;
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
+      addNotification(queryClient, {
+        type: "warning",
+        icon: "warning",
+        title: "Order voided",
+        description: `Order #${order.order_number} has been voided.`,
+        action: { label: "View order", href: `/orders/${order.id}` },
+      });
+    },
+  });
+
+  const refund = useMutation({
+    mutationFn: ({
+      invoiceId,
+      data,
+    }: {
+      invoiceId: string;
+      data: RefundFormData;
+    }) =>
+      api.post<ApiResponse<unknown>>(
+        `/pos/${invoiceId}/refund`,
+        data
+      ),
+    onSuccess: (_res, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      addNotification(queryClient, {
+        type: "payment",
+        icon: "payment",
+        title: "Refund processed",
+        description: `Refund of ${variables.data.amount} has been processed.`,
+      });
+    },
+  });
+
+  return {
+    list,
+    create,
+    update,
+    updateStatus,
+    addPayment,
+    cancel,
+    archive,
+    voidOrder,
+    refund,
+  };
 }
 
 export function useOrder(id: string) {

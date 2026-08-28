@@ -28,7 +28,7 @@ class PurchaseOrderController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('po_number', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(po_number) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $purchaseOrders = $query->orderBy('created_at', 'desc')

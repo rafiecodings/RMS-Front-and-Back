@@ -1,23 +1,10 @@
 "use client";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import type { MenuCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -55,96 +42,87 @@ export function CategoryList({
   const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10" />
-            <TableHead>Order</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead className="hidden md:table-cell">Description</TableHead>
-            <TableHead className="text-center">Items</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((cat) => (
-            <TableRow key={cat.id}>
-              <TableCell>
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </TableCell>
-              <TableCell className="text-muted-foreground font-mono text-xs">
-                {cat.sort_order}
-              </TableCell>
-              <TableCell className="font-medium">{cat.name}</TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground max-w-[200px] truncate">
-                {cat.description || "—"}
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge variant="secondary" className="text-xs">
-                  {cat.items_count}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "text-[10px] px-1.5 py-0",
-                    cat.is_active
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                      : "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {sorted.map((cat) => (
+        <Card
+          key={cat.id}
+          size="sm"
+          className={cn(
+            "border-l-4",
+            cat.is_active
+              ? "border-l-emerald-500"
+              : "border-l-slate-300 dark:border-l-slate-600"
+          )}
+        >
+          <CardHeader>
+            <CardTitle className="truncate" title={cat.name}>
+              {cat.name}
+            </CardTitle>
+            <CardDescription className="truncate" title={cat.description}>
+              {cat.description || "No description"}
+            </CardDescription>
+            <CardAction>
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  cat.is_active
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
+                )}
+              >
+                {cat.is_active ? "Active" : "Archived"}
+              </Badge>
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {cat.items_count} {cat.items_count === 1 ? "item" : "items"}
+            </span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Order #{cat.sort_order}
+            </span>
+          </CardContent>
+
+          <CardFooter className="justify-between">
+            <div className="flex items-center gap-1">
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={() => onEdit(cat)}>
+                  <Pencil className="h-4 w-4 mr-1.5" />
+                  Edit
+                </Button>
+              )}
+              {onToggleActive && (
+                <Button variant="ghost" size="sm" onClick={() => onToggleActive(cat)}>
+                  {cat.is_active ? (
+                    <>
+                      <Archive className="h-4 w-4 mr-1.5" />
+                      Archive
+                    </>
+                  ) : (
+                    <>
+                      <ArchiveRestore className="h-4 w-4 mr-1.5" />
+                      Activate
+                    </>
                   )}
-                >
-                  {cat.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={<Button variant="ghost" size="icon-sm" />}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {onEdit && (
-                      <DropdownMenuItem onClick={() => onEdit(cat)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    )}
-                    {onToggleActive && (
-                      <DropdownMenuItem onClick={() => onToggleActive(cat)}>
-                        {cat.is_active ? (
-                          <>
-                            <EyeOff className="h-4 w-4 mr-2" />
-                            Deactivate
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Activate
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                    )}
-                    {onDelete && (
-                      <DropdownMenuItem
-                        onClick={() => onDelete(cat)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </Button>
+              )}
+            </div>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onDelete(cat)}
+                className="text-destructive"
+                aria-label={`Delete ${cat.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   );
 }

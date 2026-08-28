@@ -30,7 +30,6 @@ interface InvoiceTableProps {
 const ORDER_TYPE_ICONS: Record<string, string> = {
   dine_in: "🍽️",
   takeaway: "🥡",
-  delivery: "🛵",
 };
 
 export function InvoiceTable({

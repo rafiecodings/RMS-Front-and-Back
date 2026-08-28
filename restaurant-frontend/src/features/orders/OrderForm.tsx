@@ -200,7 +200,6 @@ export function OrderForm({
             <SelectContent>
               <SelectItem value="dine_in">Dine In</SelectItem>
               <SelectItem value="takeaway">Takeaway</SelectItem>
-              <SelectItem value="delivery">Delivery</SelectItem>
             </SelectContent>
           </Select>
           {touched.order_type && errors.order_type && (

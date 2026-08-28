@@ -18,6 +18,25 @@ use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
+    /**
+     * Engine-safe SQL fragment for the HOUR-of-day of a datetime column.
+     * PostgreSQL: EXTRACT(HOUR FROM col). SQLite: strftime('%H', col).
+     */
+    private function hourSql(string $column = 'created_at'): string
+    {
+        return config('database.default') === 'sqlite'
+            ? "CAST(strftime('%H', {$column}) AS INTEGER)"
+            : "EXTRACT(HOUR FROM {$column})";
+    }
+
+    /** Engine-safe SQL fragment for weekday name of a datetime column. */
+    private function dayOfWeekSql(string $column = 'created_at'): string
+    {
+        return config('database.default') === 'sqlite'
+            ? "strftime('%A', {$column})"
+            : "TRIM(TO_CHAR({$column}, 'Day'))";
+    }
+
     protected function getDateRange(Request $request): array
     {
         $period = $request->input('period', 'this_month');
@@ -96,7 +115,7 @@ public function revenue(Request $request): JsonResponse
 
         $byHour = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("EXTRACT(HOUR FROM created_at) as hour, SUM(total) as revenue, COUNT(*) as orders")
+            ->selectRaw($this->hourSql() . " as hour, SUM(total) as revenue, COUNT(*) as orders")
             ->groupBy('hour')
             ->orderBy('hour')
             ->get()
@@ -180,7 +199,7 @@ public function sales(Request $request): JsonResponse
             $q->where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end]);
         })
-            ->selectRaw("EXTRACT(HOUR FROM order_items.created_at) as hour, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue")
+            ->selectRaw($this->hourSql("order_items.created_at") . " as hour, SUM(order_items.quantity) as items_sold, SUM(order_items.total_price) as revenue")
             ->groupBy('hour')
             ->orderBy('hour')
             ->get()
@@ -272,7 +291,7 @@ public function sales(Request $request): JsonResponse
 
         $hourly = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("EXTRACT(HOUR FROM created_at) as hour, TO_CHAR(created_at, 'Day') as day_of_week, SUM(total) as revenue, COUNT(*) as orders")
+            ->selectRaw("" . $this->hourSql() . " as hour, " . $this->dayOfWeekSql() . " as day_of_week, SUM(total) as revenue, COUNT(*) as orders")
             ->groupBy('hour', 'day_of_week')
             ->orderBy('hour')
             ->get()

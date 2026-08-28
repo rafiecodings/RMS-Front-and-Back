@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(prepend: [
             \App\Http\Middleware\ExtractTokenFromCookie::class,
+            \App\Http\Middleware\SanitizePagination::class,
         ]);
 
         // API-only backend: the Next.js web client handles auth itself and no

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Analytics\AnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\DemandForecastController;
 use App\Http\Controllers\Api\V1\Analytics\ForecastController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,4 +14,5 @@ Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('analytics')->
     Route::get('/forecast/{menuItemId}', [ForecastController::class, 'forecast']);
     Route::get('/low-stock-projection', [ForecastController::class, 'lowStockProjection']);
     Route::post('/insights', [ForecastController::class, 'insights']);
+    Route::get('/demand-forecast', [DemandForecastController::class, 'sales']);
 });

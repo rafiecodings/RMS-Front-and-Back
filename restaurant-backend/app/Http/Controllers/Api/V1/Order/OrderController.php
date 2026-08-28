@@ -22,9 +22,35 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
+    /**
+     * Allowed order-status transitions. The UI only offers valid next steps;
+     * the backend enforces the machine authoritatively with a readable 409.
+     */
+    private const TRANSITIONS = [
+        'pending' => ['confirmed', 'cancelled'],
+        'confirmed' => ['preparing', 'cancelled'],
+        'preparing' => ['ready', 'cancelled'],
+        'ready' => ['served'],
+        // 'served' has no forward PATCH transitions: completion is a
+        // settlement outcome reached ONLY via POST /orders/{id}/payments.
+        'served' => [],
+        // on_hold is managed exclusively by hold()/recall().
+        'completed' => [],
+        'cancelled' => [],
+        'voided' => [],
+    ];
+
     public function index(Request $request): JsonResponse
     {
         $query = Order::with(['customer', 'table', 'items.menuItem']);
+
+        // Archived orders are hidden from the active list unless explicitly
+        // requested with ?archived=1.
+        if ($request->boolean('archived')) {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+        }
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
@@ -35,7 +61,9 @@ class OrderController extends Controller
         }
 
         if ($paymentStatus = $request->input('payment_status')) {
-            $query->where('payment_status', $paymentStatus);
+            // Support comma lists, e.g. ?payment_status=unpaid,partial
+            $statuses = array_filter(array_map('trim', explode(',', $paymentStatus)));
+            $query->whereIn('payment_status', $statuses);
         }
 
         if ($date = $request->input('date')) {
@@ -43,7 +71,7 @@ class OrderController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('order_number', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(order_number) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $orders = $query->orderBy('created_at', 'desc')
@@ -66,6 +94,8 @@ class OrderController extends Controller
                 'id' => $o->customer->id,
                 'name' => $o->customer->name,
             ] : null,
+            'customer_name' => $o->customer?->name,
+            'table_number' => $o->table?->number,
             'table' => $o->table ? [
                 'id' => $o->table->id,
                 'number' => $o->table->number,
@@ -91,7 +121,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'table_id' => 'nullable|exists:tables,id',
-            'order_type' => 'required|string|in:dine_in,takeaway,delivery',
+            'order_type' => 'required|string|in:dine_in,takeaway',
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|string|exists:menu_items,id',
@@ -102,6 +132,7 @@ class OrderController extends Controller
             'items.*.modifier_ids.*' => 'string|exists:menu_modifiers,id',
             'discount_id' => 'nullable|string|exists:discounts,id',
             'discount_code' => 'nullable|string|max:50',
+            'auto_apply_promotions' => 'nullable|boolean',
         ]);
 
         $pricing = app(PricingService::class);
@@ -144,11 +175,23 @@ class OrderController extends Controller
             return $this->error('Order subtotal exceeds the maximum allowed amount.', 422);
         }
 
-        $discountResolution = $pricing->resolveDiscount(
-            $validated['discount_id'] ?? null,
-            $validated['discount_code'] ?? null,
-            $subtotal,
-        );
+        // An explicit discount (by id or code) is honored as-is. Otherwise,
+        // when the client opts in, the server selects the single best-eligible
+        // active promotion (non-stacking) so pricing stays authoritative.
+        if (!empty($validated['discount_id']) || !empty($validated['discount_code'])) {
+            $discountResolution = $pricing->resolveDiscount(
+                $validated['discount_id'] ?? null,
+                $validated['discount_code'] ?? null,
+                $subtotal,
+            );
+        } elseif (!empty($validated['auto_apply_promotions'])) {
+            $promoCustomer = !empty($validated['customer_id'])
+                ? \App\Models\Customer::find($validated['customer_id'])
+                : null;
+            $discountResolution = $pricing->resolveBestPromotion($subtotal, $promoCustomer);
+        } else {
+            $discountResolution = ['discount' => null, 'amount' => 0.0, 'error' => null];
+        }
 
         if ($discountResolution['error'] !== null) {
             return $this->error($discountResolution['error'], 422);
@@ -278,6 +321,7 @@ class OrderController extends Controller
 
         return $this->success([
             'id' => $order->id,
+            'invoice_id' => $order->invoice?->id,
             'order_number' => $order->order_number,
             'order_type' => $order->order_type,
             'status' => $order->status,
@@ -295,6 +339,10 @@ class OrderController extends Controller
                 'name' => $order->customer->name,
                 'phone' => $order->customer->phone,
             ] : null,
+            // Flattened labels so consumers never fall back to showing the
+            // raw customer/table UUID.
+            'customer_name' => $order->customer?->name,
+            'table_number' => $order->table?->number,
             'table' => $order->table ? [
                 'id' => $order->table->id,
                 'number' => $order->table->number,
@@ -369,6 +417,36 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
+        // Enforce the status machine — no arbitrary timeline jumping.
+        $target = $validated['status'];
+        $current = $order->status;
+
+        if ($current !== $target) {
+            // Completion is a settlement outcome. It may ONLY be reached
+            // through a successful payment (POST /orders/{id}/payments),
+            // never by a direct status patch — this prevents bypassing the
+            // Kitchen → POS → Payment workflow.
+            if ($target === 'completed') {
+                return $this->error(
+                    'Orders can only be marked completed after a successful payment. Settle the bill via the POS first.',
+                    409
+                );
+            }
+
+            $allowed = self::TRANSITIONS[$current] ?? [];
+            if (! in_array($target, $allowed, true)) {
+                return $this->error(
+                    "This order can no longer be moved to {$target}. A {$current} order allows only: "
+                    .( $allowed === [] ? 'no further changes (terminal).' : implode(', ', $allowed).'.'),
+                    409
+                );
+            }
+        }
+
+        // Capture the pre-transition status: the loyalty visit hook must fire
+        // exactly once, only on the transition INTO "completed".
+        $previousStatus = $current;
+
         $order->update(['status' => $validated['status']]);
 
         OrderStatusHistory::create([
@@ -380,12 +458,60 @@ class OrderController extends Controller
 
         $workflow = app(OrderWorkflowService::class);
 
-        if ($validated['status'] === 'confirmed') {
+        if ($target === 'confirmed') {
+            // Inventory is consumed exactly once, here at confirmation — never
+            // again at payment/settlement. If stock is insufficient the order
+            // is NOT confirmed and the kitchen never starts preparing it.
+            try {
+                $workflow->deductInventoryForCompletedOrder($order, $request->user());
+            } catch (\App\Exceptions\InsufficientStockException $e) {
+                $order->update(['status' => $current]);
+                \App\Models\OrderStatusHistory::where('order_id', $order->id)
+                    ->where('status', 'confirmed')
+                    ->orderByDesc('id')
+                    ->limit(1)
+                    ->delete();
+
+                return $this->error(
+                    'Cannot confirm order: insufficient stock for one or more ingredients.',
+                    422,
+                    ['insufficient' => $e->getInsufficient()]
+                );
+            }
+
             $workflow->createKotForOrder($order);
+            \App\Services\AuditLogger::record('order_confirmed', $order, [
+                'description' => "Order {$order->order_number} confirmed — kitchen ticket generated",
+            ]);
         }
 
-        if ($validated['status'] === 'completed') {
-            $workflow->deductInventoryForCompletedOrder($order, $request->user());
+        // Waiter served the table → close out any open kitchen tickets.
+        if ($target === 'served') {
+            \App\Models\KotTicket::where('order_id', $order->id)
+                ->whereIn('status', ['received', 'pending', 'in_progress', 'ready'])
+                ->update(['status' => 'completed', 'completed_at' => now()]);
+            \App\Services\AuditLogger::record('order_served', $order, [
+                'description' => "Order {$order->order_number} served",
+            ]);
+        }
+
+        if ($target === 'cancelled') {
+            \App\Services\AuditLogger::record('order_cancelled', $order, [
+                'description' => "Order {$order->order_number} cancelled"
+                    .($validated['notes'] ?? '' ? ": {$validated['notes']}" : '.'),
+            ]);
+        }
+
+        if ($target === 'completed') {
+            // Inventory is already consumed at confirmation; settlement must
+            // not deduct again. Loyalty visit is recorded once on completion.
+            if (
+                $previousStatus !== 'completed'
+                && $order->customer_id
+                && $order->payment_status === 'paid'
+            ) {
+                $order->customer?->recordCompletedVisit((float) $order->total);
+            }
         }
 
         if ($validated['status'] === 'cancelled') {
@@ -401,6 +527,59 @@ class OrderController extends Controller
             'order_number' => $order->order_number,
             'status' => $order->status,
         ], 'Order status updated successfully.');
+    }
+
+    /**
+     * Archive an order (soft-hide from active lists; never deleted).
+     * Only completed or cancelled orders may be archived.
+     */
+    public function archive(Request $request, string $id): JsonResponse
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return $this->notFound('Order not found.');
+        }
+
+        if (! in_array($order->status, ['completed', 'cancelled'], true)) {
+            return $this->error(
+                'Only completed or cancelled orders can be archived.',
+                422
+            );
+        }
+
+        // Idempotent: archiving an already-archived order is a no-op.
+        if ($order->archived_at === null) {
+            $order->update(['archived_at' => now()]);
+        }
+
+        return $this->success([
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'status' => $order->status,
+            'archived_at' => $order->archived_at?->toISOString(),
+        ], 'Order archived successfully.');
+    }
+
+    /**
+     * Restore an archived order (sets archived_at back to null).
+     */
+    public function unarchive(Request $request, string $id): JsonResponse
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return $this->notFound('Order not found.');
+        }
+
+        $order->update(['archived_at' => null]);
+
+        return $this->success([
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'status' => $order->status,
+            'archived_at' => null,
+        ], 'Order restored successfully.');
     }
 
     public function addItem(Request $request, string $id): JsonResponse
@@ -827,8 +1006,10 @@ class OrderController extends Controller
             return $this->error('Cannot process payment for a ' . $order->status . ' order.', 409);
         }
 
+        // Final capstone payment methods. Loyalty TIER is not a tender type;
+        // gift cards / room charges are hotel scope and removed.
         $validated = $request->validate([
-            'payment_method' => 'required|string|in:cash,card,bank_transfer,gift_card,loyalty_points,digital_wallet,room_charge',
+            'payment_method' => 'required|string|in:cash,card,e_wallet,bank_transfer',
             'amount' => 'required|numeric|min:0.01',
             'reference' => 'nullable|string|max:255',
         ]);
@@ -851,55 +1032,115 @@ class OrderController extends Controller
         }
 
         if ($invoice->status === 'paid') {
-            return $this->error('Invoice is already fully paid.', 409);
+            return $this->error('This order is already fully paid.', 409);
         }
 
-        if ($validated['amount'] > (float) $invoice->balance) {
-            return $this->error('Payment amount exceeds remaining balance.', 422);
+        $balanceDue = round((float) $invoice->balance, 2);
+        $tendered = round((float) $validated['amount'], 2);
+
+        // One order → one payment → one method (split payment deferred).
+        if ($tendered < $balanceDue - 0.001) {
+            if ($validated['payment_method'] === 'cash') {
+                return $this->error(
+                    'Insufficient amount received. Cash received must cover the ₱'
+                    . number_format($balanceDue, 2) . ' bill total.',
+                    422
+                );
+            }
+            return $this->error(
+                'Card / e-wallet payments must be for the exact bill total of ₱'
+                . number_format($balanceDue, 2) . '.',
+                422
+            );
         }
 
-        $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $order, $request) {
+        $previousStatus = $order->status;
+        $change = 0.0;
+
+        $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $order, $request, $tendered, $balanceDue, $previousStatus, &$change) {
+            // Cash records the amount RECEIVED; change is returned to guest.
+            $recordedAmount = $validated['payment_method'] === 'cash'
+                ? $tendered
+                : $balanceDue;
+
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
-                'amount' => $validated['amount'],
+                'amount' => $recordedAmount,
                 'payment_method' => $validated['payment_method'],
                 'reference_number' => $validated['reference'] ?? null,
                 'processed_by' => $request->user()->id,
             ]);
 
-            $newAmountPaid = (float) $invoice->amount_paid + $validated['amount'];
-            $newBalance = (float) $invoice->total - $newAmountPaid;
+            if ($validated['payment_method'] === 'cash') {
+                $change = round($tendered - $balanceDue, 2);
+            }
 
+            $newAmountPaid = (float) $invoice->amount_paid + $balanceDue;
             $invoice->update([
                 'amount_paid' => $newAmountPaid,
-                'balance' => max(0, $newBalance),
-                'status' => $newBalance <= 0 ? 'paid' : 'partial',
+                'balance' => 0.0,
+                'status' => 'paid',
             ]);
 
-            if ($newBalance <= 0) {
-                $order->update([
-                    'payment_status' => 'paid',
-                    'payment_method' => $validated['payment_method'],
+            $order->update([
+                'payment_status' => 'paid',
+                'payment_method' => $validated['payment_method'],
+            ]);
+
+            // Atomic settlement side effects: complete the session exactly
+            // once, free the table, log history. Loyalty visit is recorded
+            // after commit (below) so retries can never double-count — a
+            // retried request exits earlier at "already fully paid".
+            if (! in_array($order->status, ['completed'], true)) {
+                $order->update(['status' => 'completed']);
+
+                OrderStatusHistory::create([
+                    'order_id' => $order->id,
+                    'status' => 'completed',
+                    'notes' => 'Completed automatically on full payment ('.$validated['payment_method'].').',
+                    'changed_by' => $request->user()->id,
                 ]);
-            } else {
-                $order->update([
-                    'payment_status' => 'partial',
-                    'payment_method' => $validated['payment_method'],
-                ]);
+            }
+
+            if ($order->table_id) {
+                Table::where('id', $order->table_id)->update(['status' => 'available']);
             }
 
             return $payment;
         });
+
+        // Post-commit side effects (each internally idempotent).
+        // Inventory was already consumed at confirmation; payment must never
+        // deduct recipe ingredients again.
+        if ($order->customer_id && $previousStatus !== 'completed') {
+            $freshCustomer = $order->customer()->first();
+            $freshCustomer?->recordCompletedVisit((float) $order->total);
+        }
+
+        \App\Services\AuditLogger::record('payment_completed', $order, [
+            'description' => sprintf(
+                'Processed %s payment of ₱%s for %s%s',
+                str_replace('_', ' ', $validated['payment_method']),
+                number_format($balanceDue, 2),
+                $order->order_number,
+                $change > 0 ? ' — change ₱'.number_format($change, 2) : ''
+            ),
+            'method' => $validated['payment_method'],
+            'amount' => $balanceDue,
+            'change' => $change,
+        ]);
 
         return $this->created([
             'id' => $payment->id,
             'amount' => (float) $payment->amount,
             'payment_method' => $payment->payment_method,
             'reference_number' => $payment->reference_number,
+            'change' => $change,
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'payment_status' => $order->payment_status,
+                'status' => $order->status,
             ],
             'invoice' => [
                 'id' => $invoice->id,

@@ -16,6 +16,7 @@ export interface Customer {
   visit_count: number;
   notes?: string;
   is_active: boolean;
+  loyalty_tier?: string;
   reservations?: CustomerReservation[];
   created_at: string;
   updated_at: string;

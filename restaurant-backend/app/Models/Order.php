@@ -24,6 +24,7 @@ class Order extends BaseModel
         'total',
         'payment_status',
         'payment_method',
+        'archived_at',
         'notes',
         'cancellation_reason',
         'created_by',
@@ -35,6 +36,7 @@ class Order extends BaseModel
         'discount_amount' => 'decimal:2',
         'service_charge' => 'decimal:2',
         'total' => 'decimal:2',
+        'archived_at' => 'datetime',
     ];
 
     public function getTable(): string

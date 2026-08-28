@@ -30,4 +30,33 @@ class Customer extends BaseModel
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Loyalty tier derived STRICTLY from visit_count (never stored, never
+     * manually editable):
+     *   0–4 Member · 5–9 Bronze · 10–19 Silver · 20–29 Gold · 30+ Platinum
+     */
+    public function loyaltyTier(): string
+    {
+        return match (true) {
+            $this->visit_count >= 30 => 'Platinum',
+            $this->visit_count >= 20 => 'Gold',
+            $this->visit_count >= 10 => 'Silver',
+            $this->visit_count >= 5 => 'Bronze',
+            default => 'Member',
+        };
+    }
+
+    /**
+     * Records one completed dining visit for a REGISTERED customer and keeps
+     * running totals fresh.
+     *
+     * Called exactly once per order transition INTO "completed" with paid
+     * status — never on customer/reservation/order creation or seating.
+     */
+    public function recordCompletedVisit(float $orderTotal): void
+    {
+        $this->increment('visit_count');
+        $this->increment('total_spent', $orderTotal);
+    }
 }

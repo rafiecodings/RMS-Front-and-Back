@@ -17,9 +17,9 @@ class CustomerController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%")
-                    ->orWhere('phone', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(phone) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 
@@ -47,6 +47,7 @@ class CustomerController extends Controller
             'total_orders' => $c->orders()->count(),
             'total_spent' => (float) $c->total_spent,
             'visit_count' => $c->visit_count,
+            'loyalty_tier' => $c->loyaltyTier(),
             'notes' => $c->notes,
             'is_active' => $c->is_active,
             'created_at' => $c->created_at?->toISOString(),
@@ -98,6 +99,7 @@ class CustomerController extends Controller
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
             'notes' => $customer->notes,
+            'loyalty_tier' => $customer->loyaltyTier(),
             'is_active' => $customer->is_active,
             'created_at' => $customer->created_at?->toISOString(),
             'updated_at' => $customer->updated_at?->toISOString(),
@@ -126,6 +128,7 @@ class CustomerController extends Controller
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
             'notes' => $customer->notes,
+            'loyalty_tier' => $customer->loyaltyTier(),
             'is_active' => $customer->is_active,
             'created_at' => $customer->created_at?->toISOString(),
             'updated_at' => $customer->updated_at?->toISOString(),
@@ -144,10 +147,18 @@ class CustomerController extends Controller
             'name' => 'sometimes|string|max:255',
             'email' => "sometimes|email|unique:customers,email,{$id}",
             'phone' => 'nullable|string|max:50',
-            'customer_type' => 'sometimes|string|in:regular,vip,corporate',
+            'address' => 'nullable|string|max:1000',
+            'birthday' => 'nullable|date',
+            'dietary_restrictions' => 'nullable|string|max:1000',
+            // Aligned with store(): only anonymous walk-in vs registered
+            // customer are meaningful; vip/regular/corporate kept for legacy
+            // rows but not advertised.
+            'customer_type' => 'sometimes|string|in:walk_in,registered,vip,regular,corporate',
+            // Loyalty is auto-derived from completed visits — never editable.
             'notes' => 'nullable|string|max:2000',
             'is_active' => 'sometimes|boolean',
         ]);
+        unset($validated['loyalty_points'], $validated['visit_count'], $validated['total_spent']);
 
         $customer->update($validated);
 
@@ -161,6 +172,7 @@ class CustomerController extends Controller
             'total_spent' => (float) $customer->total_spent,
             'visit_count' => $customer->visit_count,
             'notes' => $customer->notes,
+            'loyalty_tier' => $customer->loyaltyTier(),
             'is_active' => $customer->is_active,
             'created_at' => $customer->created_at?->toISOString(),
             'updated_at' => $customer->updated_at?->toISOString(),
@@ -175,8 +187,12 @@ class CustomerController extends Controller
             return $this->notFound('Customer not found.');
         }
 
-        if ($customer->orders()->count() > 0) {
-            return $this->error('Cannot delete customer with existing orders.', 409);
+        if ($customer->orders()->count() > 0
+            || \App\Models\Reservation::where('customer_id', $customer->id)->exists()) {
+            return $this->error(
+                'This customer has historical orders or reservations. Archive the customer instead of deleting to preserve history.',
+                409
+            );
         }
 
         $customer->delete();
@@ -243,5 +259,34 @@ class CustomerController extends Controller
             'total_orders' => $totalOrders,
             'customer_type' => $customer->customer_type,
         ]);
+    }
+
+    /**
+     * Archive a customer.
+     *
+     * Frontend contract: the Customers screen treats is_active = false as
+     * "archived" (its Archived filter sends ?is_active=0), so archiving here
+     * flips the existing flag instead of introducing archived_at. The record
+     * is never deleted; restoring is done via PUT /customers/{id} with
+     * is_active = true.
+     */
+    public function archive(string $id): JsonResponse
+    {
+        $customer = Customer::find($id);
+
+        if (!$customer) {
+            return $this->notFound('Customer not found.');
+        }
+
+        // Idempotent.
+        if ((bool) $customer->is_active) {
+            $customer->update(['is_active' => false]);
+        }
+
+        return $this->success([
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'is_active' => false,
+        ], 'Customer archived successfully.');
     }
 }

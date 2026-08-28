@@ -21,8 +21,8 @@ class PermissionController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('display_name', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(display_name) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 

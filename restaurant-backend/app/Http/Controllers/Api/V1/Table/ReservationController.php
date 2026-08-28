@@ -16,6 +16,14 @@ class ReservationController extends Controller
     {
         $query = Reservation::with(['customer', 'table']);
 
+        // Archived reservations are hidden unless ?archived=1 (the frontend
+        // "Archived" view scope sends this flag).
+        if ($request->boolean('archived')) {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+        }
+
         if ($date = $request->input('date')) {
             $query->whereDate('reservation_date', $date);
         }
@@ -26,9 +34,9 @@ class ReservationController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('guest_name', 'ilike', "%{$search}%")
-                    ->orWhere('guest_phone', 'ilike', "%{$search}%")
-                    ->orWhere('reservation_number', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(guest_name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(guest_phone) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(reservation_number) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 
@@ -115,6 +123,61 @@ class ReservationController extends Controller
             'created_at' => $reservation->created_at?->toISOString(),
             'updated_at' => $reservation->updated_at?->toISOString(),
         ], 'Reservation created successfully.');
+    }
+
+    /**
+     * Archive a reservation (soft-hide; never deleted).
+     *
+     * Workflow safety: reservations still pending/confirmed cannot be
+     * archived — confirm, complete, cancel or mark no-show first.
+     */
+    public function archive(Request $request, string $id): JsonResponse
+    {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            return $this->notFound('Reservation not found.');
+        }
+
+        if (in_array($reservation->status, ['pending', 'confirmed'], true)) {
+            return $this->error(
+                'Active reservations cannot be archived. Complete, cancel or mark this reservation as no-show first.',
+                409
+            );
+        }
+
+        // Idempotent.
+        if ($reservation->archived_at === null) {
+            $reservation->update(['archived_at' => now()]);
+        }
+
+        return $this->success([
+            'id' => $reservation->id,
+            'reservation_number' => $reservation->reservation_number,
+            'status' => $reservation->status,
+            'archived_at' => $reservation->archived_at?->toISOString(),
+        ], 'Reservation archived successfully.');
+    }
+
+    /**
+     * Restore an archived reservation (archived_at back to null).
+     */
+    public function unarchive(Request $request, string $id): JsonResponse
+    {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            return $this->notFound('Reservation not found.');
+        }
+
+        $reservation->update(['archived_at' => null]);
+
+        return $this->success([
+            'id' => $reservation->id,
+            'reservation_number' => $reservation->reservation_number,
+            'status' => $reservation->status,
+            'archived_at' => null,
+        ], 'Reservation restored successfully.');
     }
 
     public function calendar(Request $request): JsonResponse

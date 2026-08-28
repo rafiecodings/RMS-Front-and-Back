@@ -35,8 +35,11 @@ Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('admin')->grou
     Route::get('/permissions', [PermissionController::class, 'index']);
     Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
+    // Settings: managers may view, but billing/configuration writes are
+    // admin-only (server-side RBAC). This keeps sensitive endpoints safe
+    // even though the UI already hides edit controls from non-admins.
     Route::prefix('settings')->group(function () {
-        Route::get('/', [SettingController::class, 'index']);
-        Route::put('/', [SettingController::class, 'update']);
+        Route::get('/', [SettingController::class, 'index'])->middleware('role:admin,manager');
+        Route::put('/', [SettingController::class, 'update'])->middleware('role:admin');
     });
 });

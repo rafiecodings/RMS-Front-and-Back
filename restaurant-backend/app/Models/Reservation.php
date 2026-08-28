@@ -10,7 +10,7 @@ class Reservation extends BaseModel
         'customer_id', 'table_id', 'reservation_number', 'guest_name',
         'guest_phone', 'guest_email', 'party_size', 'reservation_date',
         'reservation_time', 'status', 'source', 'special_requests',
-        'cancellation_reason',
+        'cancellation_reason', 'archived_at',
     ];
 
     protected function casts(): array
@@ -18,6 +18,7 @@ class Reservation extends BaseModel
         return [
             'party_size' => 'integer',
             'reservation_date' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 

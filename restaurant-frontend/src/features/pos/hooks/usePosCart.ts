@@ -1,5 +1,7 @@
 import { useReducer, useMemo, useCallback } from "react";
 import type { PosState, PosAction, CartItem } from "../types";
+import { useSettings } from "@/features/settings/hooks/useSettings";
+import { computeOrderTotals } from "@/lib/utils/pricing";
 
 const initialState: PosState = {
   items: [],
@@ -70,6 +72,14 @@ function posReducer(state: PosState, action: PosAction): PosState {
 export function usePosCart() {
   const [state, dispatch] = useReducer(posReducer, initialState);
 
+  // Backend-configured VAT policy is authoritative for the cart display.
+  const { data: settings } = useSettings();
+  const taxRate =
+    settings && typeof settings.default_tax_rate === "number" && settings.default_tax_rate > 0
+      ? settings.default_tax_rate
+      : 12;
+  const vatInclusive = settings ? Boolean(settings.vat_inclusive) : true;
+
   const addItem = useCallback(
     (item: CartItem) => dispatch({ type: "ADD_ITEM", item }),
     []
@@ -125,20 +135,30 @@ export function usePosCart() {
     }
 
     const taxableAmount = subtotal - discountAmount;
-    const vatAmount = taxableAmount * 0.12;
     const serviceChargeAmount = taxableAmount * (state.serviceChargePercent / 100);
-    const totalAmount = taxableAmount + vatAmount + serviceChargeAmount;
+
+    // VAT is computed with the authoritative inclusive/exclusive formula
+    // (mirrors PricingService::orderTotals on the backend) so the cart never
+    // shows a different total than the recorded order.
+    const totals = computeOrderTotals({
+      subtotal,
+      discountAmount,
+      serviceChargeAmount,
+      taxRate,
+      vatInclusive,
+    });
+
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
 
     return {
-      subtotal,
-      discountAmount,
-      vatAmount,
-      serviceChargeAmount,
-      totalAmount,
+      subtotal: totals.subtotal,
+      discountAmount: totals.discountAmount,
+      vatAmount: totals.vatAmount,
+      serviceChargeAmount: totals.serviceChargeAmount,
+      totalAmount: totals.totalAmount,
       itemCount,
     };
-  }, [state.items, state.discount, state.serviceChargePercent]);
+  }, [state.items, state.discount, state.serviceChargePercent, taxRate, vatInclusive]);
 
   return {
     state,

@@ -19,8 +19,8 @@ class UserController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 
@@ -28,8 +28,15 @@ class UserController extends Controller
             $query->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId));
         }
 
+        // Status filter: active (default) | inactive | all.
+        // Keeps the Users & Roles page focused on live accounts; demo/legacy
+        // accounts are deactivated rather than deleted so audit-log and
+        // historical references stay intact.
+        $status = $request->input('status', 'active');
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
+        } elseif (in_array($status, ['active', 'inactive'], true)) {
+            $query->where('is_active', $status === 'active');
         }
 
         $users = $query->orderBy('created_at', 'desc')
@@ -129,6 +136,9 @@ class UserController extends Controller
             'email' => "sometimes|email|unique:users,email,{$id}",
             'password' => 'sometimes|string|min:8|confirmed',
             'role' => 'sometimes|string|exists:roles,name',
+            // Accept either role name or role id — the Users & Roles page
+            // sends the dropdown's role id.
+            'role_id' => 'sometimes|uuid|exists:roles,id',
             'avatar' => 'nullable|string|max:500',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -141,10 +151,14 @@ class UserController extends Controller
 
         $user->update($data);
 
+        $newRole = null;
         if (!empty($validated['role'])) {
-            $user->roles()->sync(
-                \App\Models\Role::where('name', $validated['role'])->first()
-            );
+            $newRole = \App\Models\Role::where('name', $validated['role'])->first();
+        } elseif (!empty($validated['role_id'])) {
+            $newRole = \App\Models\Role::find($validated['role_id']);
+        }
+        if ($newRole) {
+            $user->roles()->sync([$newRole->id]);
         }
 
         $user->load('roles');

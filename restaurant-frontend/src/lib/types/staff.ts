@@ -55,6 +55,7 @@ export interface StaffFormData {
   last_name: string;
   email: string;
   password?: string;
+  enable_system_access?: boolean;
   phone?: string;
   role: StaffRole;
   shift?: StaffShift;

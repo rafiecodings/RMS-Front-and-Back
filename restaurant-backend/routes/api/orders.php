@@ -9,6 +9,8 @@ Route::middleware(['auth:sanctum', 'role:admin,manager,waiter,cashier'])->prefix
     Route::get('/{id}', [OrderController::class, 'show']);
     Route::put('/{id}', [OrderController::class, 'update']);
     Route::patch('/{id}/status', [OrderController::class, 'updateStatus']);
+    Route::patch('/{id}/archive', [OrderController::class, 'archive'])->middleware('role:admin,manager');
+    Route::delete('/{id}/archive', [OrderController::class, 'unarchive'])->middleware('role:admin,manager');
     Route::post('/{id}/items', [OrderController::class, 'addItem']);
     Route::put('/{id}/items/{itemId}', [OrderController::class, 'updateItem']);
     Route::delete('/{id}/items/{itemId}', [OrderController::class, 'removeItem']);

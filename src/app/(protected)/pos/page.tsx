@@ -37,7 +37,7 @@ export default function PosPage() {
 
   const [completedOrderNumber, setCompletedOrderNumber] = useState("");
   const [completedPayments, setCompletedPayments] = useState<PosPaymentLine[]>([]);
-  const [completedOrderType, setCompletedOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
+  const [completedOrderType, setCompletedOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [completedCustomerName, setCompletedCustomerName] = useState("");
   const [completedTableNumber, setCompletedTableNumber] = useState("");
   // Server-computed figures captured at payment time so the receipt always
@@ -113,6 +113,9 @@ export default function PosPage() {
       customer_id: customerId || undefined,
       table_id: tableId || undefined,
       notes: cart.state.notes,
+      // Server is authoritative for discount/promotion selection
+      // (non-stacking, highest-eligible active promotion is applied).
+      auto_apply_promotions: true,
       items: cart.state.items.map((item) => {
         const modifierIds: string[] = [];
         return {
@@ -140,7 +143,7 @@ export default function PosPage() {
       (orderData.items ?? []).map((i) => ({
         id: i.id,
         menu_item_id: i.menu_item_id,
-        name: i.menu_item_name,
+        name: i.name ?? i.menu_item_name ?? "Unnamed item",
         price: i.unit_price,
         quantity: i.quantity,
       }))
@@ -155,28 +158,23 @@ export default function PosPage() {
     setCompletedDue(undefined);
     setCompletedPrevPaid(undefined);
 
-    // Record net amounts only: the backend rejects overpayment, so each
-    // tendered line is capped at the running balance. The original tendered
-    // lines are kept for receipt display (cash tendered + change).
-    let remaining = Math.round(backendTotal * 100) / 100;
-    for (const payment of payments) {
-      const paymentAmount = Math.min(payment.amount, remaining);
-      if (paymentAmount <= 0) break;
-      await addPayment.mutateAsync({
-        id: orderId,
-        data: {
-          payment_method: payment.method,
-          amount: Math.round(paymentAmount * 100) / 100,
-          reference: payment.reference,
-        },
-      });
-      remaining = Math.round((remaining - paymentAmount) * 100) / 100;
-    }
+    // One order → one payment → one method. The backend computes cash change
+    // from the TENDERED amount, so we must forward the exact amount emitted by
+    // the dialog (do NOT cap it — capping would erase the returned change).
+    const payment = payments[0];
+    await addPayment.mutateAsync({
+      id: orderId,
+      data: {
+        payment_method: payment.method,
+        amount: Math.round(payment.amount * 100) / 100,
+        reference: payment.reference,
+      },
+    });
 
     setCompletedOrderNumber(orderData.order_number);
     setCompletedPayments(payments);
     setCompletedOrderType(
-      orderType as "dine_in" | "takeaway" | "delivery"
+      orderType as "dine_in" | "takeaway"
     );
     setPaymentOpen(false);
     setReceiptOpen(true);
@@ -202,7 +200,7 @@ export default function PosPage() {
       (existingOrder.items ?? []).map((i) => ({
         id: i.id,
         menu_item_id: i.menu_item_id,
-        name: i.menu_item_name,
+        name: i.name ?? i.menu_item_name ?? "Unnamed item",
         price: i.unit_price,
         quantity: i.quantity,
       }))
@@ -217,25 +215,22 @@ export default function PosPage() {
     setCompletedDue(dueNow);
     setCompletedPrevPaid(alreadyPaid);
 
-    let remaining = dueNow;
-    for (const payment of payments) {
-      const paymentAmount = Math.min(payment.amount, remaining);
-      if (paymentAmount <= 0) break;
-      await addPayment.mutateAsync({
-        id: orderId,
-        data: {
-          payment_method: payment.method,
-          amount: Math.round(paymentAmount * 100) / 100,
-          reference: payment.reference,
-        },
-      });
-      remaining = Math.round((remaining - paymentAmount) * 100) / 100;
-    }
+    // Single payment settles the remaining balance. The dialog already emits
+    // the exact due for card/e-wallet and the full tendered amount for cash.
+    const payment = payments[0];
+    await addPayment.mutateAsync({
+      id: orderId,
+      data: {
+        payment_method: payment.method,
+        amount: Math.round(payment.amount * 100) / 100,
+        reference: payment.reference,
+      },
+    });
 
     setCompletedOrderNumber(existingOrder.order_number);
     setCompletedPayments(payments);
     setCompletedOrderType(
-      existingOrder.order_type as "dine_in" | "takeaway" | "delivery"
+      existingOrder.order_type as "dine_in" | "takeaway"
     );
     setExistingOrderId(null);
     setPaymentOpen(false);
@@ -306,7 +301,7 @@ export default function PosPage() {
         ? existingOrder.items.map((i) => ({
             id: i.id,
             menu_item_id: i.menu_item_id,
-            name: i.menu_item_name,
+            name: i.name ?? i.menu_item_name ?? "Unnamed item",
             price: i.unit_price,
             quantity: i.quantity,
           }))

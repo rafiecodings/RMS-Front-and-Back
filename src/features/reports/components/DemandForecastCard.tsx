@@ -38,10 +38,15 @@ export function DemandForecastCard() {
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <CalendarDays className="h-4 w-4 text-primary" />
-          Demand Forecast
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            AI Sales Forecast
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Demand Forecast — AI-powered sales demand forecast
+          </p>
+        </div>
         <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
           {HORIZONS.map((h) => (
             <Button

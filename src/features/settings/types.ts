@@ -42,20 +42,20 @@ export interface RestaurantSettings {
   name: string;
   description?: string;
   address?: string;
-  city?: string;
-  state?: string;
-  postal_code?: string;
-  country?: string;
   phone?: string;
   email?: string;
   timezone?: string;
   currency?: string;
   currency_symbol?: string;
-  tax_id?: string;
   default_tax_rate: number;
+  vat_enabled: boolean;
+  vat_inclusive: boolean;
   default_service_charge: number;
   service_charge_enabled: boolean;
   allow_negative_inventory: boolean;
+  order_prefix?: string;
+  receipt_header?: string;
+  receipt_footer?: string;
   opening_hours: OpeningHourRow[];
   updated_at?: string;
 }
@@ -66,16 +66,11 @@ export function normalizeSettings(raw: unknown): RestaurantSettings {
     name: typeof r.name === "string" ? r.name : "",
     description: typeof r.description === "string" ? r.description : undefined,
     address: typeof r.address === "string" ? r.address : "",
-    city: typeof r.city === "string" ? r.city : "",
-    state: typeof r.state === "string" ? r.state : "",
-    postal_code: typeof r.postal_code === "string" ? r.postal_code : "",
-    country: typeof r.country === "string" ? r.country : "",
     phone: typeof r.phone === "string" ? r.phone : "",
     email: typeof r.email === "string" ? r.email : "",
     timezone: typeof r.timezone === "string" ? r.timezone : "Asia/Manila",
     currency: typeof r.currency === "string" ? r.currency : "PHP",
     currency_symbol: typeof r.currency_symbol === "string" ? r.currency_symbol : "₱",
-    tax_id: typeof r.tax_id === "string" ? r.tax_id : "",
     default_tax_rate:
       typeof r.default_tax_rate === "number"
         ? r.default_tax_rate
@@ -85,7 +80,12 @@ export function normalizeSettings(raw: unknown): RestaurantSettings {
         ? r.default_service_charge
         : Number(r.default_service_charge ?? 0),
     service_charge_enabled: Boolean(r.service_charge_enabled),
+    vat_enabled: Boolean(r.vat_enabled),
+    vat_inclusive: Boolean(r.vat_inclusive),
     allow_negative_inventory: Boolean(r.allow_negative_inventory),
+    order_prefix: typeof r.order_prefix === "string" ? r.order_prefix : undefined,
+    receipt_header: typeof r.receipt_header === "string" ? r.receipt_header : undefined,
+    receipt_footer: typeof r.receipt_footer === "string" ? r.receipt_footer : undefined,
     opening_hours: normalizeHours((r.opening_hours as RawOpeningHours) ?? null),
     updated_at: typeof r.updated_at === "string" ? r.updated_at : undefined,
   };
@@ -95,22 +95,20 @@ export interface RestaurantInfoFormData {
   name: string;
   description?: string;
   address?: string;
-  city?: string;
-  state?: string;
-  postal_code?: string;
-  country?: string;
   phone?: string;
   email?: string;
-  tax_id?: string;
   opening_hours: RawOpeningHours;
 }
 
 export interface SystemPreferencesFormData {
   currency: string;
   currency_symbol: string;
-  timezone: string;
+  vat_enabled: boolean;
+  vat_inclusive: boolean;
   default_tax_rate: number;
   default_service_charge: number;
   service_charge_enabled: boolean;
-  allow_negative_inventory: boolean;
+  order_prefix: string;
+  receipt_header: string;
+  receipt_footer: string;
 }

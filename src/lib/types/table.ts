@@ -8,6 +8,7 @@ export interface Table {
   zone?: string;
   section?: string;
   is_wheelchair_accessible: boolean;
+  is_active?: boolean;
   pos_x: number;
   pos_y: number;
   width: number;

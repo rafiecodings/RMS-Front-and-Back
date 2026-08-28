@@ -180,3 +180,12 @@ export interface ExportPayload {
   start_date: string;
   end_date: string;
 }
+
+export interface CustomerAnalyticsReport {
+  total_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  average_visit_frequency: number;
+  average_lifetime_value: number;
+  top_customers: { id: string; name: string; total_orders: number; total_spent: number }[];
+}

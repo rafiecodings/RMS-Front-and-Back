@@ -45,6 +45,32 @@ function formatTime(timeStr: string | undefined | null) {
   return `${h12}:${m ?? "00"} ${ampm}`;
 }
 
+// Loyalty tiers strictly from visit_count (mirrors backend Customer::loyaltyTier()).
+const LOYALTY_TIERS = [
+  { name: "Member", min: 0, next: 5 },
+  { name: "Bronze", min: 5, next: 10 },
+  { name: "Silver", min: 10, next: 20 },
+  { name: "Gold", min: 20, next: 30 },
+  { name: "Platinum", min: 30, next: null },
+] as const;
+
+function loyaltyProgress(visitCount: number) {
+  const idx = LOYALTY_TIERS.findIndex((t) => visitCount >= t.min);
+  const tier = LOYALTY_TIERS[Math.max(idx, 0)];
+  const next = LOYALTY_TIERS[Math.min(idx + 1, LOYALTY_TIERS.length - 1)];
+  if (tier.next === null) {
+    return { tier: tier.name, nextTier: null, pct: 100, remaining: 0 };
+  }
+  const span = tier.next - tier.min;
+  const pct = Math.min(100, Math.round(((visitCount - tier.min) / span) * 100));
+  return {
+    tier: tier.name,
+    nextTier: next.name,
+    pct,
+    remaining: Math.max(0, tier.next - visitCount),
+  };
+}
+
 export function CustomerDetail({
   customer,
   reservations = [],
@@ -158,6 +184,47 @@ export function CustomerDetail({
                   <p className="text-xl font-bold">{customer.total_reservations ?? 0}</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Loyalty Tier</p>
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0"
+                >
+                  {customer.loyalty_tier ?? loyaltyProgress(customer.visit_count).tier}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Visits</p>
+                <p className="text-xl font-bold">{customer.visit_count}</p>
+              </div>
+              {(() => {
+                const p = loyaltyProgress(customer.visit_count);
+                if (p.nextTier === null) {
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      Highest tier reached — thank you for your loyalty!
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-1">
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-amber-500"
+                        style={{ width: `${p.pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {p.remaining} more visit{p.remaining === 1 ? "" : "s"} to {p.nextTier}
+                    </p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>

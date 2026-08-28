@@ -85,6 +85,12 @@ export default function proxy(request: NextRequest) {
   const role = getRoleFromCookie(request);
   const isAuthenticated = !!role;
 
+  // The 403 destination page must always render standalone. It is never
+  // auth/RBAC gated so it can never be redirected to itself.
+  if (pathname === "/unauthorized") {
+    return NextResponse.next();
+  }
+
   // Unauthenticated → public routes allowed; everything else → /login.
   if (!isAuthenticated) {
     if (isPublic) {
@@ -95,9 +101,16 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Authenticated but landed on a public (auth) route → to dashboard.
+  // Authenticated but landed on a public (auth) route → leave in ONE hop:
+  // /dashboard when the role may enter it, otherwise /unauthorized directly
+  // (avoids the /login → /dashboard → /unauthorized bounce chain).
   if (isPublic) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const dashboardGuard = ROLE_GUARDS["/dashboard"];
+    const dashboardAllowed =
+      dashboardGuard === "any" || dashboardGuard.includes(role ?? "");
+    return NextResponse.redirect(
+      new URL(dashboardAllowed ? "/dashboard" : "/unauthorized", request.url)
+    );
   }
 
   // Match the longest guard prefix first.

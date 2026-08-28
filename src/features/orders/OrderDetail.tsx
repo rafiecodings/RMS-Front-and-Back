@@ -80,7 +80,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm break-words">
-                        {item.menu_item_name}
+                        {item.name ?? item.menu_item_name ?? "Unnamed item"}
                       </span>
                       {item.variant && (
                         <span className="text-xs text-muted-foreground">
@@ -179,9 +179,9 @@ export function OrderDetail({ order }: OrderDetailProps) {
                       <span className="capitalize break-words">
                         {payment.payment_method.replace(/_/g, " ")}
                       </span>
-                      {payment.reference && (
+                      {payment.reference_number && (
                         <span className="text-muted-foreground ml-1">
-                          ({payment.reference})
+                          ({payment.reference_number})
                         </span>
                       )}
                     </div>

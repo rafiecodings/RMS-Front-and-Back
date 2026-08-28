@@ -7,6 +7,9 @@ const backendUrl =
     : "http://127.0.0.1:8000");
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root to THIS folder. Prevents Next.js from inferring
+  // a wrong monorepo root when other lockfiles exist higher up the tree.
+  outputFileTracingRoot: import.meta.dirname,
   async rewrites() {
     return [
       {

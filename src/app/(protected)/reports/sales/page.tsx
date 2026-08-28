@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageHeader, ErrorState } from "@/components/shared";
 import {
   ReportFilters,
@@ -14,6 +15,7 @@ import {
 import { useSalesReport, useMenuPerformanceReport } from "@/features/reports/hooks/useReports";
 import type { ReportPeriod, DateRange } from "@/features/reports/types";
 import { LoadingSpinner } from "@/components/shared";
+import { Sparkles } from "lucide-react";
 
 export default function SalesReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
@@ -66,6 +68,20 @@ export default function SalesReportsPage() {
         onPeriodChange={setPeriod}
         onDateRangeChange={setDateRange}
       />
+
+      {/* Compact cross-link — the canonical forecast lives in Analytics. */}
+      <Link href="/analytics" className="group block">
+        <div className="flex items-center gap-4 rounded-lg border border-dashed p-4 transition-colors hover:bg-muted/50">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">AI Sales Forecast</p>
+            <p className="text-xs text-muted-foreground">Expected orders, direction, and peak days</p>
+          </div>
+          <span className="text-sm font-medium text-primary group-hover:underline">View Forecast</span>
+        </div>
+      </Link>
 
       {isLoading || menuLoading ? (
         <LoadingSpinner />

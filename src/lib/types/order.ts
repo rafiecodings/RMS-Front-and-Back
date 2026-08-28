@@ -4,14 +4,19 @@ import { User } from "./api";
 
 export interface Order {
   id: string;
+  invoice_id?: string | null;
   order_number: string;
   order_type: OrderType;
   status: OrderStatus;
   payment_status?: string;
   customer_id?: string;
   customer?: Customer;
+  /** Flattened customer label (never the UUID). */
+  customer_name?: string | null;
   table_id?: string;
   table?: Table;
+  /** Flattened table label (never the UUID). */
+  table_number?: string | number | null;
   subtotal: number;
   tax_amount: number;
   discount_amount: number;
@@ -37,18 +42,21 @@ export interface Order {
 export interface OrderItem {
   id: string;
   menu_item_id: string;
-  menu_item_name: string;
+  /** Backend serializes the snapshot name as `name` (OrderController). */
+  name?: string;
+  /** Legacy alias kept for defensive fallbacks in older payloads. */
+  menu_item_name?: string;
   variant?: string;
   quantity: number;
   unit_price: number;
-  discount_amount: number;
-  tax_amount: number;
+  discount_amount?: number;
+  tax_amount?: number;
   total_amount: number;
   notes?: string;
   status: OrderItemStatus;
   modifiers?: OrderItemModifier[];
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface OrderItemModifier {
@@ -58,7 +66,7 @@ export interface OrderItemModifier {
   price: number;
 }
 
-export type OrderType = "dine_in" | "takeaway" | "delivery";
+export type OrderType = "dine_in" | "takeaway";
 
 export type OrderStatus =
   | "draft"
@@ -81,6 +89,7 @@ export interface Payment {
   payment_method: PaymentMethod;
   amount: number;
   reference?: string;
+  reference_number?: string;
   processed_by?: User;
   processed_by_id?: string;
   processed_at: string;
@@ -91,10 +100,7 @@ export type PaymentMethod =
   | "cash"
   | "card"
   | "bank_transfer"
-  | "gift_card"
-  | "loyalty_points"
-  | "digital_wallet"
-  | "room_charge";
+  | "e_wallet";
 
 export interface OrderFormData {
   order_type: OrderType;
@@ -102,6 +108,7 @@ export interface OrderFormData {
   table_id?: string;
   items: OrderItemFormData[];
   notes?: string;
+  auto_apply_promotions?: boolean;
 }
 
 export interface OrderItemFormData {
@@ -117,4 +124,10 @@ export interface PaymentFormData {
   payment_method: PaymentMethod;
   amount: number;
   reference?: string;
+}
+
+export interface RefundFormData {
+  payment_id: string;
+  amount: number;
+  reason: string;
 }

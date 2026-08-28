@@ -141,7 +141,7 @@ export default function MenuItemsPage() {
         description="Manage your restaurant menu"
         action={
           canEditMenu ? (
-            <Button size="sm" onClick={() => setActiveModal({ mode: "add" })}>
+            <Button variant="default" size="default" onClick={() => setActiveModal({ mode: "add" })}>
               <Plus className="h-4 w-4 mr-1.5" />
               Add Item
             </Button>

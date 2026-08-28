@@ -11,8 +11,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared";
-import { Plus } from "lucide-react";
-import { SplitPaymentLine } from "./SplitPaymentLine";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentLine } from "../types";
 import type { PaymentMethod } from "@/lib/types";
@@ -22,8 +20,10 @@ import type { OrderType } from "@/lib/types";
 import type { Order } from "@/lib/types";
 import { useCustomers } from "@/lib/hooks";
 import { useTables } from "@/lib/hooks";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTaxRate } from "@/features/settings/hooks/useSettings";
+import { customerDisplayName, tableDisplayName } from "@/lib/utils/orderDisplay";
 import {
   Select,
   SelectContent,
@@ -40,11 +40,28 @@ interface PaymentDialogProps {
   vatAmount: number;
   serviceChargeAmount: number;
   subtotal: number;
-  onProcessPayment: (payments: PaymentLine[], orderType: OrderType, customerId?: string, tableId?: string) => void;
+  onProcessPayment: (
+    payments: PaymentLine[],
+    orderType: OrderType,
+    customerId?: string,
+    tableId?: string
+  ) => void;
   isProcessing: boolean;
   existingOrder?: Order | null;
 }
 
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "card", label: "Card" },
+  { value: "e_wallet", label: "E-Wallet" },
+];
+
+const EWALLET_PROVIDERS = ["GCash", "Maya", "GrabPay", "Other"];
+
+/**
+ * Single-tender payment dialog — one order, one payment, one method.
+ * Split payment is intentionally deferred for UAT simplicity.
+ */
 export function PaymentDialog({
   open,
   onOpenChange,
@@ -58,10 +75,11 @@ export function PaymentDialog({
   existingOrder,
 }: PaymentDialogProps) {
   const taxRate = useTaxRate();
-  const [payments, setPayments] = useState<PaymentLine[]>([
-    { id: crypto.randomUUID(), method: "cash" as PaymentMethod, amount: 0 },
-  ]);
-  const [orderType, setOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
+  const [method, setMethod] = useState<PaymentMethod>("cash");
+  const [amountReceived, setAmountReceived] = useState<string>("");
+  const [reference, setReference] = useState<string>("");
+  const [provider, setProvider] = useState<string>("GCash");
+  const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [customerId, setCustomerId] = useState<string>("");
   const [tableId, setTableId] = useState<string>("");
 
@@ -70,27 +88,31 @@ export function PaymentDialog({
 
   const customers = customersList.data?.data?.data ?? [];
   const tables = tablesList.data ?? [];
-  const availableTables = tables.filter(
-    (t) => t.status === "available"
-  );
+  const availableTables = tables.filter((t) => t.status === "available");
 
-  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-  const remaining = Math.max(0, totalAmount - totalPaid);
-  const isFullyPaid = remaining <= 0.01;
-  const hasEnteredAmount = totalPaid > 0;
-  const change = isFullyPaid ? Math.round((totalPaid - totalAmount) * 100) / 100 : 0;
+  const isCash = method === "cash";
+  // Cash: guest hands over `amountReceived`; card/e-wallet charge exact total.
+  const tendered = isCash ? Number(amountReceived || 0) : totalAmount;
+  const insufficient = isCash && amountReceived !== "" && tendered < totalAmount - 0.001;
+  const change = isCash && tendered >= totalAmount ? Math.round((tendered - totalAmount) * 100) / 100 : 0;
+  const canProcess =
+    !isProcessing &&
+    (isCash
+      ? amountReceived !== "" && tendered >= totalAmount - 0.001
+      : true);
 
   useEffect(() => {
     if (open) {
       // Reset form state each time the dialog opens. This is a legitimate
       // reset-on-open pattern; the synchronous setState is intentional.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPayments([
-        { id: crypto.randomUUID(), method: "cash" as PaymentMethod, amount: 0 },
-      ]);
+      setMethod("cash");
+      setAmountReceived("");
+      setReference("");
+      setProvider("GCash");
       setOrderType(
         existingOrder
-          ? (existingOrder.order_type as "dine_in" | "takeaway" | "delivery")
+          ? (existingOrder.order_type as OrderType)
           : "dine_in"
       );
       setCustomerId(existingOrder?.customer_id ?? "");
@@ -99,27 +121,25 @@ export function PaymentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  function addPaymentLine() {
-    setPayments((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), method: "cash" as PaymentMethod, amount: 0 },
-    ]);
-  }
-
-  function updatePaymentLine(id: string, updates: Partial<PaymentLine>) {
-    setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-    );
-  }
-
-  function removePaymentLine(id: string) {
-    setPayments((prev) => prev.filter((p) => p.id !== id));
-  }
-
   function handleProcess() {
-    const validPayments = payments.filter((p) => p.amount > 0);
-    if (validPayments.length === 0) return;
-    onProcessPayment(validPayments, orderType, customerId || undefined, orderType === "dine_in" ? (tableId || undefined) : undefined);
+    if (!canProcess) return;
+    const line: PaymentLine = {
+      id: crypto.randomUUID(),
+      method,
+      amount: Math.round(tendered * 100) / 100,
+      reference:
+        method === "card"
+          ? reference || undefined
+          : method === "e_wallet"
+            ? `${provider}${reference ? ` · ${reference}` : ""}`
+            : undefined,
+    };
+    onProcessPayment(
+      [line],
+      orderType,
+      customerId || undefined,
+      orderType === "dine_in" ? tableId || undefined : undefined
+    );
   }
 
   return (
@@ -141,11 +161,9 @@ export function PaymentDialog({
                 </span>
               </p>
               <p className="text-xs text-muted-foreground">
-                {existingOrder.customer
-                  ? `Customer: ${existingOrder.customer.name}`
-                  : "Walk-in customer"}
-                {existingOrder.table
-                  ? ` · Table ${existingOrder.table.number}`
+                {`Customer: ${customerDisplayName(existingOrder)}`}
+                {tableDisplayName(existingOrder)
+                  ? ` · ${tableDisplayName(existingOrder)}`
                   : ""}
               </p>
             </div>
@@ -154,14 +172,13 @@ export function PaymentDialog({
               <h4 className="text-sm font-medium">Order Details</h4>
               <div className="flex gap-2">
                 <Label className="text-xs">Order Type</Label>
-                <Select value={orderType} onValueChange={(v) => v && setOrderType(v as "dine_in" | "takeaway" | "delivery")}>
+                <Select value={orderType} onValueChange={(v) => v && setOrderType(v as OrderType)}>
                   <SelectTrigger className="h-8 w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dine_in">Dine In</SelectItem>
                     <SelectItem value="takeaway">Takeaway</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -172,7 +189,6 @@ export function PaymentDialog({
                     <SelectValue placeholder="Walk-in Customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Walk-in Customer</SelectItem>
                     {customers.map((c: Customer) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.name}
@@ -189,7 +205,6 @@ export function PaymentDialog({
                       <SelectValue placeholder="Select Table" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Table</SelectItem>
                       {availableTables.map((t: Table) => (
                         <SelectItem key={t.id} value={t.id}>
                           T{t.number} ({t.capacity} seats)
@@ -214,7 +229,9 @@ export function PaymentDialog({
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">VAT ({taxRate}%)</span>
+              <span className="text-muted-foreground">
+                VAT ({taxRate}%, inclusive)
+              </span>
               <span>{formatCurrency(vatAmount)}</span>
             </div>
             {serviceChargeAmount > 0 && (
@@ -225,64 +242,108 @@ export function PaymentDialog({
             )}
             <Separator />
             <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
+              <span>Total Due</span>
               <span>{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Payment Methods</p>
-              <Button variant="ghost" size="xs" onClick={addPaymentLine}>
-                <Plus className="h-3 w-3 mr-1" /> Add Method
-              </Button>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {payments.map((line, idx) => (
-                <SplitPaymentLine
-                  key={line.id}
-                  line={line}
-                  isFirst={idx === 0}
-                  onUpdate={updatePaymentLine}
-                  onRemove={removePaymentLine}
-                />
+          {/* Payment method */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Payment Method</p>
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setMethod(m.value)}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    method === m.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m.label}
+                </button>
               ))}
             </div>
+
+            {isCash ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="cash-received" className="text-xs">Amount Received</Label>
+                <Input
+                  id="cash-received"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(e.target.value)}
+                  placeholder="0.00"
+                  aria-invalid={insufficient}
+                  className={insufficient ? "border-red-500" : ""}
+                />
+                {insufficient ? (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    Insufficient amount received.
+                  </p>
+                ) : (
+                  change > 0 && (
+                    <div className="flex items-center justify-between rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-2">
+                      <span className="text-sm font-medium">Change</span>
+                      <span className="text-base font-bold text-emerald-600">
+                        {formatCurrency(change)}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            ) : method === "e_wallet" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Provider</Label>
+                  <Select value={provider} onValueChange={(v) => setProvider(v ?? "GCash")}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {EWALLET_PROVIDERS.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ewallet-ref" className="text-xs">Reference Number</Label>
+                  <Input
+                    id="ewallet-ref"
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  Amount charged: <strong>{formatCurrency(totalAmount)}</strong> (exact bill total)
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="card-ref" className="text-xs">Reference Number</Label>
+                <Input
+                  id="card-ref"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Optional (last 4 digits / approval code)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Amount charged: <strong>{formatCurrency(totalAmount)}</strong> (exact bill total)
+                </p>
+              </div>
+            )}
           </div>
-
-          {!isFullyPaid && hasEnteredAmount && (
-            <p className="text-xs text-destructive">
-              Amount entered does not cover the total. Enter the full amount to
-              complete the payment.
-            </p>
-          )}
-
-          <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
-            <span className="text-sm font-medium">Total Paid</span>
-            <span className={`text-sm font-bold ${isFullyPaid ? "text-emerald-600" : ""}`}>
-              {formatCurrency(totalPaid)}
-            </span>
-          </div>
-
-          {change > 0 && (
-            <div className="flex items-center justify-between rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
-              <span className="text-sm font-medium">Change</span>
-              <span className="text-base font-bold text-emerald-600">
-                {formatCurrency(change)}
-              </span>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleProcess}
-            disabled={!isFullyPaid || isProcessing || totalPaid <= 0}
-          >
+          <Button onClick={handleProcess} disabled={!canProcess}>
             {isProcessing && <LoadingSpinner size="sm" className="mr-2" />}
             Process Payment
           </Button>

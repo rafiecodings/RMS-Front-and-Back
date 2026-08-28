@@ -116,7 +116,7 @@ export function CartPanel({
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium truncate">
-                    {item.menu_item_name}
+                    {item.name ?? item.menu_item_name ?? "Unnamed item"}
                   </p>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {item.quantity} × {formatCurrency(item.unit_price)}

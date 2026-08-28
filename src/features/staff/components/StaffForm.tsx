@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { STAFF_ROLES, STAFF_SHIFTS } from "@/lib/types";
 import type { Staff, StaffFormData, StaffRole, StaffShift } from "@/lib/types";
 
@@ -30,6 +31,7 @@ export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffF
     last_name: initialData?.user?.name?.split(" ").slice(1).join(" ") ?? "",
     email: initialData?.user?.email ?? "",
     password: "",
+    enable_system_access: !initialData,
     phone: initialData?.phone ?? "",
     role: (initialData?.user?.role ?? "waiter") as StaffRole,
     shift: undefined,
@@ -94,15 +96,32 @@ export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffF
           </div>
         </div>
         {!initialData && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Password *</Label>
-            <Input
-              type="password"
-              value={form.password ?? ""}
-              onChange={(e) => update("password", e.target.value)}
-              placeholder="Minimum 8 characters"
-              required
-            />
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <Checkbox
+                checked={!!form.enable_system_access}
+                onCheckedChange={(checked) =>
+                  update("enable_system_access", checked === true)
+                }
+              />
+              Enable System Access
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Provisions a login account for this staff member and links it to
+              their staff profile. Leave off to create a profile only.
+            </p>
+            {form.enable_system_access && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Password *</Label>
+                <Input
+                  type="password"
+                  value={form.password ?? ""}
+                  onChange={(e) => update("password", e.target.value)}
+                  placeholder="Minimum 8 characters"
+                  required
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

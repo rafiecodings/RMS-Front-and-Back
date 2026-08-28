@@ -17,6 +17,27 @@ import { canEdit as canEditRole } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { Staff, StaffFormData } from "@/lib/types";
 
+/** Extract the most user-relevant message from an axios/API error. */
+function extractApiError(err: unknown): string {
+  const e = err as {
+    response?: {
+      status?: number;
+      data?: { message?: string; errors?: Record<string, string[]> };
+    };
+    message?: string;
+  };
+  const fieldErrors = e?.response?.data?.errors;
+  if (fieldErrors) {
+    const first = Object.values(fieldErrors)[0]?.[0];
+    if (first) return first;
+  }
+  if (e?.response?.data?.message) return e.response.data.message;
+  if (e?.response?.status === 422) return "Please check the highlighted fields.";
+  if (e?.response?.status && e.response.status >= 500)
+    return "Server error. Please try again shortly.";
+  return "";
+}
+
 export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -67,8 +88,10 @@ export default function EmployeesPage() {
 
       toast.success("Staff member added successfully");
       setAddOpen(false);
-    } catch {
-      toast.error("Failed to add staff member");
+    } catch (error) {
+      // Surface backend validation (422) / conflict messages verbatim:
+      // duplicate email, invalid email, missing role, server error, etc.
+      toast.error(extractApiError(error) || "Failed to add staff member");
     }
   }
 

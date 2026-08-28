@@ -35,3 +35,4 @@ export {
 } from "./useStaff";
 export { useDashboard } from "./useDashboard";
 export { useUsers, useUser } from "./useUsers";
+export { useReplenishmentRequests } from "./useReplenishment";

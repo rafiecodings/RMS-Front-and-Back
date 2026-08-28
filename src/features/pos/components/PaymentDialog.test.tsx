@@ -37,8 +37,8 @@ describe("PaymentDialog", () => {
     expect(screen.getByText("Subtotal")).toBeInTheDocument();
     expect(screen.getByText("₱510")).toBeInTheDocument();
     expect(screen.getByText("₱60")).toBeInTheDocument();
-    expect(screen.getAllByText("₱500")).toHaveLength(1);
-    expect(screen.getByText("₱0")).toBeInTheDocument();
+    expect(screen.getByText("Total Due")).toBeInTheDocument();
+    expect(screen.getByText("₱500")).toBeInTheDocument();
   });
 
   it("keeps Process Payment disabled until the total is fully paid", async () => {
@@ -51,7 +51,6 @@ describe("PaymentDialog", () => {
     await user.type(screen.getByPlaceholderText("0.00"), "500");
 
     expect(processButton).toBeEnabled();
-    expect(screen.getAllByText("₱500")).toHaveLength(2);
     expect(screen.queryByText("Remaining")).not.toBeInTheDocument();
   });
 
@@ -69,27 +68,12 @@ describe("PaymentDialog", () => {
     expect(payments[0]).toMatchObject({ method: "cash", amount: 500 });
   });
 
-  it("supports multiple split payment lines", async () => {
-    const user = userEvent.setup();
-    const onProcessPayment = vi.fn();
-    renderWithProviders(<PaymentDialog {...baseProps} onProcessPayment={onProcessPayment} />);
+  it("is single-tender (no split payment UI)", () => {
+    renderWithProviders(<PaymentDialog {...baseProps} />);
 
-    await user.click(screen.getByRole("button", { name: "Add Method" }));
-
-    const amountInputs = screen.getAllByPlaceholderText("0.00");
-    expect(amountInputs).toHaveLength(2);
-
-    await user.type(amountInputs[0], "300");
-    await user.type(amountInputs[1], "200");
-
-    const processButton = screen.getByRole("button", { name: "Process Payment" });
-    expect(processButton).toBeEnabled();
-    await user.click(processButton);
-
-    expect(onProcessPayment).toHaveBeenCalledTimes(1);
-    const [payments] = onProcessPayment.mock.calls[0] as [PaymentLine[]];
-    expect(payments).toHaveLength(2);
-    expect(payments.map((p) => p.amount)).toEqual([300, 200]);
+    // Split payment was intentionally removed (one order → one payment → one method).
+    expect(screen.queryByRole("button", { name: /add method/i })).toBeNull();
+    expect(screen.getAllByPlaceholderText("0.00")).toHaveLength(1);
   });
 
   it("blocks payment when amount is insufficient and shows validation", async () => {
@@ -101,7 +85,7 @@ describe("PaymentDialog", () => {
     const processButton = screen.getByRole("button", { name: "Process Payment" });
     expect(processButton).toBeDisabled();
     expect(
-      screen.getByText(/does not cover the total/i)
+      screen.getByText(/insufficient amount received/i)
     ).toBeInTheDocument();
   });
 

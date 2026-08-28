@@ -5,13 +5,17 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // Forks pool: the threads worker fails to start in this environment
+    // (worker-start timeout), which is purely infrastructural. Forks runs
+    // all suites reliably without changing any application/test logic.
+    pool: "forks",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     css: false,
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });

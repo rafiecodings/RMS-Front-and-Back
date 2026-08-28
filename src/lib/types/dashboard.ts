@@ -1,3 +1,5 @@
+import type { OrderType } from "./order";
+
 export interface DashboardSummary {
   revenue: RevenueSummary;
   sales: SalesSummary;
@@ -63,7 +65,7 @@ export interface KitchenOrder {
   id: string;
   order_number: string;
   table_number: string | null;
-  order_type: "dine_in" | "takeaway" | "delivery";
+  order_type: OrderType;
   items: { name: string; quantity: number; notes?: string }[];
   status: "received" | "in_progress" | "ready";
   elapsed_minutes: number;
@@ -110,7 +112,7 @@ export interface RecentOrder {
   order_number: string;
   customer_name: string | null;
   table_number: string | null;
-  order_type: "dine_in" | "takeaway" | "delivery";
+  order_type: OrderType;
   status: "draft" | "pending" | "confirmed" | "preparing" | "ready" | "served" | "completed" | "cancelled";
   total: number;
   items_count: number;

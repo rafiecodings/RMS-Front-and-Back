@@ -198,7 +198,7 @@ export function useCanEdit(): (page: keyof RolePermissions) => boolean {
   return (page) => canEdit(role, page);
 }
 
-export function canAccessRevenueReport(role: string | undefined): boolean {
+export function canAccessRevenueReport(role?: string): boolean {
   return (
     role === ROLES.ADMIN ||
     role === ROLES.MANAGER ||
@@ -206,7 +206,7 @@ export function canAccessRevenueReport(role: string | undefined): boolean {
   );
 }
 
-export function canArchiveOrders(role: string | undefined): boolean {
+export function canArchiveOrders(role?: string): boolean {
   return (
     role === ROLES.ADMIN ||
     role === ROLES.MANAGER ||

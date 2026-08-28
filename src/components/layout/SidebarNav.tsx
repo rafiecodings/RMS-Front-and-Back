@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +60,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Categories", href: "/menu/categories", icon: ShoppingBag, roles: SIDEBAR_ROLES.staff },
       { label: "Items", href: "/menu/items", icon: UtensilsCrossed, roles: SIDEBAR_ROLES.staff },
+      { label: "Promotions & Discounts", href: "/menu/promotions", icon: Store, roles: SIDEBAR_ROLES.staff },
     ],
   },
   {
@@ -67,21 +68,34 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Ingredients", href: "/inventory/ingredients", icon: Package, roles: SIDEBAR_ROLES.inventory },
       { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck, roles: SIDEBAR_ROLES.inventory },
-      { label: "Suppliers", href: "/inventory/suppliers", icon: Truck, roles: SIDEBAR_ROLES.inventory },
-      {
-        label: "Purchase Orders",
-        href: "/inventory/purchase-orders",
-        icon: FileBarChart,
-        roles: SIDEBAR_ROLES.inventory,
-      },
+      { label: "Inventory Monitoring", href: "/inventory", icon: FileBarChart, roles: SIDEBAR_ROLES.inventory },
+      { label: "Replenishment Requests", href: "/inventory/replenishment", icon: Truck, roles: SIDEBAR_ROLES.inventory },
     ],
   },
   {
     label: "Management",
     items: [
       { label: "Staff", href: "/staff", icon: UserCog, roles: SIDEBAR_ROLES.staff },
-      { label: "Reports & Analytics", href: "/reports", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
-      { label: "Settings", href: "/settings", icon: Settings, roles: SIDEBAR_ROLES.settings },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { label: "Sales", href: "/reports/sales", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
+      { label: "Menu", href: "/reports/menu", icon: ShoppingBag, roles: SIDEBAR_ROLES.reports },
+      { label: "Customers", href: "/reports/customers", icon: Users, roles: SIDEBAR_ROLES.reports },
+      { label: "Inventory", href: "/reports/inventory", icon: Package, roles: SIDEBAR_ROLES.reports },
+      { label: "Staff", href: "/reports/staff", icon: UserCog, roles: SIDEBAR_ROLES.reports },
+      { label: "Tax Reports", href: "/reports/tax", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
+      { label: "Forecasting / Analytics", href: "/analytics", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { label: "Restaurant Settings", href: "/settings/restaurant", icon: Settings, roles: SIDEBAR_ROLES.settings },
+      { label: "Users & Roles", href: "/settings/users", icon: UserCog, roles: SIDEBAR_ROLES.settings },
+      { label: "Audit Logs", href: "/settings/audit-logs", icon: ClipboardList, roles: SIDEBAR_ROLES.settings },
     ],
   },
 ];
@@ -127,6 +141,22 @@ export function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
 
 const SIDEBAR_COLLAPSED_KEY = "rms.sidebar.collapsed";
 
+/**
+ * Only the most specific matching route is active. Prevents broad prefixes
+ * (e.g. "/inventory") from highlighting alongside exact child routes
+ * (e.g. "/inventory/replenishment"), which made adjacent items share one
+ * continuous highlighted block.
+ */
+function computeActiveHrefs(pathname: string, hrefs: string[]): Set<string> {
+  let best: string | null = null;
+  for (const href of hrefs) {
+    const matches = pathname === href || pathname.startsWith(href + "/");
+    if (!matches) continue;
+    if (best === null || href.length > best.length) best = href;
+  }
+  return new Set(best === null ? [] : [best]);
+}
+
 export function useSidebarCollapsed() {
   // Lazy init from localStorage (client-only component tree).
   const [collapsed, setCollapsed] = useState(
@@ -155,6 +185,14 @@ export function NavLinks({
 }) {
   const pathname = usePathname();
   const filteredNavGroups = useFilteredNavGroups();
+  const activeHrefs = useMemo(
+    () =>
+      computeActiveHrefs(
+        pathname,
+        filteredNavGroups.flatMap((g) => g.items.map((i) => i.href)),
+      ),
+    [pathname, filteredNavGroups],
+  );
 
   if (collapsed) {
     // Icon-only rail with hover tooltips.
@@ -162,8 +200,7 @@ export function NavLinks({
     return (
       <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-4">
         {flat.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = activeHrefs.has(item.href);
           const Icon = item.icon;
           return (
             <Link
@@ -195,9 +232,7 @@ export function NavLinks({
           </p>
           <ul className="space-y-0.5 px-2">
             {group.items.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                pathname.startsWith(item.href + "/");
+              const isActive = activeHrefs.has(item.href);
               const Icon = item.icon;
               return (
                 <li key={item.href}>

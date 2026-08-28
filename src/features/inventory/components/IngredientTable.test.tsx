@@ -45,7 +45,8 @@ describe("IngredientTable", () => {
     expect(screen.getByText("vegetables")).toBeInTheDocument();
     expect(screen.getByText("50 kg")).toBeInTheDocument();
     expect(screen.getByText("₱120")).toBeInTheDocument();
-    expect(screen.getByText("In Stock")).toBeInTheDocument();
+    // Stock status for a healthy (above-minimum) ingredient.
+    expect(screen.getByText("Healthy")).toBeInTheDocument();
   });
 
   it("marks low stock ingredients", () => {

@@ -25,6 +25,8 @@ class RestaurantSetting extends BaseModel
         'business_registration',
         'opening_hours',
         'default_tax_rate',
+        'vat_enabled',
+        'vat_inclusive',
         'default_service_charge',
         'service_charge_enabled',
         'receipt_header',
@@ -41,6 +43,8 @@ class RestaurantSetting extends BaseModel
     protected $casts = [
         'opening_hours' => 'array',
         'default_tax_rate' => 'decimal:2',
+        'vat_enabled' => 'boolean',
+        'vat_inclusive' => 'boolean',
         'default_service_charge' => 'decimal:2',
         'service_charge_enabled' => 'boolean',
         'allow_negative_inventory' => 'boolean',

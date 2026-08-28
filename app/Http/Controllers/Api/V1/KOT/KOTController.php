@@ -18,6 +18,14 @@ class KOTController extends Controller
     {
         $query = KotTicket::with(['order.table', 'items']);
 
+        // Archived tickets are hidden from the kitchen board unless
+        // explicitly requested with ?archived=1.
+        if ($request->boolean('archived')) {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+        }
+
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
@@ -118,18 +126,42 @@ class KOTController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,in_progress,ready,completed,voided',
+            // "received" is the created state used by the kitchen board.
+            'status' => 'required|string|in:received,pending,in_progress,ready,completed,voided',
         ]);
 
         $data = ['status' => $validated['status']];
 
         if ($validated['status'] === 'in_progress') {
             $data['started_at'] = now();
-        } elseif ($validated['status'] === 'completed') {
+        } elseif ($validated['status'] === 'completed' || $validated['status'] === 'ready') {
             $data['completed_at'] = now();
         }
 
         $ticket->update($data);
+
+        // Keep the parent order in lockstep with the kitchen board:
+        //   Start Preparing → order preparing
+        //   Mark Ready      → order ready
+        // (Serving stays a waiter action on the order itself.)
+        if ($ticket->order) {
+            $orderStatusMap = [
+                'in_progress' => 'preparing',
+                'ready' => 'ready',
+                'completed' => 'ready',
+            ];
+            $nextOrderStatus = $orderStatusMap[$validated['status']] ?? null;
+
+            if ($nextOrderStatus && ! in_array($ticket->order->status, ['completed', 'cancelled', 'voided'], true)) {
+                \App\Models\Order::where('id', $ticket->order_id)->update(['status' => $nextOrderStatus]);
+                \App\Models\OrderStatusHistory::create([
+                    'order_id' => $ticket->order_id,
+                    'status' => $nextOrderStatus,
+                    'notes' => "Kitchen marked {$validated['status']} ({$ticket->kot_number})",
+                    'changed_by' => $request->user()->id,
+                ]);
+            }
+        }
 
         return $this->success([
             'id' => $ticket->id,
@@ -138,6 +170,60 @@ class KOTController extends Controller
             'started_at' => $ticket->started_at?->toISOString(),
             'completed_at' => $ticket->completed_at?->toISOString(),
         ], 'KOT status updated successfully.');
+    }
+
+    /**
+     * Archive a KOT ticket (soft-hide from the kitchen board; never deleted).
+     *
+     * Workflow safety: tickets still being prepared cannot be archived.
+     */
+    public function archive(Request $request, string $id): JsonResponse
+    {
+        $ticket = KotTicket::find($id);
+
+        if (!$ticket) {
+            return $this->notFound('KOT ticket not found.');
+        }
+
+        if (in_array($ticket->status, ['pending', 'in_progress'], true)) {
+            return $this->error(
+                'KOT tickets that are still pending or in progress cannot be archived.',
+                409
+            );
+        }
+
+        // Idempotent.
+        if ($ticket->archived_at === null) {
+            $ticket->update(['archived_at' => now()]);
+        }
+
+        return $this->success([
+            'id' => $ticket->id,
+            'kot_number' => $ticket->kot_number,
+            'status' => $ticket->status,
+            'archived_at' => $ticket->archived_at?->toISOString(),
+        ], 'KOT ticket archived successfully.');
+    }
+
+    /**
+     * Restore an archived KOT ticket (archived_at back to null).
+     */
+    public function unarchive(Request $request, string $id): JsonResponse
+    {
+        $ticket = KotTicket::find($id);
+
+        if (!$ticket) {
+            return $this->notFound('KOT ticket not found.');
+        }
+
+        $ticket->update(['archived_at' => null]);
+
+        return $this->success([
+            'id' => $ticket->id,
+            'kot_number' => $ticket->kot_number,
+            'status' => $ticket->status,
+            'archived_at' => null,
+        ], 'KOT ticket restored successfully.');
     }
 
     public function print(string $id): JsonResponse

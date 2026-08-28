@@ -16,7 +16,7 @@ class RecipeController extends Controller
         $query = Recipe::with(['menuItem', 'ingredients']);
 
         if ($search = $request->input('search')) {
-            $query->whereHas('menuItem', fn ($q) => $q->where('name', 'ilike', "%{$search}%"));
+            $query->whereHas('menuItem', fn ($q) => $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"]));
         }
 
         $recipes = $query->orderBy('created_at', 'desc')

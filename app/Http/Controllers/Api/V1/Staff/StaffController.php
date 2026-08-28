@@ -35,9 +35,9 @@ class StaffController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('employee_id', 'ilike', "%{$search}%")
-                    ->orWhere('position', 'ilike', "%{$search}%")
-                    ->orWhereHas('user', fn ($uq) => $uq->where('name', 'ilike', "%{$search}%"));
+                $q->whereRaw('LOWER(employee_id) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(position) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereHas('user', fn ($uq) => $uq->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"]));
             });
         }
 
@@ -79,7 +79,7 @@ class StaffController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|uuid|exists:users,id|unique:staff_profiles,user_id',
+            'user_id' => 'nullable|uuid|exists:users,id|unique:staff_profiles,user_id',
             'employee_id' => 'required|string|max:50|unique:staff_profiles,employee_id',
             'position' => 'required|string|max:255',
             'department' => 'nullable|string|max:255',
@@ -229,14 +229,13 @@ class StaffController extends Controller
 
         $performances = StaffPerformance::where('staff_id', $id);
 
+        // Operational performance only — attendance/punctuality belong to HRMS.
         $summary = [
             'orders_handled' => (int) $performances->sum('orders_served'),
             'tables_served' => (int) $performances->sum('tables_served'),
             'total_sales' => (float) $performances->sum('total_sales'),
             'tips_earned' => (float) $performances->sum('tips_earned'),
             'average_rating' => round((float) $performances->avg('rating'), 2),
-            'attendance_rate' => round((float) $performances->avg('attendance_rate'), 2),
-            'punctuality_score' => round((float) $performances->avg('punctuality_score'), 2),
             'customer_feedback_count' => (int) $performances->sum('customer_feedback_count'),
         ];
 
@@ -368,6 +367,148 @@ class StaffController extends Controller
         $shifts = \App\Models\StaffShift::all(['id', 'name', 'start_time', 'end_time']);
 
         return $this->success($shifts->toArray());
+    }
+
+    /**
+     * Attendance listing (GET /staff/attendance).
+     *
+     * Supported filters: staff_id, date, date_from, date_to, status,
+     * page/per_page. Returns real attendance records with staff info.
+     */
+    public function attendance(Request $request): JsonResponse
+    {
+        $request->validate([
+            'staff_id' => 'nullable|uuid',
+            'date' => 'nullable|date',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
+            'status' => 'nullable|string|max:30',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $query = Attendance::with('staff.user');
+
+        if ($staffId = $request->input('staff_id')) {
+            $query->where('staff_id', $staffId);
+        }
+
+        if ($date = $request->input('date')) {
+            $query->whereDate('clock_in', $date);
+        }
+
+        if ($from = $request->input('date_from')) {
+            $query->whereDate('clock_in', '>=', $from);
+        }
+
+        if ($to = $request->input('date_to')) {
+            $query->whereDate('clock_in', '<=', $to);
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $records = $query->orderByDesc('clock_in')
+            ->paginate($request->integer('per_page', 15));
+
+        $data = $records->getCollection()->map(fn (Attendance $a) => [
+            'id' => $a->id,
+            'staff_id' => $a->staff_id,
+            'staff' => $a->staff ? [
+                'id' => $a->staff->id,
+                'employee_id' => $a->staff->employee_id,
+                'name' => $a->staff->user?->name,
+            ] : null,
+            'date' => $a->clock_in?->toDateString(),
+            'clock_in' => $a->clock_in?->toISOString(),
+            'clock_out' => $a->clock_out?->toISOString(),
+            'hours_worked' => $a->hours_worked !== null ? (float) $a->hours_worked : null,
+            'status' => $a->status,
+            'notes' => $a->notes,
+            'created_at' => $a->created_at?->toISOString(),
+        ]);
+
+        return $this->success([
+            'items' => $data,
+            'pagination' => [
+                'current_page' => $records->currentPage(),
+                'last_page' => $records->lastPage(),
+                'per_page' => $records->perPage(),
+                'total' => $records->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Update an existing shift schedule (PUT /staff/schedule/{id}).
+     */
+    public function updateSchedule(Request $request, string $id): JsonResponse
+    {
+        $schedule = ShiftSchedule::find($id);
+
+        if (!$schedule) {
+            return $this->notFound('Schedule not found.');
+        }
+
+        $validated = $request->validate([
+            'staff_id' => 'sometimes|uuid|exists:staff_profiles,id',
+            'shift_id' => 'sometimes|uuid|exists:staff_shifts,id',
+            'date' => 'sometimes|date',
+            'status' => 'sometimes|string|in:scheduled,confirmed,completed,absent,swap,cancelled',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $targetStaffId = $validated['staff_id'] ?? $schedule->staff_id;
+        $targetDate = $validated['date'] ?? $schedule->date?->toDateString();
+
+        // Conflict check: same staff may not hold two schedules on one date.
+        $conflict = ShiftSchedule::where('staff_id', $targetStaffId)
+            ->whereDate('date', $targetDate)
+            ->where('id', '!=', $schedule->id)
+            ->exists();
+
+        if ($conflict) {
+            return $this->error('Staff already has a schedule for this date.', 409);
+        }
+
+        $schedule->update($validated);
+
+        $schedule->load(['staff.user', 'shift']);
+
+        return $this->success([
+            'id' => $schedule->id,
+            'date' => $schedule->date?->toDateString(),
+            'status' => $schedule->status,
+            'notes' => $schedule->notes,
+            'staff' => $schedule->staff ? [
+                'id' => $schedule->staff->id,
+                'employee_id' => $schedule->staff->employee_id,
+                'name' => $schedule->staff->user?->name,
+            ] : null,
+            'shift' => $schedule->shift ? [
+                'id' => $schedule->shift->id,
+                'name' => $schedule->shift->name,
+                'start_time' => $schedule->shift->start_time,
+                'end_time' => $schedule->shift->end_time,
+            ] : null,
+            'created_at' => $schedule->created_at?->toISOString(),
+        ], 'Schedule updated successfully.');
+    }
+
+    /**
+     * Delete a shift schedule (DELETE /staff/schedule/{id}).
+     */
+    public function destroySchedule(string $id): JsonResponse
+    {
+        $schedule = ShiftSchedule::find($id);
+
+        if (!$schedule) {
+            return $this->notFound('Schedule not found.');
+        }
+
+        $schedule->delete();
+
+        return $this->noContent();
     }
 
     public function createSchedule(Request $request): JsonResponse

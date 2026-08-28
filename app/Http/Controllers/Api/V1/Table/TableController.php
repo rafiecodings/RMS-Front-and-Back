@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Table;
 
 use App\Http\Controllers\Controller;
 use App\Models\Table;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class TableController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('number', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(number) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $tables = $query->orderBy('number')->get();
@@ -61,27 +62,48 @@ class TableController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'floor_plan_id' => ['required','uuid','exists:floor_plans,id'],
+            // Floor-plan geometry is optional on create — the simple Add Table
+            // flow sends number/capacity/shape only; defaults below keep the
+            // row valid for the floor-plan editor.
+            'floor_plan_id' => ['nullable', 'uuid', 'exists:floor_plans,id'],
             'number' => 'required|string|max:50',
             'capacity' => 'required|integer|min:1',
             'status' => 'sometimes|string|in:available,occupied,reserved,maintenance,needs_cleaning',
             'shape' => 'sometimes|string|in:rectangle,circle,square',
-            'pos_x' => 'required|numeric|min:0',
-            'pos_y' => 'required|numeric|min:0',
-            'width' => 'required|numeric|min:1',
-            'height' => 'required|numeric|min:1',
+            'pos_x' => 'sometimes|numeric|min:0',
+            'pos_y' => 'sometimes|numeric|min:0',
+            'width' => 'sometimes|numeric|min:1',
+            'height' => 'sometimes|numeric|min:1',
             'is_active' => 'sometimes|boolean',
         ]);
 
-        $exists = Table::where('floor_plan_id', $validated['floor_plan_id'])
+        $floorPlanId = $validated['floor_plan_id']
+            ?? \App\Models\FloorPlan::query()->orderBy('created_at')->value('id');
+
+        if (!$floorPlanId) {
+            return $this->error('No floor plan exists yet. Create a floor plan before adding tables.', 422);
+        }
+
+        $exists = Table::where('floor_plan_id', $floorPlanId)
             ->where('number', $validated['number'])
             ->exists();
 
         if ($exists) {
-            return $this->error('Table number already exists in this floor plan.', 409);
+            return $this->error("Table \"{$validated['number']}\" already exists. Please use a different table number.", 409);
         }
 
-        $table = Table::create($validated);
+        $table = Table::create(array_merge($validated, [
+            'floor_plan_id' => $floorPlanId,
+            'status' => $validated['status'] ?? 'available',
+            'pos_x' => $validated['pos_x'] ?? 0,
+            'pos_y' => $validated['pos_y'] ?? 0,
+            'width' => $validated['width'] ?? 80,
+            'height' => $validated['height'] ?? 80,
+        ]));
+
+        \App\Services\AuditLogger::record('table_created', $table, [
+            'description' => "Table {$table->number} created (capacity {$table->capacity})",
+        ]);
 
         return $this->created([
             'id' => $table->id,
@@ -197,6 +219,79 @@ class TableController extends Controller
             'number' => $table->number,
             'status' => $table->status,
         ], 'Table status updated successfully.');
+    }
+
+    /**
+     * Archive a table (is_active = false). Historical orders and
+     * reservations keep their reference — tables are never hard-deleted.
+     *
+     * A table with an active (non-finished) order or a pending/confirmed
+     * reservation cannot be archived; a meaningful 409 explains why.
+     */
+    public function archive(Request $request, string $id): JsonResponse
+    {
+        $table = Table::find($id);
+
+        if (!$table) {
+            return $this->notFound('Table not found.');
+        }
+
+        $activeOrderStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'served', 'on_hold'];
+        $hasActiveOrder = \App\Models\Order::where('table_id', $table->id)
+            ->whereIn('status', $activeOrderStatuses)
+            ->whereNull('archived_at')
+            ->exists();
+
+        if ($hasActiveOrder) {
+            return $this->error(
+                "Table {$table->number} cannot be archived while it has an active order.",
+                409
+            );
+        }
+
+        $hasOpenReservation = \App\Models\Reservation::where('table_id', $table->id)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->exists();
+
+        if ($hasOpenReservation) {
+            return $this->error(
+                "Table {$table->number} cannot be archived while it has pending or confirmed reservations.",
+                409
+            );
+        }
+
+        // Idempotent.
+        if ((bool) $table->is_active) {
+            $table->update(['is_active' => false]);
+        }
+
+        \App\Services\AuditLogger::record('table_archived', $table, [
+            'description' => "Table {$table->number} archived",
+        ]);
+
+        return $this->success([
+            'id' => $table->id,
+            'number' => $table->number,
+            'is_active' => false,
+        ], 'Table archived successfully.');
+    }
+
+    /** Restore an archived table. */
+    public function unarchive(Request $request, string $id): JsonResponse
+    {
+        $table = Table::find($id);
+
+        if (!$table) {
+            return $this->notFound('Table not found.');
+        }
+
+        $table->update(['is_active' => true]);
+
+        return $this->success([
+            'id' => $table->id,
+            'number' => $table->number,
+            'is_active' => true,
+        ], 'Table restored successfully.');
     }
 
     public function merge(Request $request): JsonResponse
@@ -324,5 +419,103 @@ class TableController extends Controller
                 'status' => 'occupied',
             ],
         ], 'Table transferred successfully.');
+    }
+
+    /**
+     * Tables available for a reservation slot (GET /tables/available).
+     *
+     * Contract (useReservations.availableTables):
+     *   params: reservation_date (Y-m-d), reservation_time, party_size?, floor_plan_id?
+     *   returns: { items: Table[] }
+     *
+     * A table is unavailable when:
+     *  - it is inactive, or
+     *  - its capacity is below the requested party size, or
+     *  - it currently holds an "occupied" status and the slot is today, or
+     *  - it has a pending/confirmed reservation on that date whose time
+     *    window overlaps the requested slot (default 90-minute window).
+     * Cancelled / no-show / completed reservations never block availability.
+     */
+    public function available(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'reservation_date' => 'required|date',
+            'reservation_time' => 'required|date_format:H:i,H:i:s,g:i A',
+            'party_size' => 'nullable|integer|min:1',
+            'floor_plan_id' => 'nullable|uuid',
+        ]);
+
+        $date = $validated['reservation_date'];
+        $time = strlen($validated['reservation_time']) > 5
+            ? substr($validated['reservation_time'], 0, 5)
+            : $validated['reservation_time'];
+        $windowMinutes = (int) config('app.reservation_window_minutes', 90);
+
+        // Tables blocked by overlapping reservations on this date.
+        $blockingStatuses = ['pending', 'confirmed'];
+        $blockedTableIds = [];
+
+        $sameDay = \App\Models\Reservation::whereIn('status', $blockingStatuses)
+            ->whereDate('reservation_date', $date)
+            ->get(['table_id', 'reservation_date', 'reservation_time']);
+
+        $slotStart = Carbon::parse("{$date} {$time}");
+        $slotEnd = $slotStart->copy()->addMinutes($windowMinutes);
+
+        foreach ($sameDay as $reservation) {
+            if (! $reservation->table_id || ! $reservation->reservation_time) {
+                continue;
+            }
+
+            $resStart = Carbon::parse($reservation->reservation_date->toDateString().' '.$reservation->reservation_time);
+            $resEnd = $resStart->copy()->addMinutes($windowMinutes);
+
+            if ($slotStart < $resEnd && $resStart < $slotEnd) {
+                $blockedTableIds[] = $reservation->table_id;
+            }
+        }
+
+        $query = Table::query()
+            ->where('is_active', true)
+            ->whereNotIn('id', array_unique($blockedTableIds));
+
+        if ($floorPlanId = $request->input('floor_plan_id')) {
+            $query->where('floor_plan_id', $floorPlanId);
+        }
+
+        if ($partySize = (int) ($validated['party_size'] ?? 0)) {
+            $query->where('capacity', '>=', $partySize);
+        }
+
+        // For walk-in / today slots, physically occupied tables are not free.
+        if ($date === now()->toDateString()) {
+            $now = now();
+            if ($now->between($slotStart, $slotEnd)) {
+                $query->whereNot('status', 'occupied');
+            }
+        }
+
+        $tables = $query->orderBy('capacity')
+            ->orderBy('number')
+            ->get();
+
+        $data = $tables->map(fn (Table $t) => [
+            'id' => $t->id,
+            'number' => $t->number,
+            'capacity' => $t->capacity,
+            'status' => $t->status,
+            'shape' => $t->shape,
+            'pos_x' => (float) $t->pos_x,
+            'pos_y' => (float) $t->pos_y,
+            'width' => (float) $t->width,
+            'height' => (float) $t->height,
+            'is_active' => $t->is_active,
+            'floor_plan' => $t->floorPlan ? [
+                'id' => $t->floorPlan->id,
+                'name' => $t->floorPlan->name,
+            ] : null,
+        ]);
+
+        return $this->success(['items' => $data]);
     }
 }

@@ -21,7 +21,7 @@ class CategoryController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $categories = $query->orderBy('sort_order')

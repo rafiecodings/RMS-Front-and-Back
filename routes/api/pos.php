@@ -13,9 +13,17 @@ Route::middleware(['auth:sanctum', 'role:admin,manager,cashier'])->group(functio
         Route::post('/generate', [InvoiceController::class, 'generate']);
         Route::get('/{id}', [InvoiceController::class, 'show']);
         Route::get('/{id}/receipt', [InvoiceController::class, 'receipt']);
+        // Frontend contract alias: delegates to the SAME refund implementation
+        // as POST /payments/{invoiceId}/refund (no duplicated business logic).
+        Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund']);
     });
 
     Route::prefix('payments')->group(function () {
+        // Literal segments before /{invoiceId} posts; no shadowing risk but
+        // grouped here for readability.
+        Route::get('/', [PaymentController::class, 'index']);
+        Route::get('/stats', [PaymentController::class, 'stats']);
+        Route::get('/refunds', [PaymentController::class, 'refunds']);
         Route::post('/{invoiceId}/pay', [PaymentController::class, 'pay']);
         Route::post('/{invoiceId}/split', [PaymentController::class, 'splitPayment']);
         Route::post('/{invoiceId}/refund', [PaymentController::class, 'refund']);

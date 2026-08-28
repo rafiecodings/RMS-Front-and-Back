@@ -17,8 +17,8 @@ class OutletController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('address', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(address) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 

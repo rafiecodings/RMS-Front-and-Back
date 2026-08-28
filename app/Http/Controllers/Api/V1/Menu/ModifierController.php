@@ -20,7 +20,7 @@ class ModifierController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $modifiers = $query->orderBy('created_at', 'desc')->get();

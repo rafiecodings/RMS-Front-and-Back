@@ -35,5 +35,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Never spend provider quota from the test suite. Integration tests
+             that exercise Timecho override this via config() + Http::fake(). -->
+        <env name="TIMECHO_API_KEY" value=""/>
+        <env name="GEMINI_API_KEY" value=""/>
     </php>
 </phpunit>

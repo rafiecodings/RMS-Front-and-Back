@@ -21,9 +21,9 @@ class SupplierController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('contact_person', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%");
+                $q->whereRaw('LOWER(name) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(contact_person) LIKE ?', ["%".strtolower($search)."%"])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 

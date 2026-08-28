@@ -18,12 +18,14 @@ class KotTicket extends BaseModel
         'estimated_minutes',
         'started_at',
         'completed_at',
+        'archived_at',
     ];
 
     protected $casts = [
         'estimated_minutes' => 'integer',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     public function getTable(): string

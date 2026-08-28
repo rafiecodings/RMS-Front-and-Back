@@ -21,6 +21,25 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->loadHelpers();
         $this->configureLoginRateLimiter();
+        $this->configureRoutePatterns();
+    }
+
+    /**
+     * Global route parameter constraints.
+     *
+     * Every API entity uses UUID primary keys (HasUuid trait). Constraining
+     * these patterns means a malformed ID fails ROUTE MATCHING and returns
+     * 404, instead of reaching SQL and triggering PostgreSQL error 22P02
+     * (invalid uuid) as a 500. Explicit ->whereUuid(...) on individual routes
+     * still takes precedence and remains compatible with this.
+     */
+    protected function configureRoutePatterns(): void
+    {
+        $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+
+        foreach (['id', 'invoiceId', 'menuItemId', 'itemId', 'stationId'] as $param) {
+            \Illuminate\Support\Facades\Route::pattern($param, $uuid);
+        }
     }
 
     protected function configureLoginRateLimiter(): void

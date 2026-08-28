@@ -20,7 +20,7 @@ class GiftCardController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('code', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(code) LIKE ?', ["%".strtolower($search)."%"]);
         }
 
         $giftCards = $query->orderBy('created_at', 'desc')

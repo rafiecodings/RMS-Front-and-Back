@@ -17,8 +17,6 @@ import { formatCurrency, formatLabel } from "@/lib/utils";
 import { customerDisplayName, tableDisplayName } from "@/lib/utils/orderDisplay";
 import type { Order } from "@/lib/types";
 
-const EXCLUDED_STATUSES = ["cancelled", "completed"];
-
 const PAYMENT_BADGE: Record<string, string> = {
   unpaid: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   partial:
@@ -42,7 +40,11 @@ export function ExistingOrderDialog({
   const orders = useMemo(() => {
     const all = (data?.data?.data ?? []) as Order[];
     return all
-      .filter((o) => !EXCLUDED_STATUSES.includes(o.status))
+      .filter(
+        (o) =>
+          o.status === "served" &&
+          (o.payment_status === "unpaid" || o.payment_status === "partial")
+      )
       .filter((o) =>
         query === ""
           ? true
@@ -59,8 +61,8 @@ export function ExistingOrderDialog({
         <DialogHeader>
           <DialogTitle>Select an Order to Pay</DialogTitle>
           <DialogDescription>
-            Unpaid or partially paid orders appear here. Selecting one loads it
-            for payment without recreating it.
+            Only served orders with an unpaid balance appear here. Selecting
+            one loads its recorded details without recreating it.
           </DialogDescription>
         </DialogHeader>
 
@@ -82,7 +84,7 @@ export function ExistingOrderDialog({
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
               <Receipt className="h-8 w-8 opacity-40" />
-              <p className="text-sm">No unpaid orders found</p>
+              <p className="text-sm">No served orders ready for payment</p>
             </div>
           ) : (
             orders.map((order) => (

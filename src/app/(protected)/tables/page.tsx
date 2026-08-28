@@ -81,7 +81,6 @@ const STATUS_DOT: Record<TableStatus, string> = {
 
 export default function TablesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [deleteTarget, setDeleteTarget] = useState<TableType | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<TableType | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<TableType | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -120,17 +119,6 @@ export default function TablesPage() {
       }
     );
     setStatusActionTarget(null);
-  }
-
-  function handleDeleteTable() {
-    if (!deleteTarget) return;
-    tables.remove.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        toast.success(`Table T${deleteTarget.number} deleted`);
-        setDeleteTarget(null);
-      },
-      onError: () => toast.error("Failed to delete table"),
-    });
   }
 
   function handleArchiveTable() {
@@ -180,7 +168,11 @@ export default function TablesPage() {
           toast.success("Table created");
           setShowTableDialog(false);
         },
-        onError: () => toast.error("Failed to create table"),
+        onError: (error) => {
+          const message = (error as { response?: { data?: { message?: string } } })
+            .response?.data?.message;
+          toast.error(message || "Failed to create table");
+        },
       });
     }
   }
@@ -244,7 +236,6 @@ export default function TablesPage() {
             setEditingTable(t);
             setShowTableDialog(true);
           }}
-          onDelete={(t) => setDeleteTarget(t)}
           onArchive={(t) => setArchiveTarget(t)}
           onRestore={(t) => setRestoreTarget(t)}
         />
@@ -259,17 +250,6 @@ export default function TablesPage() {
             </p>
           </div>
         )}
-
-        <ConfirmDialog
-          open={!!deleteTarget}
-          onOpenChange={(open) => !open && setDeleteTarget(null)}
-          title="Delete Table"
-          description={`Are you sure you want to delete table T${deleteTarget?.number}? This action cannot be undone.`}
-          confirmText="Delete"
-          variant="destructive"
-          onConfirm={handleDeleteTable}
-          isLoading={tables.remove.isPending}
-        />
 
         <ConfirmDialog
           open={!!statusActionTarget}
@@ -391,7 +371,6 @@ function TableGridView({
   onStatusChange,
   onView,
           onEdit,
-          onDelete,
           onArchive,
           onRestore,
         }: {
@@ -399,7 +378,6 @@ function TableGridView({
           onStatusChange?: (table: TableType, status: TableStatus) => void;
           onView?: (table: TableType) => void;
           onEdit?: (table: TableType) => void;
-          onDelete?: (table: TableType) => void;
           onArchive?: (table: TableType) => void;
           onRestore?: (table: TableType) => void;
         }) {
@@ -485,15 +463,6 @@ function TableGridView({
                   >
                     <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
                     Restore
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    onClick={() => onDelete(table)}
-                    className="text-destructive"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-2 rotate-45" />
-                    Delete
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

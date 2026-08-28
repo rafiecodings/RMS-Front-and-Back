@@ -25,7 +25,7 @@ export function useKitchenOrders() {
     queryFn: () =>
       api
         .get<ApiResponse<Kot[]>>("/kot", {
-          params: { status: "received,in_progress,ready,completed", per_page: 200 },
+          params: { status: "received,in_progress,ready", per_page: 200 },
         })
         .then((res) => unwrapArray<Kot>(res.data)),
     refetchInterval: 5000,

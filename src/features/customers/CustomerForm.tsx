@@ -26,7 +26,6 @@ export function CustomerForm({
 }: CustomerFormProps) {
   const [formData, setFormData] = useState<CustomerFormData>({
     name: initialData?.name ?? "",
-    customer_type: initialData?.customer_type ?? "walk_in",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -54,7 +53,6 @@ export function CustomerForm({
     if (Object.keys(errs).length === 0) {
       onSubmit({
         name: formData.name.trim(),
-        customer_type: formData.customer_type,
       });
     }
   }

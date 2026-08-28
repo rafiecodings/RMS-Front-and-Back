@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, XCircle, Archive, UtensilsCrossed, ShoppingBag, Truck, HelpCircle } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, XCircle, Archive, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
 import type { Order, OrderType } from "@/lib/types";
 import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -79,7 +79,8 @@ export function OrderTable({
           <TableRow>
             <TableHead>Order</TableHead>
             <TableHead className="hidden md:table-cell">Type</TableHead>
-            <TableHead className="hidden md:table-cell">Table / Customer</TableHead>
+            <TableHead className="hidden md:table-cell">Table</TableHead>
+            <TableHead className="hidden lg:table-cell">Customer</TableHead>
             <TableHead className="text-center">Items</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead>Status</TableHead>
@@ -109,12 +110,13 @@ export function OrderTable({
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
-                  {order.table
-                    ? `T${order.table.number}`
-                    : order.customer?.name ?? "—"}
+                  {order.table ? `T${order.table.number}` : "—"}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                  {order.customer?.name ?? "Walk-in"}
                 </TableCell>
                 <TableCell className="text-center text-muted-foreground">
-                  {order.items?.length ?? 0}
+                  {order.items_count ?? order.items?.length ?? 0}
                 </TableCell>
                 <TableCell className="text-right font-semibold">
                   {formatCurrency(order.total_amount)}

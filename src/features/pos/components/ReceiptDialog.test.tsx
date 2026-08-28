@@ -72,8 +72,11 @@ describe("ReceiptDialog totals", () => {
     renderReceipt({ payments });
 
     expect(rowValue("Subtotal")).toContain("₱480");
+    expect(rowValue("VATable Sales")).toContain("₱480");
     expect(rowValue("Total")).toContain("₱537.6");
     expect(rowValue("Amount Paid")).toContain("₱537.6");
+    expect(screen.getByText("Adobo")).toBeInTheDocument();
+    expect(screen.getByText(/2 ×/)).toBeInTheDocument();
     expect(screen.queryByText("Change")).not.toBeInTheDocument();
   });
 

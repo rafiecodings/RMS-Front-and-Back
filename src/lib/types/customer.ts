@@ -1,4 +1,4 @@
-export type CustomerType = "walk_in" | "regular";
+export type CustomerType = "registered";
 
 export interface Customer {
   id: string;
@@ -37,5 +37,4 @@ export interface CustomerReservation {
 
 export interface CustomerFormData {
   name: string;
-  customer_type: CustomerType;
 }

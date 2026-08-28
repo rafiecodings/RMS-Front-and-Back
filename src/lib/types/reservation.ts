@@ -33,7 +33,7 @@ export type ReservationStatus =
 
 export interface ReservationFormData {
   customer_id?: string;
-  guest_name: string;
+  guest_name?: string;
   guest_phone?: string;
   guest_email?: string;
   table_id?: string;

@@ -95,6 +95,7 @@ export function PaymentDialog({
   const tendered = isCash ? Number(amountReceived || 0) : totalAmount;
   const insufficient = isCash && amountReceived !== "" && tendered < totalAmount - 0.001;
   const change = isCash && tendered >= totalAmount ? Math.round((tendered - totalAmount) * 100) / 100 : 0;
+  const vatableSales = Math.max(0, Math.round((totalAmount - vatAmount) * 100) / 100);
   const canProcess =
     !isProcessing &&
     (isCash
@@ -228,6 +229,10 @@ export function PaymentDialog({
                 <span>-{formatCurrency(discountAmount)}</span>
               </div>
             )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">VATable Sales</span>
+              <span>{formatCurrency(vatableSales)}</span>
+            </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
                 VAT ({taxRate}%, inclusive)

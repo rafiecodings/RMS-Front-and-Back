@@ -36,7 +36,7 @@ function StatCard({
 
 export function CustomerStats({ customers }: { customers: Customer[] }) {
   const total = customers.length;
-  const walkIn = customers.filter((c) => c.customer_type === "walk_in").length;
+  const active = customers.filter((c) => c.is_active).length;
   const totalOrders = customers.reduce((sum, c) => sum + (c.total_orders ?? 0), 0);
   const totalReservations = customers.reduce(
     (sum, c) => sum + (c.total_reservations ?? 0),
@@ -52,8 +52,8 @@ export function CustomerStats({ customers }: { customers: Customer[] }) {
         iconColor="bg-blue-500/10 text-blue-600"
       />
       <StatCard
-        title="Walk-in Customers"
-        value={String(walkIn)}
+        title="Active Customers"
+        value={String(active)}
         icon={UserCheck}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />

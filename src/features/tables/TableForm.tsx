@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/shared";
 import type { Table, TableFormData } from "@/lib/types";
 
@@ -16,7 +15,6 @@ interface TableFormProps {
 }
 
 interface FormErrors {
-  name?: string;
   number?: string;
   capacity?: string;
 }
@@ -28,13 +26,9 @@ export function TableForm({
   submitLabel = "Save Table",
 }: TableFormProps) {
   const [formData, setFormData] = useState<TableFormData>({
-    name: initialData?.name ?? "",
     number: initialData?.number ?? "",
     capacity: initialData?.capacity ?? 4,
     shape: initialData?.shape ?? "rectangle",
-    zone: initialData?.zone ?? "",
-    section: initialData?.section ?? "",
-    is_wheelchair_accessible: initialData?.is_wheelchair_accessible ?? false,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -42,9 +36,6 @@ export function TableForm({
 
   function validate(): FormErrors {
     const errs: FormErrors = {};
-    if (!formData.name.trim()) {
-      errs.name = "Table name is required";
-    }
     if (!formData.number.trim()) {
       errs.number = "Table number is required";
     }
@@ -64,13 +55,11 @@ export function TableForm({
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
-    setTouched({ name: true, number: true, capacity: true });
+    setTouched({ number: true, capacity: true });
     if (Object.keys(errs).length === 0) {
       onSubmit({
         ...formData,
-        name: formData.name.trim(),
-        zone: formData.zone?.trim() || undefined,
-        section: formData.section?.trim() || undefined,
+        number: formData.number.trim(),
       });
     }
   }
@@ -78,23 +67,6 @@ export function TableForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="name">Table Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, name: e.target.value }))
-            }
-            onBlur={() => handleBlur("name")}
-            placeholder="e.g. Window Seat, Patio 1"
-            aria-invalid={touched.name && !!errors.name}
-          />
-          {touched.name && errors.name && (
-            <p className="text-xs text-destructive">{errors.name}</p>
-          )}
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="number">Table Number *</Label>
           <Input
@@ -141,32 +113,6 @@ export function TableForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="zone">Zone</Label>
-          <Input
-            id="zone"
-            value={formData.zone}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, zone: e.target.value }))
-            }
-            placeholder="e.g. Indoor, Patio, VIP"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="section">Section</Label>
-          <Input
-            id="section"
-            value={formData.section}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, section: e.target.value }))
-            }
-            placeholder="e.g. A, B, Near Bar"
-          />
-        </div>
-
-        <div className="space-y-2">
           <Label htmlFor="shape">Shape</Label>
           <select
             id="shape"
@@ -181,19 +127,6 @@ export function TableForm({
             <option value="square">Square</option>
           </select>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={formData.is_wheelchair_accessible}
-          onCheckedChange={(checked) =>
-            setFormData((prev) => ({
-              ...prev,
-              is_wheelchair_accessible: !!checked,
-            }))
-          }
-        />
-        <span className="text-sm">Wheelchair accessible</span>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

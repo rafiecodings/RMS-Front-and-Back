@@ -8,7 +8,6 @@ import {
   PosHeader,
   ProductGrid,
   CartPanel,
-  DiscountDialog,
   PaymentDialog,
   ReceiptDialog,
   ExistingOrderDialog,
@@ -17,15 +16,14 @@ import { useOrders, useOrder } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { canAccessRevenueReport } from "@/lib/utils/permissions";
 import type { MenuItem, OrderType, Order } from "@/lib/types";
-import type { PosDiscount, PaymentLine as PosPaymentLine, CartItemType } from "@/features/pos";
+import type { PaymentLine as PosPaymentLine, CartItemType } from "@/features/pos";
 
 export default function PosPage() {
   const router = useRouter();
   const { user } = useAuth();
   const cart = usePosCart();
-  const { create: createOrder, addPayment } = useOrders();
+  const { addPayment } = useOrders();
 
-  const [discountOpen, setDiscountOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [existingDialogOpen, setExistingDialogOpen] = useState(false);
@@ -40,6 +38,7 @@ export default function PosPage() {
   const [completedOrderType, setCompletedOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [completedCustomerName, setCompletedCustomerName] = useState("");
   const [completedTableNumber, setCompletedTableNumber] = useState("");
+  const [completedDiscountName, setCompletedDiscountName] = useState<string | undefined>();
   // Server-computed figures captured at payment time so the receipt always
   // mirrors the recorded transaction/invoice instead of client cart math.
   const [completedItems, setCompletedItems] = useState<CartItemType[]>([]);
@@ -60,6 +59,7 @@ export default function PosPage() {
     setCompletedPayments([]);
     setCompletedItems([]);
     setCompletedTotals(null);
+    setCompletedDiscountName(undefined);
     setCompletedDue(undefined);
     setCompletedPrevPaid(undefined);
   }
@@ -77,109 +77,6 @@ export default function PosPage() {
     },
     [cart]
   );
-
-  function handleApplyDiscount(discount?: PosDiscount) {
-    cart.setDiscount(discount);
-    if (discount) {
-      toast.success("Discount applied");
-    } else {
-      toast.success("Discount removed");
-    }
-  }
-
-  function handleServiceChargeInput() {
-    const input = window.prompt(
-      "Enter service charge percentage (0-100):",
-      String(cart.state.serviceChargePercent)
-    );
-    if (input === null) return;
-    const val = parseFloat(input);
-    if (!isNaN(val) && val >= 0 && val <= 100) {
-      cart.setServiceCharge(val);
-      toast.success(
-        val > 0 ? `Service charge set to ${val}%` : "Service charge removed"
-      );
-    }
-  }
-
-  async function payNewOrder(
-    payments: PosPaymentLine[],
-    orderType: OrderType,
-    customerId?: string,
-    tableId?: string
-  ) {
-    const orderResult = await createOrder.mutateAsync({
-      order_type: orderType,
-      customer_id: customerId || undefined,
-      table_id: tableId || undefined,
-      notes: cart.state.notes,
-      // Server is authoritative for discount/promotion selection
-      // (non-stacking, highest-eligible active promotion is applied).
-      auto_apply_promotions: true,
-      items: cart.state.items.map((item) => {
-        const modifierIds: string[] = [];
-        return {
-          menu_item_id: item.menu_item_id,
-          variant: undefined,
-          quantity: item.quantity,
-          unit_price: item.price,
-          notes: item.notes,
-          ...(modifierIds.length > 0
-            ? { modifier_ids: modifierIds }
-            : {}),
-        };
-      }),
-    });
-
-    // Server-computed totals are authoritative (tax rate, service charge and
-    // discount clamping are applied backend-side via PricingService).
-    const orderData = orderResult.data.data;
-    const orderId = orderData.id;
-    const backendTotal = orderData.total_amount as number;
-
-    setCompletedCustomerName(orderData.customer?.name ?? "");
-    setCompletedTableNumber(orderData.table?.number ?? "");
-    setCompletedItems(
-      (orderData.items ?? []).map((i) => ({
-        id: i.id,
-        menu_item_id: i.menu_item_id,
-        name: i.name ?? i.menu_item_name ?? "Unnamed item",
-        price: i.unit_price,
-        quantity: i.quantity,
-      }))
-    );
-    setCompletedTotals({
-      subtotal: orderData.subtotal,
-      discountAmount: orderData.discount_amount ?? 0,
-      vatAmount: orderData.tax_amount ?? 0,
-      serviceChargeAmount: orderData.service_charge ?? 0,
-      totalAmount: backendTotal,
-    });
-    setCompletedDue(undefined);
-    setCompletedPrevPaid(undefined);
-
-    // One order → one payment → one method. The backend computes cash change
-    // from the TENDERED amount, so we must forward the exact amount emitted by
-    // the dialog (do NOT cap it — capping would erase the returned change).
-    const payment = payments[0];
-    await addPayment.mutateAsync({
-      id: orderId,
-      data: {
-        payment_method: payment.method,
-        amount: Math.round(payment.amount * 100) / 100,
-        reference: payment.reference,
-      },
-    });
-
-    setCompletedOrderNumber(orderData.order_number);
-    setCompletedPayments(payments);
-    setCompletedOrderType(
-      orderType as "dine_in" | "takeaway"
-    );
-    setPaymentOpen(false);
-    setReceiptOpen(true);
-    toast.success("Payment processed successfully");
-  }
 
   async function payExistingOrder(payments: PosPaymentLine[]) {
     if (!existingOrder) return;
@@ -212,6 +109,7 @@ export default function PosPage() {
       serviceChargeAmount: existingOrder.service_charge ?? 0,
       totalAmount: backendTotal,
     });
+    setCompletedDiscountName(existingOrder.applied_discount?.name);
     setCompletedDue(dueNow);
     setCompletedPrevPaid(alreadyPaid);
 
@@ -240,19 +138,25 @@ export default function PosPage() {
 
   async function handleProcessPayment(
     payments: PosPaymentLine[],
-    orderType: OrderType,
-    customerId?: string,
-    tableId?: string
+    _orderType: OrderType,
+    _customerId?: string,
+    _tableId?: string
   ) {
     try {
       const validPayments = payments.filter((p) => p.amount > 0);
       if (validPayments.length === 0) return;
 
-      if (existingOrder) {
-        await payExistingOrder(validPayments);
-      } else {
-        await payNewOrder(validPayments, orderType, customerId, tableId);
+      // POS is an EXISTING-order settlement screen. It must NEVER create a new
+      // restaurant order — order creation belongs to the Waiter/Orders workflow.
+      // The cart's Pay button is intentionally disabled until an existing
+      // served/unpaid order is loaded (see CartPanel), so reaching this guard
+      // is defensive only and must not spawn an orphan Pending Order.
+      if (!existingOrder) {
+        toast.error("Load an existing served order before settling payment.");
+        return;
       }
+
+      await payExistingOrder(validPayments);
     } catch (error) {
       const message =
         (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
@@ -345,19 +249,15 @@ export default function PosPage() {
           <CartPanel
             items={cart.state.items}
             subtotal={cart.computed.subtotal}
-            discount={cart.state.discount}
             discountAmount={cart.computed.discountAmount}
             vatAmount={cart.computed.vatAmount}
             serviceChargeAmount={cart.computed.serviceChargeAmount}
-            serviceChargePercent={cart.state.serviceChargePercent}
+            serviceChargePercent={cart.computed.serviceChargePercent}
             totalAmount={cart.computed.totalAmount}
             itemCount={cart.computed.itemCount}
             onUpdateQuantity={cart.updateQuantity}
             onRemove={cart.removeItem}
             onUpdateNotes={cart.updateItemNotes}
-            onEditDiscount={() => setDiscountOpen(true)}
-            onEditServiceCharge={handleServiceChargeInput}
-            onPay={() => setPaymentOpen(true)}
             existingOrder={existingOrder}
             onSelectExistingOrder={() => setExistingDialogOpen(true)}
             onClearExistingOrder={() => setExistingOrderId(null)}
@@ -365,14 +265,6 @@ export default function PosPage() {
           />
         </div>
       </div>
-
-      <DiscountDialog
-        open={discountOpen}
-        onOpenChange={setDiscountOpen}
-        currentDiscount={cart.state.discount}
-        subtotal={cart.computed.subtotal}
-        onApply={handleApplyDiscount}
-      />
 
       <PaymentDialog
         open={paymentOpen}
@@ -383,7 +275,7 @@ export default function PosPage() {
         serviceChargeAmount={dialogTotals.serviceChargeAmount}
         subtotal={dialogTotals.subtotal}
         onProcessPayment={handleProcessPayment}
-        isProcessing={createOrder.isPending || addPayment.isPending}
+        isProcessing={addPayment.isPending}
         existingOrder={existingOrder}
       />
 
@@ -394,6 +286,7 @@ export default function PosPage() {
         items={receiptItems}
         subtotal={receiptTotals.subtotal}
         discountAmount={receiptTotals.discountAmount}
+        discountName={completedDiscountName}
         vatAmount={receiptTotals.vatAmount}
         serviceChargeAmount={receiptTotals.serviceChargeAmount}
         totalAmount={receiptTotals.totalAmount}

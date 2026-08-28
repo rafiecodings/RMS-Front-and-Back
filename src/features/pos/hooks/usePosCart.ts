@@ -126,16 +126,13 @@ export function usePosCart() {
       return sum + (item.price + modifierTotal) * item.quantity;
     }, 0);
 
-    let discountAmount = 0;
-    if (state.discount) {
-      discountAmount =
-        state.discount.type === "percentage"
-          ? subtotal * (state.discount.value / 100)
-          : Math.min(state.discount.value, subtotal);
-    }
-
-    const taxableAmount = subtotal - discountAmount;
-    const serviceChargeAmount = taxableAmount * (state.serviceChargePercent / 100);
+    // Promotion eligibility and savings are unknown until the backend prices
+    // the order. Never preview a browser-authored discount as authoritative.
+    const discountAmount = 0;
+    const serviceChargePercent = settings?.service_charge_enabled
+      ? Number(settings.default_service_charge ?? 0)
+      : 0;
+    const serviceChargeAmount = subtotal * (serviceChargePercent / 100);
 
     // VAT is computed with the authoritative inclusive/exclusive formula
     // (mirrors PricingService::orderTotals on the backend) so the cart never
@@ -155,10 +152,11 @@ export function usePosCart() {
       discountAmount: totals.discountAmount,
       vatAmount: totals.vatAmount,
       serviceChargeAmount: totals.serviceChargeAmount,
+      serviceChargePercent,
       totalAmount: totals.totalAmount,
       itemCount,
     };
-  }, [state.items, state.discount, state.serviceChargePercent, taxRate, vatInclusive]);
+  }, [state.items, settings, taxRate, vatInclusive]);
 
   return {
     state,

@@ -20,7 +20,6 @@ export default function CustomersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"active" | "archived" | "all">("active");
   const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Customer | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,7 +35,7 @@ export default function CustomersPage() {
     ...(statusFilter !== "all" && { is_active: statusFilter === "active" }),
   }), [page, debouncedSearch, statusFilter]);
 
-  const { list, create, remove, archive } = useCustomers(params);
+  const { list, create, archive } = useCustomers(params);
 
   const customers = list.data?.data?.data ?? [];
   const meta = list.data?.data?.meta;
@@ -60,21 +59,6 @@ export default function CustomersPage() {
         const msg =
           (error as { response?: { data?: { message?: string } } }).response?.data?.message;
         toast.error(msg || "Failed to create customer");
-      },
-    });
-  }
-
-function handleDeleteConfirm() {
-    if (!deleteTarget) return;
-    remove.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        toast.success("Customer deleted successfully");
-        setDeleteTarget(null);
-      },
-      onError: (error) => {
-        const msg =
-          (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-        toast.error(msg || "Failed to delete customer");
       },
     });
   }
@@ -139,7 +123,6 @@ function handleDeleteConfirm() {
 <CustomerTable
           customers={customers}
           isLoading={list.isLoading}
-          onDelete={canModify ? (c) => setDeleteTarget(c) : undefined}
           onArchive={canModify ? (c) => setArchiveTarget(c) : undefined}
         />
 
@@ -195,16 +178,6 @@ function handleDeleteConfirm() {
         </DialogContent>
       </Dialog>
 
-<ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Customer"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmText="Delete Customer"
-        variant="destructive"
-        onConfirm={handleDeleteConfirm}
-        isLoading={remove.isPending}
-      />
       <ConfirmDialog
         open={!!archiveTarget}
         onOpenChange={(open) => !open && setArchiveTarget(null)}

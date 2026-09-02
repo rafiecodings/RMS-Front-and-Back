@@ -68,7 +68,7 @@ class StockController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::lockForUpdate()->find($validated['ingredient_id']);
 
             $ingredient->increment('current_stock', $validated['quantity']);
 
@@ -108,7 +108,7 @@ class StockController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::lockForUpdate()->find($validated['ingredient_id']);
 
             if ((float) $ingredient->current_stock < $validated['quantity']) {
                 return ['error' => 'Insufficient stock.'];
@@ -155,7 +155,7 @@ class StockController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $ingredient = Ingredient::find($validated['ingredient_id']);
+            $ingredient = Ingredient::lockForUpdate()->find($validated['ingredient_id']);
             $previousStock = (float) $ingredient->current_stock;
             $adjustment = $validated['new_stock'] - $previousStock;
 
@@ -197,8 +197,8 @@ class StockController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
-            $fromIngredient = Ingredient::find($validated['from_ingredient_id']);
-            $toIngredient = Ingredient::find($validated['to_ingredient_id']);
+            $fromIngredient = Ingredient::lockForUpdate()->find($validated['from_ingredient_id']);
+            $toIngredient = Ingredient::lockForUpdate()->find($validated['to_ingredient_id']);
 
             if ((float) $fromIngredient->current_stock < $validated['quantity']) {
                 return ['error' => 'Insufficient stock in source ingredient.'];

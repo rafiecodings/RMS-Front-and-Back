@@ -25,46 +25,51 @@ class OrderWorkflowService
         }
 
         return DB::transaction(function () use ($order) {
-            $kot = KotTicket::create([
-                'kot_number' => generate_kot_number(),
-                'order_id' => $order->id,
-                'status' => 'received',
-                'priority' => 'normal',
-                'station' => null,
-                'estimated_minutes' => null,
-                'started_at' => null,
-                'completed_at' => null,
-            ]);
-
-            $order->items()->get()->each(function ($item) use ($kot) {
-                KotTicketItem::create([
-                    'kot_ticket_id' => $kot->id,
-                    'order_item_id' => $item->id,
-                    'name' => $item->name,
-                    'quantity' => $item->quantity,
-                    'notes' => $item->notes,
-                    'status' => 'pending',
-                ]);
-            });
-
-            return $kot->load('items');
+            return $this->createKotBody($order);
         });
     }
 
-    /**
-     * Consume recipe inventory for an order exactly ONCE.
-     *
-     * This is intended to run when the order is CONFIRMED (kitchen ticket
-     * generated). Settlement (payment) and the completed-status transition
-     * must NOT deduct again — idempotency is enforced by the existing
-     * outward StockMovement guard below, so a retry or a later completion
-     * is a safe no-op.
-     *
-     * If stock is genuinely insufficient the caller (confirm) catches
-     * InsufficientStockException and fails the confirmation gracefully
-     * before kitchen preparation begins.
-     */
-    public function deductInventoryForCompletedOrder(Order $order, User $user): array
+    private function createKotBody(Order $order): KotTicket
+    {
+        $kot = KotTicket::create([
+            'kot_number' => generate_kot_number(),
+            'order_id' => $order->id,
+            'status' => 'received',
+            'priority' => 'normal',
+            'station' => null,
+            'estimated_minutes' => null,
+            'started_at' => null,
+            'completed_at' => null,
+        ]);
+
+        $order->items()->get()->each(function ($item) use ($kot) {
+            KotTicketItem::create([
+                'kot_ticket_id' => $kot->id,
+                'order_item_id' => $item->id,
+                'name' => $item->name,
+                'quantity' => $item->quantity,
+                'notes' => $item->notes,
+                'status' => 'pending',
+            ]);
+        });
+
+        return $kot->load('items');
+    }
+
+    public function confirmOrder(Order $order, User $user): array
+    {
+        return DB::transaction(function () use ($order, $user) {
+            $deducted = $this->deductInventoryForCompletedOrder($order, $user, true);
+
+            if (($deducted['skipped'] ?? false) || ($deducted['deducted'] ?? false)) {
+                $this->createKotBody($order);
+            }
+
+            return $deducted;
+        });
+    }
+
+    public function deductInventoryForCompletedOrder(Order $order, User $user, bool $skipTransaction = false): array
     {
         if (in_array($order->status, ['cancelled', 'voided'], true)) {
             return ['skipped' => true, 'reason' => 'Order is cancelled or voided.'];
@@ -89,7 +94,7 @@ class OrderWorkflowService
             return ['skipped' => true, 'reason' => 'No recipes found for order items.'];
         }
 
-        return DB::transaction(function () use ($order, $user, $requirements, $allowNegative) {
+        $execute = function () use ($order, $user, $requirements, $allowNegative) {
             $movements = [];
             $insufficient = [];
 
@@ -134,7 +139,13 @@ class OrderWorkflowService
                 'movements' => $movements,
                 'insufficient' => $insufficient,
             ];
-        });
+        };
+
+        if ($skipTransaction) {
+            return $execute();
+        }
+
+        return DB::transaction($execute);
     }
 
     public function reverseInventoryForCancelledOrder(Order $order, User $user): array

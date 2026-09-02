@@ -8,11 +8,48 @@ use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use App\Models\Customer;
 use App\Models\Table;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ReservationController extends Controller
 {
+    private const BLOCKING_STATUSES = ['pending', 'confirmed'];
+
+    private function overlapsActiveReservation(
+        string $tableId,
+        string $date,
+        string $time,
+        ?string $excludeId = null
+    ): bool {
+        $windowMinutes = (int) config('app.reservation_window_minutes', 90);
+        $slotStart = Carbon::parse("{$date} {$time}");
+        $slotEnd = $slotStart->copy()->addMinutes($windowMinutes);
+
+        $query = Reservation::where('table_id', $tableId)
+            ->whereIn('status', self::BLOCKING_STATUSES)
+            ->whereDate('reservation_date', $date);
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        foreach ($query->get() as $reservation) {
+            if (! $reservation->reservation_time) {
+                continue;
+            }
+            $resStart = Carbon::parse(
+                $reservation->reservation_date->toDateString().' '.$reservation->reservation_time
+            );
+            $resEnd = $resStart->copy()->addMinutes($windowMinutes);
+
+            if ($slotStart->lt($resEnd) && $resStart->lt($slotEnd)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     public function index(Request $request): JsonResponse
     {
         $query = Reservation::with(['customer', 'table']);
@@ -105,6 +142,25 @@ class ReservationController extends Controller
             $validated['guest_name'] = $customer->name;
             $validated['guest_phone'] = $customer->phone;
             $validated['guest_email'] = $customer->email;
+        }
+
+        if (! empty($validated['table_id'])) {
+            $table = Table::where('id', $validated['table_id'])->where('is_active', true)->first();
+            if (! $table) {
+                return $this->error('The selected table is not available.', 422);
+            }
+            if ((int) $validated['party_size'] > (int) $table->capacity) {
+                return $this->error(
+                    'Party size exceeds the capacity of the selected table.',
+                    422
+                );
+            }
+            if ($this->overlapsActiveReservation($validated['table_id'], $validated['reservation_date'], $validated['reservation_time'])) {
+                return $this->error(
+                    'This table is already reserved for the selected time.',
+                    409
+                );
+            }
         }
 
         $validated['reservation_number'] = 'RES-' . strtoupper(uniqid());
@@ -311,6 +367,28 @@ class ReservationController extends Controller
             }
             if (! is_string($guestPhone) || trim($guestPhone) === '') {
                 return $this->error('Guest phone is required for a guest reservation.', 422);
+            }
+        }
+
+        $tableId = $validated['table_id'] ?? $reservation->table_id;
+        $date = $validated['reservation_date'] ?? $reservation->reservation_date->toDateString();
+        $time = $validated['reservation_time'] ?? $reservation->reservation_time;
+
+        if (! empty($tableId)) {
+            $table = Table::where('id', $tableId)->where('is_active', true)->first();
+            if (! $table) {
+                return $this->error('The selected table is not available.', 422);
+            }
+            if (isset($validated['party_size']) && (int) $validated['party_size'] > (int) $table->capacity) {
+                return $this->error('Party size exceeds the capacity of the selected table.', 422);
+            }
+            if ($this->overlapsActiveReservation($tableId, $date, $time, $reservation->id)) {
+                return $this->error('This table is already reserved for the selected time.', 409);
+            }
+        } elseif (isset($validated['party_size']) && $reservation->table_id) {
+            $table = $reservation->table;
+            if ((int) $validated['party_size'] > (int) $table->capacity) {
+                return $this->error('Party size exceeds the capacity of the selected table.', 422);
             }
         }
 

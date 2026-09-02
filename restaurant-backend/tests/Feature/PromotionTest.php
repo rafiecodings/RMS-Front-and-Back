@@ -182,6 +182,42 @@ class PromotionTest extends TestCase
             ->assertJsonPath('data.applied_discount.value', 20);
     }
 
+    public function test_discount_max_uses_is_enforced_on_create(): void
+    {
+        $discount = Discount::create([
+            'name' => 'Limited Promo',
+            'code' => 'LIMITED'.uniqid(),
+            'type' => 'percentage',
+            'value' => 10,
+            'is_active' => true,
+            'applies_to' => 'all',
+            'max_uses' => 1,
+            'used_count' => 0,
+            'start_date' => now()->subDay(),
+            'end_date' => now()->addDay(),
+        ]);
+        $item = $this->menuItem();
+
+        $created = $this->actingAs($this->user)
+            ->postJson('/api/v1/orders', [
+                'order_type' => 'takeaway',
+                'discount_id' => $discount->id,
+                'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
+            ]);
+        $created->assertCreated()
+            ->assertJsonPath('data.applied_discount.name', 'Limited Promo');
+        $this->assertEquals(1, $discount->fresh()->used_count);
+
+        $second = $this->actingAs($this->user)
+            ->postJson('/api/v1/orders', [
+                'order_type' => 'takeaway',
+                'discount_id' => $discount->id,
+                'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
+            ]);
+        $second->assertStatus(422);
+        $this->assertEquals(1, $discount->fresh()->used_count);
+    }
+
     private function menuItem(): MenuItem
     {
         $category = MenuCategory::create([

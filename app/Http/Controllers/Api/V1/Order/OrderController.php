@@ -257,19 +257,24 @@ class OrderController extends Controller
             }
 
             if ($discountResolution['discount']) {
-                $discount = $discountResolution['discount'];
+                $discount = Discount::lockForUpdate()
+                    ->where('id', $discountResolution['discount']->id)
+                    ->where('is_active', true)
+                    ->first();
 
-                $claim = Discount::where('id', $discount->id)->where('is_active', true);
-
-                if ($discount->max_uses !== null) {
-                    $claim->where('used_count', '<', (int) $discount->max_uses);
+                if (! $discount) {
+                    throw ValidationException::withMessages([
+                        'discount' => ['Discount is no longer available.'],
+                    ]);
                 }
 
-                if (!$claim->increment('used_count')) {
+                if ($discount->max_uses !== null && $discount->used_count >= (int) $discount->max_uses) {
                     throw ValidationException::withMessages([
                         'discount' => ['Discount usage limit reached.'],
                     ]);
                 }
+
+                $discount->increment('used_count');
             }
 
             if ($order->table_id) {
@@ -512,11 +517,8 @@ class OrderController extends Controller
         $workflow = app(OrderWorkflowService::class);
 
         if ($target === 'confirmed') {
-            // Inventory is consumed exactly once, here at confirmation — never
-            // again at payment/settlement. If stock is insufficient the order
-            // is NOT confirmed and the kitchen never starts preparing it.
             try {
-                $workflow->deductInventoryForCompletedOrder($order, $request->user());
+                $workflow->confirmOrder($order, $request->user());
             } catch (\App\Exceptions\InsufficientStockException $e) {
                 $order->update(['status' => $current]);
                 \App\Models\OrderStatusHistory::where('order_id', $order->id)
@@ -532,7 +534,6 @@ class OrderController extends Controller
                 );
             }
 
-            $workflow->createKotForOrder($order);
             \App\Services\AuditLogger::record('order_confirmed', $order, [
                 'description' => "Order {$order->order_number} confirmed — kitchen ticket generated",
             ]);

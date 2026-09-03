@@ -303,9 +303,8 @@ class AiInsightService
         $key = (string) config('services.gemini.key');
 
         $prompt = "You are a restaurant business analyst. Today is " . now()->toDateString() . ".\n"
-            . "Analyze the following authoritative metrics from our restaurant management system "
-            . "for the period {$startDate} to {$endDate}.\n\n"
-            . json_encode($aggregates) . "\n\n"
+            . "Analyze ONLY the provided authoritative metrics for {$startDate} to {$endDate}: " . json_encode($aggregates) . "\n\n"
+            . "Rules: distinguish observation from inference; do NOT claim system integration failure, POS transmission failure, or restaurant shutdown/closure unless cancelled/voided counts or explicit error metrics support it. When revenue is 0 and completed orders is 0, state neutrally that no completed sales were recorded for the selected period and note it may reflect a no-sales/closed period or limited history, without fabricating a technical failure. State uncertainty when activity is low.\n"
             . "Reply with ONLY a valid JSON object (no markdown fences) with exactly these keys:\n"
             . '{"summary": string (2-3 sentence executive summary), '
             . '"sales_insights": string[] (2-4 items), '

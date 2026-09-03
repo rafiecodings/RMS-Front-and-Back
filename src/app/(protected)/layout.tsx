@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { TopNav } from "@/components/layout/TopNav";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { LoadingSpinner } from "@/components/shared";
@@ -33,7 +32,6 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <MobileSidebar />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopNav />

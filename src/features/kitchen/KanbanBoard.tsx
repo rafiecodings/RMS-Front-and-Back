@@ -23,8 +23,10 @@ export function KanbanBoard({
   onArchive,
 }: KanbanBoardProps) {
   return (
-    <div className="flex gap-4 h-full min-h-[400px] overflow-x-auto">
-      {COLUMNS.map((col) => (
+    <>
+      <p className="text-[11px] text-muted-foreground sm:hidden mb-2">Swipe to view stages →</p>
+      <div className="flex gap-4 h-full min-h-[400px] overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {COLUMNS.map((col) => (
         <KotColumn
           key={col.title}
           title={col.title}
@@ -36,6 +38,7 @@ export function KanbanBoard({
           onArchive={onArchive}
         />
       ))}
-    </div>
+      </div>
+    </>
   );
 }

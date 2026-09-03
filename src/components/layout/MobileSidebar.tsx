@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { Menu } from "lucide-react";
 import { NavLinks, SidebarLogo } from "./SidebarNav";
 
-export function MobileSidebar() {
+export function MobileSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Sheet>
       <SheetTrigger
@@ -17,13 +17,12 @@ export function MobileSidebar() {
             <span className="sr-only">Open navigation</span>
           </button>
         }
-      >
-        <SheetContent side="left" className="w-72 p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarLogo />
-          <NavLinks onNavigate={() => {}} />
-        </SheetContent>
-      </SheetTrigger>
+      />
+      <SheetContent side="left" className="w-[85vw] max-w-72 p-0">
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
+        <SidebarLogo />
+        <NavLinks onNavigate={onNavigate} />
+      </SheetContent>
     </Sheet>
   );
 }

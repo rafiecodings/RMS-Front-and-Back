@@ -299,7 +299,7 @@ class AiInsightService
 
     private function callGemini(array $aggregates, string $startDate, string $endDate): array
     {
-        $model = (string) config('services.gemini.model', 'gemini-3.7-flash');
+        $model = (string) config('services.gemini.model', 'gemini-3.1-flash-lite');
         $key = (string) config('services.gemini.key');
 
         $prompt = "You are a restaurant business analyst. Today is " . now()->toDateString() . ".\n"

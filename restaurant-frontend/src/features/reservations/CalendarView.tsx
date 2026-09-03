@@ -85,9 +85,14 @@ export function CalendarView({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div>
-        <Calendar
+    <div className="grid gap-6 lg:grid-cols-[1.65fr_0.95fr] items-start">
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Reservation Calendar</CardTitle>
+          <p className="text-xs text-muted-foreground">Select a date to view its reservations</p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={onDateSelect}
@@ -108,38 +113,28 @@ export function CalendarView({
                 <button
                   {...props}
                   className={cn(
-                    "relative flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors",
+                    "relative flex h-10 w-10 sm:h-12 sm:w-12 lg:h-[72px] lg:w-full items-center justify-center rounded-xl text-sm transition-colors border border-transparent",
                     modifiers.selected
                       ? "bg-primary text-primary-foreground"
                       : isToday
-                        ? "bg-muted font-semibold"
+                        ? "bg-primary/10 ring-1 ring-primary/30 font-semibold"
                         : "hover:bg-muted/50",
                     modifiers.hasReservations && !modifiers.selected && "font-semibold"
                   )}
                 >
                   {day.date.getDate()}
-                  {count > 0 && !modifiers.selected && (
-                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-                      {count <= 3 ? (
-                        Array.from({ length: count }, (_, i) => (
-                          <span
-                            key={i}
-                            className="h-1 w-1 rounded-full bg-primary"
-                          />
-                        ))
-                      ) : (
-                        <span className="h-1 w-1 rounded-full bg-primary" />
-                      )}
-                    </span>
+                  {count > 0 && (
+                    <span className={cn("absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-1 py-0 text-[10px] font-bold leading-none", modifiers.selected ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground")}>{count}</span>
                   )}
                 </button>
               );
             },
           }}
         />
-      </div>
+        </CardContent>
+      </Card>
 
-      <Card>
+      <Card className="lg:h-full lg:flex lg:flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-base font-semibold">
             {selectedDate
@@ -160,7 +155,7 @@ export function CalendarView({
             )
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           {selectedReservations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <p className="text-sm">

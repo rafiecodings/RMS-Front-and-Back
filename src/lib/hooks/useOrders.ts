@@ -191,13 +191,17 @@ export function useOrders(
       data: RefundFormData;
     }) =>
       api.post<ApiResponse<unknown>>(
-        `/pos/${invoiceId}/refund`,
+        `/invoices/${invoiceId}/refund`,
         data
       ),
     onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["refunds"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-stats"] });
       addNotification(queryClient, {
         type: "payment",
         icon: "payment",

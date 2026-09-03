@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader, ErrorState } from "@/components/shared";
 import {
@@ -20,7 +20,7 @@ import { Sparkles } from "lucide-react";
 export default function SalesReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const filters = { period, date_range: dateRange };
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
   const { data: report, isLoading, isError } = useSalesReport(filters);
   // Real top/bottom sellers come from the menu-performance dataset.

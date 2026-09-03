@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner } from "@/components/shared";
+import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,7 +93,7 @@ export default function ReportsPage() {
   );
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const filters = { period, date_range: dateRange };
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
   const range = useMemo(
     () => resolveReportRange(period, dateRange),
@@ -106,6 +106,8 @@ export default function ReportsPage() {
 
   const anyLoading =
     revenue.isLoading || sales.isLoading || inventory.isLoading;
+  const anyError =
+    revenue.isError || sales.isError || inventory.isError;
 
   function handleRefresh() {
     revenue.refetch();
@@ -141,6 +143,11 @@ export default function ReportsPage() {
         <div className="flex justify-center py-16">
           <LoadingSpinner size="lg" />
         </div>
+      ) : anyError ? (
+        <ErrorState
+          message="Failed to load reports. Please try again."
+          onRetry={handleRefresh}
+        />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

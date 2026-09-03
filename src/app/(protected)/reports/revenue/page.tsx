@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { ReportFilters, ReportSummaryCard, RevenueChart, OrdersChart, ExportButton } from "@/features/reports";
 import { useRevenueReport } from "@/features/reports/hooks/useReports";
@@ -10,8 +10,9 @@ import { LoadingSpinner } from "@/components/shared";
 export default function RevenueReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
-  const { data: report, isLoading, isError: listError } = useRevenueReport({ period, date_range: dateRange });
+  const { data: report, isLoading, isError: listError } = useRevenueReport(filters);
 
   return (
     <div className="space-y-6">

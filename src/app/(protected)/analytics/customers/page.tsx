@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { LoadingSpinner } from "@/components/shared";
 import {
@@ -18,8 +18,9 @@ import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 export default function CustomerAnalyticsPage() {
   const [period, setPeriod] = useState<AnalyticsPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
-  const { data: analytics, isLoading } = useCustomerAnalytics({ period, date_range: dateRange });
+  const { data: analytics, isLoading } = useCustomerAnalytics(filters);
 
   return (
     <div className="space-y-6">

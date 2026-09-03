@@ -120,6 +120,39 @@ interface RawMenuPerformanceReport extends Record<string, unknown> {
     total_revenue?: unknown;
     order_count?: unknown;
   }>;
+  bottom_items?: Array<{
+    menu_item_id?: unknown;
+    name?: unknown;
+    category?: unknown;
+    total_quantity?: unknown;
+    total_revenue?: unknown;
+    order_count?: unknown;
+  }>;
+}
+
+function mapMenuItems(
+  items: Array<{
+    menu_item_id?: unknown;
+    name?: unknown;
+    category?: unknown;
+    total_quantity?: unknown;
+    total_revenue?: unknown;
+    order_count?: unknown;
+  }>,
+): MenuItemPerformance[] {
+  return items.map(
+    (it): MenuItemPerformance => ({
+      id: safeString(it.menu_item_id),
+      name: safeString(it.name),
+      category: safeString(it.category),
+      quantity_sold: safeNumber(it.total_quantity),
+      revenue: safeNumber(it.total_revenue),
+      order_count: safeNumber(it.order_count),
+      cost: null,
+      margin: null,
+      margin_percentage: null,
+    }),
+  );
 }
 
 export function normalizeMenuPerformanceReport(raw: unknown): MenuPerformanceReport {
@@ -132,23 +165,20 @@ export function normalizeMenuPerformanceReport(raw: unknown): MenuPerformanceRep
     total_revenue?: unknown;
     order_count?: unknown;
   }>(r.top_items);
+  const bottom = safeArray<{
+    menu_item_id?: unknown;
+    name?: unknown;
+    category?: unknown;
+    total_quantity?: unknown;
+    total_revenue?: unknown;
+    order_count?: unknown;
+  }>(r.bottom_items);
 
   return {
     total_menu_items: safeNumber(r.total_menu_items),
     active_items: safeNumber(r.active_items),
-    item_performance: items.map(
-      (it): MenuItemPerformance => ({
-        id: safeString(it.menu_item_id),
-        name: safeString(it.name),
-        category: safeString(it.category),
-        quantity_sold: safeNumber(it.total_quantity),
-        revenue: safeNumber(it.total_revenue),
-        order_count: safeNumber(it.order_count),
-        cost: null,
-        margin: null,
-        margin_percentage: null,
-      }),
-    ),
+    item_performance: mapMenuItems(items),
+    bottom_items: mapMenuItems(bottom),
   };
 }
 

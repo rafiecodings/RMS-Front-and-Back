@@ -71,7 +71,7 @@ export default function MenuPerformancePage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-semibold">Item Performance</CardTitle>
+              <CardTitle className="text-base font-semibold">Best-Selling Items</CardTitle>
               <span className="text-xs text-muted-foreground">
                 {report.item_performance.length} items sold
               </span>
@@ -121,10 +121,56 @@ export default function MenuPerformancePage() {
                   </Table>
                 </div>
               )}
-              {/* Recipe-level costing is not tracked yet; per-item cost and
-                  margin are intentionally omitted instead of faked. */}
               <p className="mt-3 text-xs text-muted-foreground">
                 Cost and margin tracking requires recipe-level ingredient costing.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-semibold">Worst-Selling Items</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {report.bottom_items.length} low performers
+              </span>
+            </CardHeader>
+            <CardContent>
+              {report.bottom_items.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No low-performing items in this period.
+                </p>
+              ) : (
+                <div className="max-h-[400px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Qty Sold</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.bottom_items.map((item) => (
+                        <TableRow key={`worst-${item.id}`}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            {item.category ? (
+                              <Badge variant="outline">{item.category}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{item.quantity_sold}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(item.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              <p className="mt-3 text-xs text-muted-foreground">
+                Lowest revenue items with completed sales in the selected period.
               </p>
             </CardContent>
           </Card>

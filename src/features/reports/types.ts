@@ -93,6 +93,7 @@ export interface MenuPerformanceReport {
   total_menu_items: number;
   active_items: number;
   item_performance: MenuItemPerformance[];
+  bottom_items: MenuItemPerformance[];
 }
 
 export interface MenuItemPerformance {

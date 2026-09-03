@@ -215,6 +215,13 @@ class OrderController extends Controller
         $totals = $pricing->orderTotals($subtotal, $discountResolution['amount']);
 
         $result = DB::transaction(function () use ($validated, $request, $lineItems, $discountResolution, $totals) {
+            if (($validated['order_type'] ?? null) === 'dine_in' && !empty($validated['table_id'])) {
+                $table = Table::lockForUpdate()->find($validated['table_id']);
+                if (!$table || $table->status !== 'available') {
+                    abort(409, 'Selected table is not available.');
+                }
+            }
+
             $orderNumber = 'ORD-' . strtoupper(uniqid());
 
             $order = Order::create([

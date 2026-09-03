@@ -143,7 +143,37 @@ class ReplenishmentRequestController extends Controller
             );
         }
 
-        $replenishment->update(['status' => $target]);
+        if ($target === 'fulfilled') {
+            $replenishment = DB::transaction(function () use ($replenishment, $request) {
+                $fresh = ReplenishmentRequest::lockForUpdate()->find($replenishment->id);
+                if ($fresh->status === 'fulfilled') {
+                    return $fresh;
+                }
+                $exists = \App\Models\StockMovement::where('reference_type', 'replenishment')
+                    ->where('reference_id', $fresh->id)
+                    ->exists();
+                if (! $exists) {
+                    $ingredient = Ingredient::lockForUpdate()->find($fresh->ingredient_id);
+                    if ($ingredient) {
+                        $ingredient->increment('current_stock', (float) $fresh->quantity);
+                        \App\Models\StockMovement::create([
+                            'ingredient_id' => $fresh->ingredient_id,
+                            'type' => 'inward',
+                            'quantity' => (float) $fresh->quantity,
+                            'unit_cost' => $ingredient->cost_per_unit ?? 0,
+                            'reference_type' => 'replenishment',
+                            'reference_id' => $fresh->id,
+                            'notes' => 'Replenishment fulfilled: '.$fresh->request_number,
+                            'created_by' => $request->user()->id,
+                        ]);
+                    }
+                }
+                $fresh->update(['status' => 'fulfilled']);
+                return $fresh;
+            });
+        } else {
+            $replenishment->update(['status' => $target]);
+        }
 
         return $this->success($this->mapRow($replenishment->load(['ingredient', 'requester'])), 'Replenishment request updated.');
     }

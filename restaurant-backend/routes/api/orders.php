@@ -19,8 +19,6 @@ Route::middleware(['auth:sanctum', 'role:admin,manager,waiter,cashier'])->prefix
     Route::post('/{id}/split', [OrderController::class, 'split']);
 Route::post('/{id}/reorder', [OrderController::class, 'reorder']);
     Route::get('/{id}/timeline', [OrderController::class, 'timeline']);
-    Route::middleware('role:admin,manager,cashier')->group(function () {
-        Route::post('/{id}/void', [OrderController::class, 'void']);
-        Route::post('/{id}/payments', [OrderController::class, 'pay']);
-    });
+    Route::post('/{id}/void', [OrderController::class, 'void'])->middleware('role:admin,manager');
+    Route::post('/{id}/payments', [OrderController::class, 'pay'])->middleware('role:admin,manager,cashier');
 });

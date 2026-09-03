@@ -131,6 +131,11 @@ class ReplenishmentRequestController extends Controller
             }
         }
 
+        $managerDecisions = ['approved', 'rejected', 'processing', 'fulfilled'];
+        if (in_array($target, $managerDecisions, true) && $replenishment->requested_by === $request->user()->id && ! $request->user()->hasRole('admin')) {
+            return $this->error('You cannot approve, reject or fulfill your own replenishment request.', 403);
+        }
+
         if (! in_array($replenishment->status, $allowed, true)) {
             return $this->error(
                 "Cannot move a {$replenishment->status} request to {$target}.",

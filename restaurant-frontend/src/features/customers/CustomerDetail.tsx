@@ -70,10 +70,12 @@ export function CustomerDetail({
   customer,
   reservations = [],
   canEdit = false,
+  onEdit,
 }: {
   customer: Customer;
   reservations?: CustomerReservation[];
   canEdit?: boolean;
+  onEdit?: () => void;
 }) {
   const upcoming = reservations.filter(
     (r) => r.status !== "cancelled" && r.status !== "completed"
@@ -115,7 +117,7 @@ export function CustomerDetail({
           </div>
         </div>
         {canEdit && (
-          <Button variant="outline" size="sm" render={<Link href={`/customers/${customer.id}/edit`} />}>
+          <Button variant="outline" size="sm" onClick={onEdit} render={onEdit ? undefined : (<Link href={`/customers/${customer.id}/edit`} /> as unknown as undefined)}>
             <Pencil className="h-4 w-4 mr-1.5" />
             Edit
           </Button>

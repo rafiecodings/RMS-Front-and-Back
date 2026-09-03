@@ -3,13 +3,14 @@
 import { useState, use } from "react";
 import Link from "next/link";
 import { PageHeader, LoadingSpinner, ConfirmDialog } from "@/components/shared";
-import { CustomerDetail } from "@/features/customers";
+import { CustomerDetail, EditCustomerDialog } from "@/features/customers";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Archive } from "lucide-react";
 import { useCustomer, useCustomers } from "@/lib/hooks";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { canEdit } from "@/lib/utils/permissions";
+import type { CustomerFormData } from "@/lib/types";
 
 export default function CustomerDetailPage({
   params,
@@ -18,8 +19,9 @@ export default function CustomerDetailPage({
 }) {
   const { id } = use(params);
   const { data: customer, isLoading, refetch } = useCustomer(id);
-  const { archive } = useCustomers();
+  const { archive, update } = useCustomers();
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { user } = useAuth();
   const canArchive = canEdit(user?.role, "customers");
 
@@ -36,6 +38,19 @@ export default function CustomerDetailPage({
         toast.error(message ?? "Failed to archive customer");
       },
     });
+  }
+
+  function handleUpdate(data: CustomerFormData) {
+    update.mutate(
+      { id, data },
+      {
+        onSuccess: () => {
+          toast.success("Customer updated successfully");
+          setShowEditDialog(false);
+        },
+        onError: () => toast.error("Failed to update customer"),
+      }
+    );
   }
 
   if (isLoading) {
@@ -81,7 +96,7 @@ export default function CustomerDetailPage({
             )}
             <Button variant="outline" size="sm" render={<Link href="/customers" />}>
               <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back
+              Back to Customers
             </Button>
           </div>
         }
@@ -90,6 +105,15 @@ export default function CustomerDetailPage({
         customer={customer}
         reservations={customer.reservations ?? []}
         canEdit={canArchive}
+        onEdit={() => setShowEditDialog(true)}
+      />
+
+      <EditCustomerDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        customer={customer}
+        onSubmit={handleUpdate}
+        isLoading={update.isPending}
       />
 
       <ConfirmDialog

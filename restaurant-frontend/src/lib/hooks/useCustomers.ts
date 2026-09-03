@@ -32,7 +32,10 @@ export function useCustomers(params?: QueryParams) {
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CustomerFormData> }) =>
       api.put<ApiResponse<Customer>>(`/customers/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers", vars.id] });
+    },
   });
 
   const remove = useMutation({

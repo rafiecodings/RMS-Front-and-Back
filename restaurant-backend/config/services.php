@@ -39,7 +39,7 @@ return [
     // frontend or any NEXT_PUBLIC_ variable.
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-3.7-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
     ],
 
     // TimechoAI time-series forecasting (Timer family). Server-side only.

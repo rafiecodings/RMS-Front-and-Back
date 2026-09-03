@@ -124,9 +124,30 @@ class ReportController extends Controller
             ->limit(20)
             ->get();
 
+        $bottomItems = OrderItem::whereHas('order', function ($q) use ($startDate, $endDate) {
+            $q->where('status', 'completed')
+                ->whereBetween('created_at', [$startDate, $endDate]);
+        })
+            ->selectRaw("menu_item_id, name, sum(quantity) as total_quantity, sum(total_price) as total_revenue")
+            ->groupBy('menu_item_id', 'name')
+            ->orderBy('total_revenue', 'asc')
+            ->limit(10)
+            ->get();
+
+        $topIds = $topItems->pluck('menu_item_id')->all();
+        if (count($topIds) > 10) {
+            $bottomItems = $bottomItems->reject(fn ($item) => in_array($item->menu_item_id, $topIds, true))->values();
+        }
+
         return $this->success([
             'period' => ['start' => $startDate, 'end' => $endDate],
             'top_items' => $topItems->map(fn ($item) => [
+                'menu_item_id' => $item->menu_item_id,
+                'name' => $item->name,
+                'total_quantity' => (int) $item->total_quantity,
+                'total_revenue' => (float) $item->total_revenue,
+            ]),
+            'bottom_items' => $bottomItems->map(fn ($item) => [
                 'menu_item_id' => $item->menu_item_id,
                 'name' => $item->name,
                 'total_quantity' => (int) $item->total_quantity,

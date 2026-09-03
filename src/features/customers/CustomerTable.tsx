@@ -21,6 +21,7 @@ interface CustomerTableProps {
   isLoading?: boolean;
   onDelete?: (customer: Customer) => void;
   onArchive?: (customer: Customer) => void;
+  onEdit?: (customer: Customer) => void;
   canEdit?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function CustomerTable({
   isLoading,
   onDelete,
   onArchive,
+  onEdit,
   canEdit = true,
 }: CustomerTableProps) {
   if (isLoading) {
@@ -108,7 +110,8 @@ export function CustomerTable({
                 <EntityActionDropdown
                   viewHref={`/customers/${customer.id}`}
                   viewLabel="View Details"
-                  editHref={canEdit ? `/customers/${customer.id}/edit` : undefined}
+                  editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined}
+                  onEdit={onEdit ? () => onEdit(customer) : undefined}
                   onAction={onDelete ? () => onDelete(customer) : undefined}
                   onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined}
                   archiveLabel="Archive"

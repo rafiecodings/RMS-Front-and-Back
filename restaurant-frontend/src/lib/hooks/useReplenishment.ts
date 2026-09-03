@@ -62,7 +62,12 @@ export function useReplenishmentRequests(params?: QueryParams & { status?: strin
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReplenishmentRequest["status"] }) =>
       api.patch<ApiResponse<ReplenishmentRequest>>(`/inventory/replenishment/${id}/status`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["replenishment"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["replenishment"] });
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 
   const remove = useMutation({

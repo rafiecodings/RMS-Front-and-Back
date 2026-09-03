@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSkeleton } from "@/components/shared";
+import { PageHeader, LoadingSkeleton, ErrorState } from "@/components/shared";
 import { useIngredients, useStockMovements, useReplenishmentRequests } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { StockMovementTable } from "@/features/inventory";
@@ -129,6 +129,9 @@ export default function InventoryPage() {
     },
   ];
 
+  const ingredientsError = ingredientsList.isError;
+  const stockError = movementsList.isError;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -137,7 +140,15 @@ export default function InventoryPage() {
       />
 
       {/* Observation stat cards — all values live from the database */}
-      {statsLoading ? (
+      {ingredientsError || stockError ? (
+        <ErrorState
+          message="Failed to load inventory data. Please try again."
+          onRetry={() => {
+            if (ingredientsError) ingredientsList.refetch();
+            if (stockError) movementsList.refetch();
+          }}
+        />
+      ) : statsLoading ? (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
           {Array.from({ length: 7 }).map((_, i) => (
             <LoadingSkeleton key={i} className="h-24" />

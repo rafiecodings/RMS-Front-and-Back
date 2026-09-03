@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { LoadingSpinner } from "@/components/shared";
+import { LoadingSpinner, ErrorState } from "@/components/shared";
 import {
   KanbanBoard,
   KotDetailSheet,
@@ -167,6 +167,13 @@ export default function KitchenPage() {
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <LoadingSpinner size="lg" />
+          </div>
+        ) : all.isError ? (
+          <div className="flex items-center justify-center h-full p-4">
+            <ErrorState
+              message="Failed to load kitchen orders. Please try again."
+              onRetry={() => all.refetch()}
+            />
           </div>
         ) : filteredKots.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

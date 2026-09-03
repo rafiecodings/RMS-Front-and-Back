@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
 import {
   ReportFilters,
@@ -17,8 +17,9 @@ import type { ReportPeriod, DateRange } from "@/features/reports/types";
 export default function CustomerReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
-  const { data: report, isLoading, isError } = useCustomerReport({ period, date_range: dateRange });
+  const { data: report, isLoading, isError } = useCustomerReport(filters);
 
   return (
     <div className="space-y-6">

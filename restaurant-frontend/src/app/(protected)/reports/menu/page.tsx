@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, ErrorState } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,8 +21,9 @@ import { LoadingSpinner } from "@/components/shared";
 export default function MenuPerformancePage() {
   const [period, setPeriod] = useState<ReportPeriod>("this_month");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
-  const { data: report, isLoading, isError } = useMenuPerformanceReport({ period, date_range: dateRange });
+  const { data: report, isLoading, isError } = useMenuPerformanceReport(filters);
 
   return (
     <div className="space-y-6">

@@ -36,6 +36,7 @@ export function useOrders(
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
       addNotification(queryClient, {
         type: "order",
         icon: "order",
@@ -70,8 +71,13 @@ export function useOrders(
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      // Confirming an order creates its KOT server-side; keep the kitchen
-      // board in sync.
+      queryClient.invalidateQueries({ queryKey: ["orders", "unpaid"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
       addNotification(queryClient, {
@@ -89,7 +95,13 @@ export function useOrders(
       api.post<ApiResponse<unknown>>(`/orders/${id}/payments`, data),
     onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", "unpaid"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       addNotification(queryClient, {
         type: "payment",
         icon: "payment",
@@ -110,8 +122,12 @@ export function useOrders(
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      // The KOT stays on the board until the backend voids it — refresh so
-      // the kitchen sees the cancelled parent order immediately.
+      queryClient.invalidateQueries({ queryKey: ["orders", "unpaid"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
       addNotification(queryClient, {
@@ -148,6 +164,12 @@ export function useOrders(
       const order = res.data.data;
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", "unpaid"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders-all"] });
       addNotification(queryClient, {

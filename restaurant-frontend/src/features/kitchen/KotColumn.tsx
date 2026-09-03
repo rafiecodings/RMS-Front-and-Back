@@ -58,7 +58,7 @@ export function KotColumn({
   });
 
   return (
-    <div className="flex flex-col min-w-[280px] w-80 flex-1">
+    <div className="flex flex-col min-w-[280px] w-[85vw] sm:w-80 sm:min-w-[280px] flex-1 snap-start shrink-0">
       {/* Column Header */}
       <div
         className={cn(

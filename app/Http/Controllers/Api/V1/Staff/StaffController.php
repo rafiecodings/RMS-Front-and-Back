@@ -248,6 +248,13 @@ class StaffController extends Controller
             'staff_id' => 'required|uuid|exists:staff_profiles,id',
         ]);
 
+        if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $ownProfile || $ownProfile->id !== $validated['staff_id']) {
+                return $this->error('You may only clock in for your own staff profile.', 403);
+            }
+        }
+
         $existingClockIn = Attendance::where('staff_id', $validated['staff_id'])
             ->whereNull('clock_out')
             ->first();
@@ -275,6 +282,13 @@ class StaffController extends Controller
         $validated = $request->validate([
             'staff_id' => 'required|uuid|exists:staff_profiles,id',
         ]);
+
+        if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $ownProfile || $ownProfile->id !== $validated['staff_id']) {
+                return $this->error('You may only clock out for your own staff profile.', 403);
+            }
+        }
 
         $attendance = Attendance::where('staff_id', $validated['staff_id'])
             ->whereNull('clock_out')

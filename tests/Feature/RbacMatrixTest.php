@@ -105,7 +105,7 @@ class RbacMatrixTest extends TestCase
             ], ['admin', 'manager', 'waiter', 'cashier']],
             'void_order' => ['POST', "/orders/{$this->orderPendingId}/void", [
                 'reason' => 'RBAC test void',
-            ], ['admin', 'manager', 'cashier']],
+            ], ['admin', 'manager']],
             'pay_order' => ['POST', "/orders/{$this->orderPaidId}/payments", [
                 'payment_method' => 'cash',
                 'amount' => 1,
@@ -114,7 +114,7 @@ class RbacMatrixTest extends TestCase
                 'payment_id' => $this->paymentId,
                 'amount' => 1,
                 'reason' => 'RBAC test refund',
-            ], ['admin', 'manager', 'cashier']],
+            ], ['admin', 'manager']],
             'create_ingredient' => ['POST', '/inventory/ingredients', [
                 'name' => 'X', 'unit' => 'g', 'current_stock' => 1, 'minimum_stock' => 1, 'cost_per_unit' => 1,
             ], ['admin', 'manager']],

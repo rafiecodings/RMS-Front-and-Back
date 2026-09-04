@@ -4,11 +4,11 @@ import { useState, useRef, useMemo } from "react";
 
 import { PageHeader, ConfirmDialog, SearchInput, EmptyState, TablePagination, ErrorState } from "@/components/shared";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CustomerTable, CustomerStats, CustomerForm, EditCustomerDialog } from "@/features/customers";
+import { CustomerTable, CustomerStats, CustomerForm, EditCustomerDialog, CustomerDetailsDialog } from "@/features/customers";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Users } from "lucide-react";
-import { useCustomers } from "@/lib/hooks";
+import { useCustomers, useCustomer } from "@/lib/hooks";
 import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { Customer, CustomerFormData } from "@/lib/types";
 import { canEdit } from "@/lib/utils/permissions";
@@ -24,6 +24,8 @@ export default function CustomersPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editTarget, setEditTarget] = useState<Customer | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
   const canModify = canEdit(user?.role, "customers");
@@ -38,6 +40,7 @@ export default function CustomersPage() {
   }), [page, debouncedSearch, statusFilter]);
 
   const { list, create, archive, update } = useCustomers(params);
+  const { data: selectedCustomer, isLoading: detailLoading, isError: detailError, refetch: detailRefetch } = useCustomer(selectedId ?? "");
 
   const customers = list.data?.data?.data ?? [];
   const meta = list.data?.data?.meta;
@@ -65,6 +68,11 @@ export default function CustomersPage() {
     });
   }
 
+  function handleView(customer: Customer) {
+    setSelectedId(customer.id);
+    setDetailsOpen(true);
+  }
+
   function handleEdit(customer: Customer) {
     setEditTarget(customer);
     setShowEditDialog(true);
@@ -82,10 +90,12 @@ export default function CustomersPage() {
   }
   function handleArchiveConfirm() {
     if (!archiveTarget) return;
-    archive.mutate(archiveTarget.id, {
+    const archivedId = archiveTarget.id;
+    archive.mutate(archivedId, {
       onSuccess: () => {
         toast.success("Customer archived successfully");
         setArchiveTarget(null);
+        if (selectedId === archivedId) setDetailsOpen(false);
       },
       onError: (error) => {
         const msg =
@@ -137,8 +147,9 @@ export default function CustomersPage() {
           </Select>
         </div>
 
-<CustomerTable
-        onEdit={handleEdit}
+ <CustomerTable
+          onView={handleView}
+          onEdit={handleEdit}
           customers={customers}
           isLoading={list.isLoading}
           onArchive={canModify ? (c) => setArchiveTarget(c) : undefined}
@@ -202,6 +213,27 @@ export default function CustomersPage() {
         customer={editTarget}
         onSubmit={handleUpdate}
         isLoading={update.isPending}
+      />
+      <CustomerDetailsDialog
+        open={detailsOpen}
+        onOpenChange={(o) => {
+          setDetailsOpen(o);
+          if (!o) setSelectedId(null);
+        }}
+        customer={selectedCustomer}
+        isLoading={detailLoading}
+        isError={detailError}
+        onRetry={() => detailRefetch()}
+        canEdit={canModify}
+        onEdit={() => {
+          if (selectedCustomer) {
+            setEditTarget(selectedCustomer);
+            setShowEditDialog(true);
+          }
+        }}
+        onArchive={() => {
+          if (selectedCustomer) setArchiveTarget(selectedCustomer);
+        }}
       />
       <ConfirmDialog
         open={!!archiveTarget}

@@ -6,6 +6,8 @@
     "dev": "node scripts/dev.mjs",
     "dev:api": "cd ../restaurant-backend && php artisan serve --host=0.0.0.0 --port=8000",
     "dev:web": "next dev --webpack --hostname 0.0.0.0 --port 3000",
+    "prebuild": "node ../scripts/check-dev-not-running.mjs",
+    "clean:next": "node ../scripts/clean-next.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

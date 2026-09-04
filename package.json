@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npm --prefix restaurant-frontend run dev",
     "dev:web": "npm --prefix restaurant-frontend run dev:web",
-    "dev:api": "npm --prefix restaurant-frontend run dev:api"
+    "dev:api": "npm --prefix restaurant-frontend run dev:api",
+    "clean:next": "node scripts/clean-next.mjs"
   }
 }

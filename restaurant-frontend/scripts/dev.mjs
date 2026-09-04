@@ -236,6 +236,12 @@ if (laravelPort.state === "healthy" && nextPort.state === "healthy") {
   process.exit(0);
 }
 
+if (nextPort.state === "healthy") {
+  console.error(`RMS frontend is already running on port 3000 (PID ${nextPort.pid}${describePid(nextPort.pid)}).`);
+  console.error("Use the existing instance or stop it before starting another.");
+  process.exit(1);
+}
+
 // Verified-RMS but dead/unresponsive -> clean up before starting fresh.
 if (laravelPort.state === "stale") terminatePidTree(laravelPort.pid, "Laravel");
 if (nextPort.state === "stale") terminatePidTree(nextPort.pid, "Next.js");

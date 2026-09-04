@@ -178,7 +178,7 @@ export default function TablesPage() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title="Tables"
         description="Manage restaurant tables"
@@ -199,12 +199,12 @@ export default function TablesPage() {
       <div className="space-y-6">
         <TableStats tables={visibleTables} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Select
             value={statusFilter}
             onValueChange={(val) => setStatusFilter(val ?? "all")}
           >
-            <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px] min-h-10">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -289,7 +289,7 @@ export default function TablesPage() {
             if (!open) setEditingTable(null);
           }}
         >
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[calc(100dvh-24px)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingTable ? "Edit Table" : "New Table"}
@@ -308,7 +308,7 @@ export default function TablesPage() {
           open={!!viewTarget}
           onOpenChange={(open) => !open && setViewTarget(null)}
         >
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[calc(100dvh-24px)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 Table T{viewTarget?.number}

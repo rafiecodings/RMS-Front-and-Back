@@ -49,17 +49,21 @@ export default function SalesReportsPage() {
     }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="Sales Reports"
-          description="Sales breakdown by category, item, and time"
-        />
-        <ExportButton
-          reportType="sales"
-          period={period}
-          dateRange={dateRange}
-        />
+    <div className="space-y-6 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <PageHeader
+            title="Sales Reports"
+            description="Sales breakdown by category, item, and time"
+          />
+        </div>
+        <div className="shrink-0">
+          <ExportButton
+            reportType="sales"
+            period={period}
+            dateRange={dateRange}
+          />
+        </div>
       </div>
 
       <ReportFilters
@@ -92,7 +96,7 @@ export default function SalesReportsPage() {
         />
       ) : report ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 min-w-0">
             <ReportSummaryCard
               title="Total Sales"
               value={report.total_sales}

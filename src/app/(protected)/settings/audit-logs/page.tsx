@@ -101,7 +101,7 @@ export default function AuditLogsPage() {
   const visibleRows = hideDemo ? rows.filter((r) => !isDemoRow(r)) : rows;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Audit Logs"
         description="System activity trail. Entries are read-only and retained automatically."
@@ -155,8 +155,8 @@ export default function AuditLogsPage() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border -mx-3 sm:mx-0">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-muted/50 text-left">
                 <tr>
                   <th className="px-4 py-3 font-medium">Date / Time</th>
@@ -199,7 +199,7 @@ export default function AuditLogsPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">
               Page {meta?.current_page ?? 1} of {meta?.last_page ?? 1}
             </span>

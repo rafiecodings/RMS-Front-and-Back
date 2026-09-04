@@ -83,10 +83,10 @@ export default function KitchenPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-dvh flex flex-col min-w-0 overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 border-b bg-card px-4 py-3">
-        <div className="flex items-center justify-between">
+      <div className="shrink-0 border-b bg-card px-3 sm:px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -123,13 +123,13 @@ export default function KitchenPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             {stations.length > 0 && (
               <Select
                 value={stationFilter}
                 onValueChange={(v) => setStationFilter(v ?? "all")}
               >
-                <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectTrigger className="w-full sm:w-[150px] min-h-10">
                   <SelectValue placeholder="All Stations" />
                 </SelectTrigger>
                 <SelectContent>

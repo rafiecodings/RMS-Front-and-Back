@@ -68,21 +68,21 @@ export function StaffTable({
 }: StaffTableProps) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search staff..."
-            className="h-9 pl-8"
+            className="h-9 pl-8 w-full"
           />
         </div>
         <Select value={roleFilter} onValueChange={(v) => onRoleFilterChange(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-[160px] h-9">
+          <SelectTrigger className="w-full sm:w-[160px] h-9 max-w-full">
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-w-[calc(100vw-2rem)]">
             {ROLES.map((r) => (
               <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
             ))}
@@ -90,7 +90,7 @@ export function StaffTable({
         </Select>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="hidden md:block overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -100,7 +100,7 @@ export function StaffTable({
               <TableHead>Phone</TableHead>
               <TableHead className="text-center">Rating</TableHead>
               <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
+              <TableHead className="text-center sticky right-0 bg-muted/50">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -112,9 +112,9 @@ export function StaffTable({
               staff.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{s.user?.name ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">{s.user?.email ?? "—"}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate max-w-[160px]">{s.user?.name ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[160px]">{s.user?.email ?? "—"}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -139,7 +139,7 @@ export function StaffTable({
                       {s.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center sticky right-0 bg-background">
                     <div className="flex items-center justify-center gap-1">
                       {onView ? (
                         <Button variant="ghost" size="icon-sm" onClick={() => onView(s)}>
@@ -173,6 +173,55 @@ export function StaffTable({
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="rounded-xl border p-4 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : staff.length === 0 ? (
+          <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No staff members found</div>
+        ) : (
+          staff.map((s) => (
+            <div key={s.id} className="rounded-xl border bg-card p-4 space-y-3 min-w-0">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{s.user?.name ?? "—"}</p>
+                <p className="text-xs text-muted-foreground truncate max-w-full">{s.user?.email ?? "—"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm min-w-0">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Role</p>
+                  <div className="mt-1 truncate"><RoleBadge role={(s.user?.role ?? "waiter") as StaffRole} /></div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Shift</p>
+                  <p className="capitalize truncate">{s.position ?? "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="truncate">{s.phone ?? "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant={s.is_active ? "default" : "secondary"} className="mt-1">{s.is_active ? "Active" : "Inactive"}</Badge>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {onView ? (
+                  <Button variant="outline" size="sm" onClick={() => onView(s)} className="gap-1"><Eye className="h-3.5 w-3.5" /> View</Button>
+                ) : (
+                  <Button variant="outline" size="sm" render={<Link href={`/staff/employees/${s.id}`} />} className="gap-1"><Eye className="h-3.5 w-3.5" /> View</Button>
+                )}
+                {canEdit && onEdit && (
+                  <Button variant="outline" size="sm" onClick={() => onEdit(s)} className="gap-1"><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+                )}
+                {canEdit && onToggleActive && (
+                  <Button variant={s.is_active ? "outline" : "default"} size="sm" onClick={() => onToggleActive(s)} className="gap-1">
+                    <Power className="h-3.5 w-3.5" /> {s.is_active ? "Deactivate" : "Activate"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <TablePagination

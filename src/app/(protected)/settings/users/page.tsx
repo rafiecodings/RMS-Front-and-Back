@@ -112,54 +112,90 @@ export default function UsersPage() {
             : "No accounts found."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Last Login</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className={`border-t ${u.is_active ? "" : "opacity-60"}`}>
-                  <td className="px-4 py-3 font-medium">{u.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-3">
-                    {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : "Never"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.is_active
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      {u.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      className="rounded-md border bg-background px-2 py-1 text-xs capitalize"
-                      value={roles.find((r) => r.name === u.role)?.id ?? ""}
-                      disabled={savingId === u.id}
-                      onChange={(e) => changeRole(u, e.target.value)}
-                    >
-                      <option value="" disabled>Change…</option>
-                      {selectableRoles.map((r) => (
-                        <option key={r.id} value={r.id}>{r.name}</option>
-                      ))}
-                    </select>
-                  </td>
+        <>
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Last Login</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium sticky right-0 bg-muted/50">Role</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id} className={`border-t ${u.is_active ? "" : "opacity-60"}`}>
+                    <td className="px-4 py-3 font-medium truncate max-w-[160px]">{u.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground truncate max-w-[180px]">{u.email}</td>
+                    <td className="px-4 py-3">
+                      {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : "Never"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.is_active
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        {u.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 sticky right-0 bg-background">
+                      <select
+                        className="rounded-md border bg-background px-2 py-1 text-xs capitalize w-full max-w-[160px] truncate"
+                        value={roles.find((r) => r.name === u.role)?.id ?? ""}
+                        disabled={savingId === u.id}
+                        onChange={(e) => changeRole(u, e.target.value)}
+                      >
+                        <option value="" disabled>Change…</option>
+                        {selectableRoles.map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="md:hidden space-y-3">
+            {users.map((u) => (
+              <div key={u.id} className={`rounded-xl border bg-card p-4 space-y-3 min-w-0 ${u.is_active ? "" : "opacity-60"}`}>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{u.name}</p>
+                  <p className="text-xs text-muted-foreground truncate max-w-full">{u.email}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Last Login</p>
+                    <p className="truncate">{u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : "Never"}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${u.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"}`}>{u.is_active ? "Active" : "Inactive"}</span>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground mb-1">Role</p>
+                  <select
+                    className="w-full max-w-full truncate rounded-md border bg-background px-2 py-2 text-sm capitalize"
+                    value={roles.find((r) => r.name === u.role)?.id ?? ""}
+                    disabled={savingId === u.id}
+                    onChange={(e) => changeRole(u, e.target.value)}
+                  >
+                    <option value="" disabled>Change…</option>
+                    {selectableRoles.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

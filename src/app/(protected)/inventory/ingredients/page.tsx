@@ -114,7 +114,7 @@ export default function IngredientsPage() {
           if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {activeModal?.mode === "edit" ? "Edit Ingredient" : "Add Ingredient"}
@@ -137,7 +137,7 @@ export default function IngredientsPage() {
           if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[calc(100dvh-24px)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ingredient Details</DialogTitle>
           </DialogHeader>

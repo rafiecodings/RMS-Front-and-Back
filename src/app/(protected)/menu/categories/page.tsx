@@ -157,7 +157,7 @@ export default function MenuCategoriesPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[calc(100dvh-24px)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editTarget ? "Edit Category" : "New Category"}

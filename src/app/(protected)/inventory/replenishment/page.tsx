@@ -273,63 +273,121 @@ export default function ReplenishmentPage() {
           No replenishment requests yet.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Request #</th>
-                <th className="px-4 py-3 font-medium">Ingredient</th>
-                <th className="px-4 py-3 font-medium">Qty</th>
-                <th className="px-4 py-3 font-medium">Priority</th>
-                <th className="px-4 py-3 font-medium">Requested By</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const actions = availableActions(r, canApprove, canCreate);
-                return (
-                  <tr key={r.id} className="border-t">
-                    <td className="px-4 py-3 font-mono text-xs">{r.request_number}</td>
-                    <td className="px-4 py-3">{r.ingredient?.name ?? "—"}</td>
-                    <td className="px-4 py-3">{r.quantity} {r.unit ?? r.ingredient?.unit ?? ""}</td>
-                    <td className="px-4 py-3">{PRIORITY_LABEL[r.priority] ?? r.priority}</td>
-                    <td className="px-4 py-3">{r.requester?.name ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status] ?? ""}`}>
-                        {STATUS_LABEL[r.status] ?? r.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        {actions.map((a) => (
-                          <Button
-                            key={`${r.id}-${a.target}`}
-                            size="sm"
-                            variant={a.variant ?? "default"}
-                            disabled={updateStatus.isPending}
-                            onClick={() =>
-                              act(
-                                r,
-                                a.target,
-                                a.label === "Start Processing"
-                                  ? "moved to processing"
-                                  : `${a.label.toLowerCase()}`
-                              )
-                            }
-                          >
-                            {a.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Request #</th>
+                  <th className="px-4 py-3 font-medium">Ingredient</th>
+                  <th className="px-4 py-3 font-medium">Qty</th>
+                  <th className="px-4 py-3 font-medium">Priority</th>
+                  <th className="px-4 py-3 font-medium">Requested By</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const actions = availableActions(r, canApprove, canCreate);
+                  return (
+                    <tr key={r.id} className="border-t">
+                      <td className="px-4 py-3 font-mono text-xs">{r.request_number}</td>
+                      <td className="px-4 py-3">{r.ingredient?.name ?? "—"}</td>
+                      <td className="px-4 py-3">{r.quantity} {r.unit ?? r.ingredient?.unit ?? ""}</td>
+                      <td className="px-4 py-3">{PRIORITY_LABEL[r.priority] ?? r.priority}</td>
+                      <td className="px-4 py-3">{r.requester?.name ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status] ?? ""}`}>
+                          {STATUS_LABEL[r.status] ?? r.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {actions.map((a) => (
+                            <Button
+                              key={`${r.id}-${a.target}`}
+                              size="sm"
+                              variant={a.variant ?? "default"}
+                              disabled={updateStatus.isPending}
+                              onClick={() =>
+                                act(
+                                  r,
+                                  a.target,
+                                  a.label === "Start Processing"
+                                    ? "moved to processing"
+                                    : `${a.label.toLowerCase()}`
+                                )
+                              }
+                            >
+                              {a.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="md:hidden space-y-3">
+            {rows.map((r) => {
+              const actions = availableActions(r, canApprove, canCreate);
+              return (
+                <div key={r.id} className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-mono text-xs font-medium">{r.request_number}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status] ?? ""}`}>
+                      {STATUS_LABEL[r.status] ?? r.status}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Ingredient</span>
+                      <span className="font-medium text-right truncate ml-2">{r.ingredient?.name ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Quantity</span>
+                      <span className="font-medium tabular-nums">{r.quantity} {r.unit ?? r.ingredient?.unit ?? ""}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Priority</span>
+                      <span className="font-medium">{PRIORITY_LABEL[r.priority] ?? r.priority}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Requested By</span>
+                      <span className="font-medium truncate ml-2 text-right">{r.requester?.name ?? "—"}</span>
+                    </div>
+                  </div>
+                  {actions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {actions.map((a) => (
+                        <Button
+                          key={`${r.id}-${a.target}-mobile`}
+                          size="sm"
+                          variant={a.variant ?? "default"}
+                          disabled={updateStatus.isPending}
+                          onClick={() =>
+                            act(
+                              r,
+                              a.target,
+                              a.label === "Start Processing"
+                                ? "moved to processing"
+                                : `${a.label.toLowerCase()}`
+                            )
+                          }
+                        >
+                          {a.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

@@ -183,7 +183,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title="Dashboard"
         description="Overview of your restaurant"

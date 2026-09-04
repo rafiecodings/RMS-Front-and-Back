@@ -22,7 +22,7 @@ export default function SalesAnalyticsPage() {
   const { data: analytics, isLoading } = useSalesTrends(filters);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Sales Trends"
         description="Sales performance, category breakdown, and best sellers"
@@ -39,7 +39,7 @@ export default function SalesAnalyticsPage() {
         <LoadingSpinner />
       ) : analytics ? (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 min-w-0">
             <KpiCard
               title="Total Sales"
               value={analytics.total_sales}

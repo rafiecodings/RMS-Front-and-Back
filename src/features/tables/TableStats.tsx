@@ -92,7 +92,7 @@ export function TableStats({ tables }: { tables: Table[] }) {
   }
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 min-w-0">
       <StatCard status="available" count={counts.available} total={total} />
       <StatCard status="occupied" count={counts.occupied} total={total} />
       <StatCard status="reserved" count={counts.reserved} total={total} />

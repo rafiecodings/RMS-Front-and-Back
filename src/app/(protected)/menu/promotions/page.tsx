@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Archive, Pencil, Plus } from "lucide-react";
+import { Archive, Pencil, Plus, MoreHorizontal } from "lucide-react";
 import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import api from "@/lib/api/client";
 import { normalizePaginated } from "@/lib/utils/api";
 import { formatCurrency, formatLabel } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
+import { canEdit } from "@/lib/utils/permissions";
 
 interface Discount {
   id: string;
@@ -70,6 +73,8 @@ function errorMessage(error: unknown): string {
 
 export default function PromotionsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canManagePromotions = canEdit(user?.role, "menu");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Discount | null>(null);
   const [form, setForm] = useState<PromotionForm>(emptyForm);
@@ -159,12 +164,12 @@ export default function PromotionsPage() {
       <PageHeader
         title="Promotions & Discounts"
         description="Automatic promotions are evaluated by the server. Verified discounts require cashier confirmation and never stack."
-        action={<Button onClick={startCreate}><Plus className="mr-2 h-4 w-4" />Add Promotion</Button>}
+        action={canManagePromotions ? <Button onClick={startCreate}><Plus className="mr-2 h-4 w-4" />Add Promotion</Button> : undefined}
       />
 
       {isLoading ? <LoadingSpinner /> : isError ? <ErrorState message="Failed to load promotions." /> : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[["Total", discounts.length], ["Active", active], ["Inactive", discounts.length - active]].map(([label, value]) => (
               <div key={label} className="rounded-lg border bg-card p-4">
                 <p className="text-xs text-muted-foreground">{label} Promotions</p>
@@ -173,8 +178,8 @@ export default function PromotionsPage() {
             ))}
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[1050px] text-sm">
+          <div className="hidden md:block rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left"><tr>
                 {["Name", "Mode", "Discount", "Applies To", "Eligibility", "Minimum", "Schedule", "Status", "Actions"].map((head) => <th key={head} className="px-3 py-3 font-medium">{head}</th>)}
               </tr></thead>
@@ -189,16 +194,72 @@ export default function PromotionsPage() {
                     <td className="px-3 py-3">{discount.min_order_amount > 0 ? formatCurrency(discount.min_order_amount) : "None"}</td>
                     <td className="px-3 py-3 text-xs">{discount.start_date ? new Date(discount.start_date).toLocaleDateString() : "—"} – {discount.end_date ? new Date(discount.end_date).toLocaleDateString() : "No expiry"}</td>
                     <td className="px-3 py-3"><span className={discount.is_active ? "text-emerald-700" : "text-muted-foreground"}>{discount.is_active ? "Active" : "Inactive"}</span></td>
-                    <td className="px-3 py-3"><div className="flex gap-1">
-                      <Button variant="ghost" size="icon-sm" onClick={() => startEdit(discount)} aria-label={`Edit ${discount.name}`}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => updateStatus.mutate(discount)}>{discount.is_active ? "Deactivate" : "Activate"}</Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => { if (window.confirm(`Archive ${discount.name}?`)) archive.mutate(discount.id); }} aria-label={`Archive ${discount.name}`}><Archive className="h-4 w-4" /></Button>
-                    </div></td>
+                    <td className="px-3 py-3">{canManagePromotions ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                          <MoreHorizontal className="h-4 w-4" /><span className="sr-only">Actions for {discount.name}</span>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => startEdit(discount)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateStatus.mutate(discount)}>{discount.is_active ? "Deactivate" : "Activate"}</DropdownMenuItem>
+                          <DropdownMenuItem variant="destructive" onClick={() => { if (window.confirm(`Archive ${discount.name}?`)) archive.mutate(discount.id); }}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}</td>
                   </tr>
                 ))}
                 {discounts.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No promotions configured.</td></tr>}
               </tbody>
             </table>
+          </div>
+
+          <div className="md:hidden space-y-3">
+            {discounts.length === 0 ? (
+              <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No promotions configured.</div>
+            ) : (
+              discounts.map((discount) => (
+                <div key={discount.id} className="rounded-xl border bg-card p-4 space-y-3 overflow-hidden">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{discount.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">Code: {discount.code ?? "No code"}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={discount.is_active ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-muted-foreground"}>{discount.is_active ? "Active" : "Inactive"}</span>
+                      {canManagePromotions && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="h-8 w-8 -mr-2 -mt-1" />}>
+                            <MoreHorizontal className="h-4 w-4" /><span className="sr-only">Actions for {discount.name}</span>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => startEdit(discount)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus.mutate(discount)}>{discount.is_active ? "Deactivate" : "Activate"}</DropdownMenuItem>
+                            <DropdownMenuItem variant="destructive" onClick={() => { if (window.confirm(`Archive ${discount.name}?`)) archive.mutate(discount.id); }}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Mode</p><p className="truncate capitalize">{discount.promotion_kind}</p></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Discount</p><p className="font-medium truncate">{discount.type === "percentage" ? `${discount.value}%` : formatCurrency(discount.value)}</p></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Applies To</p><p className="truncate">{formatLabel(discount.applies_to)}</p></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Validity</p><p className="text-xs truncate">{discount.start_date ? new Date(discount.start_date).toLocaleDateString() : "—"} – {discount.end_date ? new Date(discount.end_date).toLocaleDateString() : "No expiry"}</p></div>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t gap-2">
+                    <span className={discount.is_active ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-muted-foreground"}>Status: {discount.is_active ? "Active" : "Inactive"}</span>
+                    {canManagePromotions && (
+                      <div className="flex gap-2 shrink-0">
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(discount)}>Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => updateStatus.mutate(discount)}>{discount.is_active ? "Deactivate" : "Activate"}</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </>
       )}

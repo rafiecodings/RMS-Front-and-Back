@@ -69,9 +69,9 @@ export function IngredientTable({
   onEdit,
 }: IngredientTableProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
+    <div className="space-y-4 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="relative flex-1 min-w-0 w-full">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
@@ -81,7 +81,7 @@ export function IngredientTable({
           />
         </div>
         <Select value={categoryFilter} onValueChange={(v) => onCategoryFilterChange(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-[160px] h-9">
+          <SelectTrigger className="w-full sm:w-[160px] h-10 min-h-10">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>

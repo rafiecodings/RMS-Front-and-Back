@@ -116,12 +116,12 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Reports & Analytics"
         description="Restaurant performance overview"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={anyLoading}>
               <RefreshCw className={`h-4 w-4 mr-1.5 ${anyLoading ? "animate-spin" : ""}`} />
               Refresh
@@ -150,7 +150,7 @@ export default function ReportsPage() {
         />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 min-w-0">
             <ReportSummaryCard
               title="Revenue"
               value={revenue.data?.total_revenue ?? 0}
@@ -206,7 +206,7 @@ export default function ReportsPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Inventory Health
             </h2>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 min-w-0">
               <ReportSummaryCard
                 title="Stock Value"
                 value={inventory.data?.total_stock_value ?? 0}
@@ -230,7 +230,7 @@ export default function ReportsPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Business Reports
             </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 min-w-0">
               {REPORT_LINKS.map((report) => {
                 const Icon = report.icon;
                 return (

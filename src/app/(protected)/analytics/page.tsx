@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Analytics"
         description="Interactive business intelligence and insights"

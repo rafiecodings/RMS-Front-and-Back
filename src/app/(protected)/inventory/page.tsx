@@ -133,7 +133,7 @@ export default function InventoryPage() {
   const stockError = movementsList.isError;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden min-w-0 px-safe">
       <PageHeader
         title="Inventory Monitoring"
         description="Observe stock health at a glance. Management lives in Ingredients and Recipes."
@@ -168,77 +168,135 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Inventory monitoring table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Ingredient</th>
-              <th className="px-4 py-3 font-medium">Current Stock</th>
-              <th className="px-4 py-3 font-medium">Minimum</th>
-              <th className="px-4 py-3 font-medium">Maximum</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Recent Usage</th>
-              <th className="px-4 py-3 font-medium">Last Movement</th>
-              {canRequestReplenishment && <th className="px-4 py-3 font-medium">Action</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {statsLoading ? (
+      {/* Inventory monitoring - desktop table + mobile cards (same enriched data source) */}
+      <div className="hidden md:block overflow-hidden rounded-lg border max-w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left">
               <tr>
-                <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td>
+                <th className="px-4 py-3 font-medium">Ingredient</th>
+                <th className="px-4 py-3 font-medium">Current Stock</th>
+                <th className="px-4 py-3 font-medium">Minimum</th>
+                <th className="px-4 py-3 font-medium">Maximum</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Recent Usage</th>
+                <th className="px-4 py-3 font-medium">Last Movement</th>
+                {canRequestReplenishment && <th className="px-4 py-3 font-medium">Action</th>}
               </tr>
-            ) : enriched.length === 0 ? (
-              <tr>
-                <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">
-                  No ingredients tracked yet.
-                </td>
-              </tr>
-            ) : (
-              enriched.map((i) => (
-                <tr key={i.id} className="border-t hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{i.name}</td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {Number(i.current_stock).toLocaleString()} {i.unit ?? ""}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {Number(i.minimum_stock).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {i.maximum_stock != null && Number(i.maximum_stock) > 0
-                      ? Number(i.maximum_stock).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STOCK_STATUS_BADGE[i.status]}`}>
-                      {STOCK_STATUS_LABEL[i.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {i.recentUsage > 0 ? `${Number(i.recentUsage).toLocaleString()} (7d)` : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {i.lastMovement
-                      ? new Date(i.lastMovement).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
-                      : "No movement"}
-                  </td>
-                  {canRequestReplenishment && (
-                    <td className="px-4 py-3">
-                      {i.status === "low" || i.status === "out" ? (
-                        <Link
-                          className="text-sm font-medium text-primary hover:underline"
-                          href={`/inventory/replenishment?ingredient_id=${encodeURIComponent(i.id)}&quantity=${encodeURIComponent(String(Math.max(0.001, (Number(i.maximum_stock) > 0 ? Number(i.maximum_stock) : Number(i.minimum_stock) * 2) - Number(i.current_stock))))}&priority=${i.status === "out" ? "urgent" : "high"}`}
-                        >
-                          Request Replenishment
-                        </Link>
-                      ) : "—"}
-                    </td>
-                  )}
+            </thead>
+            <tbody>
+              {statsLoading ? (
+                <tr>
+                  <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : enriched.length === 0 ? (
+                <tr>
+                  <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">
+                    No ingredients tracked yet.
+                  </td>
+                </tr>
+              ) : (
+                enriched.map((i) => (
+                  <tr key={i.id} className="border-t hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium max-w-[160px] truncate" title={i.name}>{i.name}</td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {Number(i.current_stock).toLocaleString()} {i.unit ?? ""}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                      {Number(i.minimum_stock).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                      {i.maximum_stock != null && Number(i.maximum_stock) > 0
+                        ? Number(i.maximum_stock).toLocaleString()
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STOCK_STATUS_BADGE[i.status]}`}>
+                        {STOCK_STATUS_LABEL[i.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {i.recentUsage > 0 ? `${Number(i.recentUsage).toLocaleString()} (7d)` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {i.lastMovement
+                        ? new Date(i.lastMovement).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+                        : "No movement"}
+                    </td>
+                    {canRequestReplenishment && (
+                      <td className="px-4 py-3">
+                        {i.status === "low" || i.status === "out" ? (
+                          <Link
+                            className="text-sm font-medium text-primary hover:underline"
+                            href={`/inventory/replenishment?ingredient_id=${encodeURIComponent(i.id)}&quantity=${encodeURIComponent(String(Math.max(0.001, (Number(i.maximum_stock) > 0 ? Number(i.maximum_stock) : Number(i.minimum_stock) * 2) - Number(i.current_stock))))}&priority=${i.status === "out" ? "urgent" : "high"}`}
+                          >
+                            Request Replenishment
+                          </Link>
+                        ) : "—"}
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="md:hidden space-y-3 max-w-full overflow-hidden">
+        {statsLoading ? (
+          Array.from({ length: 3 }).map((_, k) => (
+            <div key={k} className="rounded-xl border bg-card p-4 animate-pulse h-40" />
+          ))
+        ) : enriched.length === 0 ? (
+          <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">No ingredients tracked yet.</div>
+        ) : (
+          enriched.map((i) => (
+            <div key={i.id} className="rounded-xl border bg-card p-4 min-w-0 overflow-hidden">
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <p className="font-medium truncate min-w-0 flex-1" title={i.name}>{i.name}</p>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STOCK_STATUS_BADGE[i.status]}`}>{STOCK_STATUS_LABEL[i.status]}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm min-w-0">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Current stock</p>
+                  <p className="font-semibold tabular-nums truncate">{Number(i.current_stock).toLocaleString()} {i.unit ?? ""}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Minimum</p>
+                  <p className="tabular-nums text-muted-foreground truncate">{Number(i.minimum_stock).toLocaleString()}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Maximum</p>
+                  <p className="tabular-nums text-muted-foreground truncate">{i.maximum_stock != null && Number(i.maximum_stock) > 0 ? Number(i.maximum_stock).toLocaleString() : "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-xs font-medium truncate">{STOCK_STATUS_LABEL[i.status]}</p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1.5 border-t pt-3 min-w-0">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground shrink-0">Recent usage</span>
+                  <span className="text-sm tabular-nums truncate min-w-0 text-right">{i.recentUsage > 0 ? `${Number(i.recentUsage).toLocaleString()} (7d)` : "—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground shrink-0">Last movement</span>
+                  <span className="text-xs text-muted-foreground truncate min-w-0 text-right">{i.lastMovement ? new Date(i.lastMovement).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "No movement"}</span>
+                </div>
+              </div>
+              {canRequestReplenishment && (i.status === "low" || i.status === "out") && (
+                <div className="mt-3 pt-3 border-t">
+                  <Link
+                    className="text-sm font-medium text-primary hover:underline break-words"
+                    href={`/inventory/replenishment?ingredient_id=${encodeURIComponent(i.id)}&quantity=${encodeURIComponent(String(Math.max(0.001, (Number(i.maximum_stock) > 0 ? Number(i.maximum_stock) : Number(i.minimum_stock) * 2) - Number(i.current_stock))))}&priority=${i.status === "out" ? "urgent" : "high"}`}
+                  >
+                    Request Replenishment
+                  </Link>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {(movements as unknown[]).length > 0 && (

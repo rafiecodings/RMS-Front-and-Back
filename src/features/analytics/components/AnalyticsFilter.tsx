@@ -45,7 +45,7 @@ export function AnalyticsFilter({
         <CardTitle className="text-sm font-medium">Period</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 [&_button]:min-h-10">
           {PERIODS.map((p) => (
             <Button
               key={p.value}

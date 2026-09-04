@@ -28,14 +28,14 @@ export const PageHeader = memo(function PageHeader({
   children,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-      <div>
-        <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight">{title}</h1>
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 min-w-0">
+      <div className="min-w-0 flex-1">
+        <h1 className="font-heading text-xl sm:text-2xl font-bold leading-tight tracking-tight truncate">{title}</h1>
         {description && (
-          <p className="mt-1.5 text-sm leading-5 text-muted-foreground">{description}</p>
+          <p className="mt-1.5 text-sm leading-5 text-muted-foreground line-clamp-2">{description}</p>
         )}
       </div>
-      <div className="flex items-center gap-3">{action}{children}</div>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto [&_button]:min-h-10 [&_a]:min-h-10">{action}{children}</div>
     </div>
   );
 });

@@ -104,19 +104,22 @@ export default function RecipesPage() {
           if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogHeader className="sticky top-0 z-10 shrink-0 bg-popover border-b p-6 pb-4">
             <DialogTitle>
               {activeModal?.mode === "edit" ? "Edit Recipe" : "Add Recipe"}
             </DialogTitle>
           </DialogHeader>
-          {activeModal?.mode === "add" || activeModal?.mode === "edit" ? (
-            <RecipeForm
-              initialData={activeModal.mode === "edit" ? toFormData(activeModal.item) : undefined}
-              onSubmit={activeModal.mode === "edit" ? handleEdit : handleCreate}
-              isLoading={create.isPending || update.isPending}
-            />
-          ) : null}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-6">
+            {activeModal?.mode === "add" || activeModal?.mode === "edit" ? (
+              <RecipeForm
+                initialData={activeModal.mode === "edit" ? toFormData(activeModal.item) : undefined}
+                onSubmit={activeModal.mode === "edit" ? handleEdit : handleCreate}
+                isLoading={create.isPending || update.isPending}
+                onCancel={() => setActiveModal(null)}
+              />
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -126,17 +129,19 @@ export default function RecipesPage() {
           if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogHeader className="sticky top-0 z-10 shrink-0 bg-popover border-b p-6 pb-4">
             <DialogTitle>Recipe Details</DialogTitle>
           </DialogHeader>
-          {activeModal?.mode === "view" ? (
-            <RecipeDetail
-              recipe={activeModal.item}
-              canEdit={canManage}
-              onEdit={() => setActiveModal({ mode: "edit", item: activeModal.item })}
-            />
-          ) : null}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-6">
+            {activeModal?.mode === "view" ? (
+              <RecipeDetail
+                recipe={activeModal.item}
+                canEdit={canManage}
+                onEdit={() => setActiveModal({ mode: "edit", item: activeModal.item })}
+              />
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

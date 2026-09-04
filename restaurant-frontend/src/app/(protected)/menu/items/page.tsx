@@ -135,13 +135,13 @@ export default function MenuItemsPage() {
   const categoryList = categories.list.data ?? [];
 
   return (
-    <div>
+    <div className="min-w-0 overflow-hidden">
       <PageHeader
         title="Menu Items"
         description="Manage your restaurant menu"
         action={
           canEditMenu ? (
-            <Button variant="default" size="default" onClick={() => setActiveModal({ mode: "add" })}>
+            <Button variant="default" size="default" onClick={() => setActiveModal({ mode: "add" })} className="shrink-0">
               <Plus className="h-4 w-4 mr-1.5" />
               Add Item
             </Button>
@@ -149,21 +149,21 @@ export default function MenuItemsPage() {
         }
       />
 
-      <div className="space-y-6">
+      <div className="space-y-6 min-w-0">
         <MenuStats items={items} />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Tabs
               value={view}
               onValueChange={(v) => v && setView(v as "list" | "grid")}
             >
               <TabsList>
-                <TabsTrigger value="list">
+                <TabsTrigger value="list" className="min-h-9">
                   <List className="h-4 w-4 mr-1.5" />
                   List
                 </TabsTrigger>
-                <TabsTrigger value="grid">
+                <TabsTrigger value="grid" className="min-h-9">
                   <LayoutGrid className="h-4 w-4 mr-1.5" />
                   Grid
                 </TabsTrigger>
@@ -171,49 +171,52 @@ export default function MenuItemsPage() {
             </Tabs>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto min-w-0">
             <SearchInput
               value={search}
               onChange={handleSearchChange}
               placeholder="Search items..."
+              className="w-full sm:w-auto sm:flex-1 sm:max-w-sm min-w-0"
             />
 
-            <Select
-              value={categoryFilter}
-              onValueChange={(val) => {
-                setCategoryFilter(val ?? "all");
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categoryList.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Select
+                value={categoryFilter}
+                onValueChange={(val) => {
+                  setCategoryFilter(val ?? "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[150px] sm:flex-none">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categoryList.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={availabilityFilter}
-              onValueChange={(val) => {
-                setAvailabilityFilter(val ?? "all");
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="unavailable">Unavailable</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={availabilityFilter}
+                onValueChange={(val) => {
+                  setAvailabilityFilter(val ?? "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[140px] sm:flex-none">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="unavailable">Unavailable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -246,7 +249,7 @@ export default function MenuItemsPage() {
                 <p className="text-muted-foreground">No menu items found</p>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => (
                   <MenuItemCard key={item.id} item={item} />
                 ))}

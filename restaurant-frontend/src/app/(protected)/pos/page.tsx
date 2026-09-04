@@ -232,7 +232,7 @@ export default function PosPage() {
   const canReport = canAccessRevenueReport(user?.role);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <PosHeader
         itemCount={cart.computed.itemCount}
         onClearCart={cart.clearCart}
@@ -240,12 +240,12 @@ export default function PosPage() {
         canReport={canReport}
       />
 
-      <div className="flex flex-1 flex-col xl:flex-row overflow-hidden">
-        <div className="flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col xl:flex-row overflow-hidden min-h-0">
+        <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
           <ProductGrid onAddToCart={handleAddToCart} />
         </div>
 
-        <div className="w-full xl:w-[380px] xl:shrink-0 border-t xl:border-t-0 xl:border-l">
+        <div className="w-full xl:w-[380px] xl:shrink-0 border-t xl:border-t-0 xl:border-l overflow-y-auto max-h-[45dvh] xl:max-h-none pb-[env(safe-area-inset-bottom)]">
           <CartPanel
             items={cart.state.items}
             subtotal={cart.computed.subtotal}

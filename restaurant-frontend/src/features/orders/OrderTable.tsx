@@ -73,21 +73,22 @@ export function OrderTable({
   }
 
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead className="hidden md:table-cell">Type</TableHead>
-            <TableHead className="hidden md:table-cell">Table</TableHead>
-            <TableHead className="hidden lg:table-cell">Customer</TableHead>
-            <TableHead className="text-center">Items</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="hidden lg:table-cell">Placed</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
+    <>
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Table</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead className="text-center">Items</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Placed</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {orders.map((order) => {
             const TypeIcon = TYPE_ICONS[order.order_type] ?? HelpCircle;
@@ -101,7 +102,7 @@ export function OrderTable({
                     {order.order_number}
                   </Link>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <TypeIcon className="h-3.5 w-3.5" />
                     <span className="text-xs capitalize">
@@ -109,10 +110,10 @@ export function OrderTable({
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
+                <TableCell className="text-muted-foreground text-xs">
                   {order.table ? `T${order.table.number}` : "—"}
                 </TableCell>
-                <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                <TableCell className="text-muted-foreground text-xs">
                   {order.customer?.name ?? "Walk-in"}
                 </TableCell>
                 <TableCell className="text-center text-muted-foreground">
@@ -132,7 +133,7 @@ export function OrderTable({
                     {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                <TableCell className="text-xs text-muted-foreground">
                   {order.placed_at ? formatDateTime(order.placed_at) : "—"}
                 </TableCell>
                 <TableCell>
@@ -191,5 +192,46 @@ export function OrderTable({
         </TableBody>
       </Table>
     </div>
+      <div className="md:hidden space-y-3">
+        {orders.map((order) => {
+          const TypeIcon = TYPE_ICONS[order.order_type] ?? HelpCircle;
+          return (
+            <div key={order.id} className="rounded-xl border bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <Link href={`/orders/${order.id}`} className="font-semibold text-sm hover:underline">
+                  {order.order_number}
+                </Link>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", STATUS_STYLES[order.status])}>
+                    {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" />}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {onView && <DropdownMenuItem onClick={() => onView(order)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>}
+                      {(order.status === "draft" || order.status === "pending" || order.status === "confirmed") && onEdit && <DropdownMenuItem onClick={() => onEdit(order)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>}
+                      {onCancel && (["draft","pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
+                      {onArchive && (["completed","cancelled"].includes(order.status)) && <DropdownMenuItem onClick={() => onArchive(order)}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1"><TypeIcon className="h-3.5 w-3.5" />{order.order_type.replace(/_/g, " ")}</span>
+                {order.order_type === "dine_in" && <span>· {order.table ? `T${order.table.number}` : "No table"}</span>}
+              </div>
+              <p className="text-xs text-muted-foreground truncate">{order.customer?.name ?? "Walk-in"}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{order.items_count ?? order.items?.length ?? 0} items</span>
+                <span className="font-semibold">{formatCurrency(order.total_amount)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{order.placed_at ? formatDateTime(order.placed_at) : ""}</p>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

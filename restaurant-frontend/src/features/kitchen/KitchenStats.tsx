@@ -79,7 +79,7 @@ export function KitchenStats({ kots }: KitchenStatsProps) {
   const avgWait = formatAvgWait(kots, nowMs);
 
   return (
-    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
       <StatCard
         title="Received"
         value={received}

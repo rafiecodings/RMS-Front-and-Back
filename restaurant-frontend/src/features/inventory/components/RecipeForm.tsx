@@ -21,9 +21,10 @@ interface RecipeFormProps {
   initialData?: RecipeFormData;
   onSubmit: (data: RecipeFormData) => void;
   isLoading?: boolean;
+  onCancel?: () => void;
 }
 
-export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps) {
+export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: RecipeFormProps) {
   const router = useRouter();
   const { list: ingredientsList } = useIngredients({ per_page: 200 });
   const { list: menuItemsList } = useMenuItems({ per_page: 200 });
@@ -38,6 +39,8 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
     yield_unit: initialData?.yield_unit ?? "serving",
     ingredients: initialData?.ingredients ?? [],
   });
+
+  const selectedMenuItemName = menuItems.find((m) => m.id === form.menu_item_id)?.name;
 
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -118,7 +121,11 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
           <Label className="text-sm font-medium">Select Menu Item *</Label>
           <Select value={form.menu_item_id} onValueChange={(v) => setForm((prev) => ({ ...prev, menu_item_id: v ?? "" }))}>
             <SelectTrigger>
-              <SelectValue placeholder="Choose a menu item" />
+              {selectedMenuItemName ? (
+                <span className="truncate">{selectedMenuItemName}</span>
+              ) : (
+                <SelectValue placeholder="Choose a menu item" />
+              )}
             </SelectTrigger>
             <SelectContent>
               {menuItems.map((mi) => (
@@ -186,56 +193,66 @@ export function RecipeForm({ initialData, onSubmit, isLoading }: RecipeFormProps
           </p>
         ) : (
           <div className="space-y-3">
-            {form.ingredients.map((ing, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <Select
-                  value={ing.ingredient_id}
-                  onValueChange={(v) => updateIngredient(idx, "ingredient_id", v ?? "")}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select ingredient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ingredients.map((i) => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={ing.quantity}
-                  onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
-                  className="w-24"
-                  placeholder="Qty"
-                />
-                <Select value={ing.unit} onValueChange={(v) => updateIngredient(idx, "unit", v ?? ing.unit)}>
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="ghost" size="icon-sm" onClick={() => removeIngredient(idx)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
+            {form.ingredients.map((ing, idx) => {
+              const ingName = ingredients.find((i) => i.id === ing.ingredient_id)?.name;
+              return (
+                <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Select
+                    value={ing.ingredient_id}
+                    onValueChange={(v) => updateIngredient(idx, "ingredient_id", v ?? "")}
+                  >
+                    <SelectTrigger className="w-full sm:flex-1">
+                      {ingName ? (
+                        <span className="truncate">{ingName}</span>
+                      ) : (
+                        <SelectValue placeholder="Select ingredient" />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ingredients.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>
+                          {i.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={ing.quantity}
+                      onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
+                      className="flex-1 sm:w-24"
+                      placeholder="Qty"
+                    />
+                    <Select value={ing.unit} onValueChange={(v) => updateIngredient(idx, "unit", v ?? ing.unit)}>
+                      <SelectTrigger className="flex-1 sm:w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNITS.map((u) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon-sm" onClick={() => removeIngredient(idx)} className="w-full sm:w-auto justify-center">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="sm:hidden ml-1">Remove</span>
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="sticky bottom-0 z-10 mt-6 flex flex-col-reverse gap-2 border-t bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
         {formError && (
-          <p className="text-xs text-destructive self-center">{formError}</p>
+          <p className="text-xs text-destructive self-center mr-auto">{formError}</p>
         )}
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => (onCancel ? onCancel() : router.back())}>
           Cancel
         </Button>
         <Button

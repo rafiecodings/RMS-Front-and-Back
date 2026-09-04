@@ -204,11 +204,12 @@ export default function ReservationsPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <SearchInput
                   value={search}
                   onChange={handleSearchChange}
                   placeholder="Search reservations..."
+                  className="w-full sm:max-w-sm"
                 />
                 <Select
                   value={viewScope}
@@ -217,7 +218,7 @@ export default function ReservationsPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[130px]">
+                  <SelectTrigger className="w-full sm:w-[130px] min-h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -232,7 +233,7 @@ export default function ReservationsPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectTrigger className="w-full sm:w-[150px] min-h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,7 +326,7 @@ export default function ReservationsPage() {
         />
 
         <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New Reservation</DialogTitle>
             </DialogHeader>
@@ -356,7 +357,7 @@ export default function ReservationsPage() {
           open={!!viewTarget}
           onOpenChange={(open) => !open && setViewTarget(null)}
         >
-          <DialogContent className="sm:max-w-3xl">
+          <DialogContent className="sm:max-w-3xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Reservation Details</DialogTitle>
             </DialogHeader>
@@ -376,7 +377,7 @@ export default function ReservationsPage() {
           open={!!editTarget}
           onOpenChange={(open) => !open && setEditTarget(null)}
         >
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Reservation</DialogTitle>
             </DialogHeader>

@@ -68,11 +68,12 @@ describe("frontend RBAC permission matrix", () => {
     expect(canManageRecipes(ROLES.INVENTORY_STAFF)).toBe(false);
   });
 
-  it("restricts revenue report + order archive to admin/manager/cashier", () => {
+  it("restricts revenue report to admin/manager and order archive to admin/manager", () => {
     for (const role of ALL_ROLES) {
-      const allowed = ([ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER] as string[]).includes(role);
-      expect(canAccessRevenueReport(role)).toBe(allowed);
-      expect(canArchiveOrders(role)).toBe(allowed);
+      const revenueAllowed = ([ROLES.ADMIN, ROLES.MANAGER] as string[]).includes(role);
+      const archiveAllowed = ([ROLES.ADMIN, ROLES.MANAGER] as string[]).includes(role);
+      expect(canAccessRevenueReport(role)).toBe(revenueAllowed);
+      expect(canArchiveOrders(role)).toBe(archiveAllowed);
     }
   });
 

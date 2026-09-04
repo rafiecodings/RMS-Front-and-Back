@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Pencil,
   Phone,
-  MapPin,
+  Mail,
   ShoppingCart,
   Calendar,
   Clock,
@@ -85,10 +85,10 @@ export function CustomerDetail({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-bold">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-bold">
             {customer.name
               .split(" ")
               .map((w) => w[0])
@@ -96,13 +96,10 @@ export function CustomerDetail({
               .slice(0, 2)
               .toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold">{customer.name}</h2>
-              <Badge
-                variant="secondary"
-                className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0"
-              >
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold truncate">{customer.name}</h2>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">
                 Registered Customer
               </Badge>
               {!customer.is_active && (
@@ -111,118 +108,104 @@ export function CustomerDetail({
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Customer since {formatDate(customer.created_at)}
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Customer since {formatDate(customer.created_at)}</p>
           </div>
         </div>
         {canEdit && (
-          <Button variant="outline" size="sm" onClick={onEdit} render={onEdit ? undefined : (<Link href={`/customers/${customer.id}/edit`} /> as unknown as undefined)}>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={onEdit} render={onEdit ? undefined : (<Link href={`/customers/${customer.id}/edit`} /> as unknown as undefined)}>
             <Pencil className="h-4 w-4 mr-1.5" />
             Edit
           </Button>
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Contact Information</CardTitle>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Contact</CardTitle>
           </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground w-20 shrink-0">Phone</span>
-              <span>{customer.phone || "—"}</span>
-            </div>
+          <CardContent className="space-y-3 p-4 pt-0">
             <div className="flex items-center gap-3 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground w-20 shrink-0">Address</span>
-              <span>{customer.address || "—"}</span>
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground w-14 shrink-0">Phone</span>
+              <span className="font-medium truncate">{customer.phone || "—"}</span>
             </div>
+            {customer.email && (
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-14 shrink-0">Email</span>
+                <span className="font-medium truncate">{customer.email}</span>
+              </div>
+            )}
             {customer.notes && (
               <>
                 <Separator />
                 <div className="text-sm">
-                  <p className="text-muted-foreground mb-1">Notes</p>
-                  <p>{customer.notes}</p>
+                  <p className="text-muted-foreground mb-1 text-xs">Notes</p>
+                  <p className="text-sm">{customer.notes}</p>
                 </div>
               </>
             )}
           </CardContent>
         </Card>
 
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="pt-1">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                    <ShoppingCart className="h-5 w-5 text-blue-600" />
-                  </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
-                  <p className="text-xl font-bold">{customer.total_orders}</p>
+          <Card className="flex flex-col justify-center">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                  <ShoppingCart className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Total Orders</p>
+                  <p className="text-xl font-bold leading-none mt-1">{customer.total_orders}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-1">
+          <Card className="flex flex-col justify-center">
+            <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
                   <Calendar className="h-5 w-5 text-emerald-600" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Reservations</p>
-                  <p className="text-xl font-bold">{customer.total_reservations ?? 0}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Total Reservations</p>
+                  <p className="text-xl font-bold leading-none mt-1">{customer.total_reservations ?? 0}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-3 pt-1">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Loyalty Tier</p>
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0"
-                >
-                  {customer.loyalty_tier ?? loyaltyProgress(customer.visit_count).tier}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Visits</p>
-                <p className="text-xl font-bold">{customer.visit_count}</p>
-              </div>
-              {(() => {
-                const p = loyaltyProgress(customer.visit_count);
-                if (p.nextTier === null) {
-                  return (
-                    <p className="text-xs text-muted-foreground">
-                      Highest tier reached — thank you for your loyalty!
-                    </p>
-                  );
-                }
-                return (
-                  <div className="space-y-1">
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-amber-500"
-                        style={{ width: `${p.pct}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {p.remaining} more visit{p.remaining === 1 ? "" : "s"} to {p.nextTier}
-                    </p>
-                  </div>
-                );
-              })()}
             </CardContent>
           </Card>
         </div>
-      </div>
+
+      <Card>
+        <CardContent className="space-y-3 pt-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Loyalty Tier</p>
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0">
+              {customer.loyalty_tier ?? loyaltyProgress(customer.visit_count).tier}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Visits</p>
+              <p className="text-xl font-bold">{customer.visit_count}</p>
+            </div>
+            {(() => {
+              const p = loyaltyProgress(customer.visit_count);
+              if (p.nextTier === null) return <p className="text-xs text-muted-foreground self-center">Highest tier reached</p>;
+              return (
+                <div className="space-y-1 self-center">
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-amber-500" style={{ width: `${p.pct}%` }} />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right">{p.remaining} to {p.nextTier}</p>
+                </div>
+              );
+            })()}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Reservation History */}
       <div className="space-y-4">

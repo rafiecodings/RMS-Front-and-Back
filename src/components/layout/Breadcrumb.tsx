@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
+import { useBreadcrumbLabel } from "./BreadcrumbContext";
 
 const segmentLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -26,17 +27,26 @@ const segmentLabels: Record<string, string> = {
   profile: "Profile",
 };
 
+function isUUID(s: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
 export function Breadcrumb() {
   const pathname = usePathname();
+  const { label: customLabel } = useBreadcrumbLabel();
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0 || segments[0] === "dashboard") return null;
 
   const items = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label =
-      segmentLabels[segment] ||
-      segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    let label: string;
+    if (isUUID(segment)) {
+      if (segments[0] === "customers" && customLabel) label = customLabel;
+      else label = "Customer Details";
+    } else {
+      label = segmentLabels[segment] || segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    }
     const isLast = index === segments.length - 1;
 
     return { label, href, isLast };

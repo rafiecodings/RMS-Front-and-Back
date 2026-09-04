@@ -6,6 +6,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { BreadcrumbProvider } from "@/components/layout/BreadcrumbContext";
 import { LoadingSpinner } from "@/components/shared";
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
@@ -31,16 +32,18 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <TopNav />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 xl:p-8 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full">
-          <Breadcrumb />
-          {children}
-        </main>
+    <BreadcrumbProvider>
+      <div className="flex h-dvh overflow-hidden bg-background">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          <TopNav />
+          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 xl:p-8 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+            <Breadcrumb />
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </BreadcrumbProvider>
   );
 }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -22,6 +21,7 @@ interface CustomerTableProps {
   onDelete?: (customer: Customer) => void;
   onArchive?: (customer: Customer) => void;
   onEdit?: (customer: Customer) => void;
+  onView?: (customer: Customer) => void;
   canEdit?: boolean;
 }
 
@@ -31,6 +31,7 @@ export function CustomerTable({
   onDelete,
   onArchive,
   onEdit,
+  onView,
   canEdit = true,
 }: CustomerTableProps) {
   if (isLoading) {
@@ -70,9 +71,9 @@ export function CustomerTable({
             {customers.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell>
-                  <Link href={`/customers/${customer.id}`} className="font-medium hover:underline">
+                  <button onClick={() => onView?.(customer)} className="font-medium hover:underline text-left">
                     {customer.name}
-                  </Link>
+                  </button>
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0">
@@ -88,7 +89,7 @@ export function CustomerTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <EntityActionDropdown viewHref={`/customers/${customer.id}`} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
+                  <EntityActionDropdown onView={onView ? () => onView(customer) : undefined} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
                 </TableCell>
               </TableRow>
             ))}
@@ -99,14 +100,14 @@ export function CustomerTable({
         {customers.map((customer) => (
           <div key={customer.id} className="rounded-xl border bg-card p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <Link href={`/customers/${customer.id}`} className="font-semibold hover:underline line-clamp-1">
+              <button onClick={() => onView?.(customer)} className="font-semibold hover:underline line-clamp-1 text-left">
                 {customer.name}
-              </Link>
+              </button>
               <div className="flex items-center gap-1.5 shrink-0">
                 <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", customer.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600")}>
                   {customer.is_active ? "Active" : "Inactive"}
                 </Badge>
-                <EntityActionDropdown viewHref={`/customers/${customer.id}`} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
+                <EntityActionDropdown onView={onView ? () => onView(customer) : undefined} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
               </div>
             </div>
             <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0">

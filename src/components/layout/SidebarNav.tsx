@@ -179,9 +179,11 @@ export function useSidebarCollapsed() {
 export function NavLinks({
   onNavigate,
   collapsed = false,
+  scrollRef,
 }: {
   onNavigate?: () => void;
   collapsed?: boolean;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const pathname = usePathname();
   const filteredNavGroups = useFilteredNavGroups();
@@ -198,7 +200,7 @@ export function NavLinks({
     // Icon-only rail with hover tooltips.
     const flat = filteredNavGroups.flatMap((g) => g.items);
     return (
-      <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-4">
+      <nav ref={scrollRef} className="flex flex-1 flex-col items-center gap-1 overflow-y-auto overscroll-contain py-4">
         {flat.map((item) => {
           const isActive = activeHrefs.has(item.href);
           const Icon = item.icon;
@@ -208,6 +210,7 @@ export function NavLinks({
               href={item.href}
               title={item.label}
               onClick={onNavigate}
+              data-active={isActive ? "true" : undefined}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-150",
                 isActive
@@ -224,7 +227,7 @@ export function NavLinks({
   }
 
   return (
-    <nav className="flex-1 overflow-y-auto py-4">
+    <nav ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain py-4">
       {filteredNavGroups.map((group, groupIndex) => (
         <div key={group.label} className={cn(groupIndex > 0 && "mt-6")}>
           <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
@@ -239,6 +242,7 @@ export function NavLinks({
                   <Link
                     href={item.href}
                     onClick={onNavigate}
+                    data-active={isActive ? "true" : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                       isActive

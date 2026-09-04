@@ -99,8 +99,17 @@ export function CalendarView({
           month={currentMonth}
           onMonthChange={handleMonthChange}
           modifiers={modifiers}
+          className="w-full"
           classNames={{
-            day: "relative",
+            root: "w-full",
+            months: "w-full",
+            month: "w-full",
+            month_caption: "w-full",
+            month_grid: "w-full border-collapse",
+            weekdays: "flex w-full",
+            weekday: "flex-1 text-center",
+            week: "flex w-full mt-2 gap-1",
+            day: "flex-1 relative p-0.5 h-auto",
           }}
           components={{
             DayButton: ({ day, modifiers, ...props }) => {
@@ -113,7 +122,7 @@ export function CalendarView({
                 <button
                   {...props}
                   className={cn(
-                    "relative flex h-10 w-10 sm:h-12 sm:w-12 lg:h-[72px] lg:w-full items-center justify-center rounded-xl text-sm transition-colors border border-transparent",
+                    "relative flex h-10 w-full sm:h-12 lg:h-[72px] items-center justify-center rounded-xl text-sm transition-colors border border-transparent",
                     modifiers.selected
                       ? "bg-primary text-primary-foreground"
                       : isToday
@@ -124,7 +133,7 @@ export function CalendarView({
                 >
                   {day.date.getDate()}
                   {count > 0 && (
-                    <span className={cn("absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-1 py-0 text-[10px] font-bold leading-none", modifiers.selected ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground")}>{count}</span>
+                    <span className={cn("absolute bottom-1 right-1 rounded-full min-w-4 px-1 py-0 text-[10px] font-bold leading-none text-center", modifiers.selected ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground")}>{count}</span>
                   )}
                 </button>
               );

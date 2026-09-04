@@ -35,8 +35,11 @@ class SecurityHardeningTest extends TestCase
 
     private function makeOrder(User $as, MenuItem $item): string
     {
+        $plan = \App\Models\FloorPlan::firstOrCreate(['name' => 'Sec Floor'], ['slug' => 'sec-floor-'.uniqid()]);
+        $table = \App\Models\Table::firstOrCreate(['number' => 'T-SEC-'.uniqid()], ['floor_plan_id' => $plan->id, 'capacity' => 4, 'status' => 'available', 'is_active' => true]);
         return $this->actingAs($as)->postJson('/api/v1/orders', [
             'order_type' => 'dine_in',
+            'table_id' => $table->id,
             'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
         ])->assertStatus(201)->json('data.id');
     }

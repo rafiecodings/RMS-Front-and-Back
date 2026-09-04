@@ -147,6 +147,10 @@ class OrderController extends Controller
             'auto_apply_promotions' => 'nullable|boolean',
         ]);
 
+        if (($validated['order_type'] ?? null) === 'dine_in' && empty($validated['table_id'])) {
+            throw ValidationException::withMessages(['table_id' => ['A table is required for dine-in orders.']]);
+        }
+
         $pricing = app(PricingService::class);
 
         $menuItemIds = collect($validated['items'])->pluck('menu_item_id')->unique()->all();
@@ -463,8 +467,22 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        // Enforce the status machine — no arbitrary timeline jumping.
         $target = $validated['status'];
+        $user = $request->user();
+        $canKitchen = $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('kitchen_staff');
+        $canServe = $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('waiter');
+        $canConfirm = $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('waiter') || $user->hasRole('cashier');
+        if (in_array($target, ['preparing', 'ready'], true) && ! $canKitchen) {
+            return $this->error('You do not have permission to transition to '.$target.'.', 403);
+        }
+        if ($target === 'served' && ! $canServe) {
+            return $this->error('You do not have permission to mark order as served.', 403);
+        }
+        if ($target === 'confirmed' && ! $canConfirm) {
+            return $this->error('You do not have permission to confirm order.', 403);
+        }
+
+        // Enforce the status machine — no arbitrary timeline jumping.
         $current = $order->status;
 
         if ($current !== $target) {

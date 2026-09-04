@@ -87,7 +87,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "view",
   },
   cashier: {
-    dashboard: "view",
+    dashboard: "none",
     customers: "view",
     tables: "view",
     reservations: "none",
@@ -102,7 +102,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   waiter: {
-    dashboard: "view",
+    dashboard: "none",
     customers: "view",
     tables: "view",
     reservations: "view",
@@ -117,7 +117,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   kitchen_staff: {
-    dashboard: "view",
+    dashboard: "none",
     customers: "none",
     tables: "none",
     reservations: "none",
@@ -132,7 +132,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   inventory_staff: {
-    dashboard: "view",
+    dashboard: "none",
     customers: "none",
     tables: "none",
     reservations: "none",
@@ -149,12 +149,12 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
 };
 
 export const SIDEBAR_ROLES: Record<string, string[]> = {
-  dashboard: ["admin", "manager", "cashier", "waiter", "kitchen_staff", "inventory_staff"],
+  dashboard: ["admin", "manager"],
   customers: ["admin", "manager", "waiter", "cashier"],
   tables: ["admin", "manager", "waiter"],
   reservations: ["admin", "manager", "waiter"],
   orders: ["admin", "manager", "waiter", "cashier", "kitchen_staff"],
-  kitchen: ["admin", "manager", "kitchen_staff", "waiter"],
+  kitchen: ["admin", "manager", "kitchen_staff"],
   pos: ["admin", "manager", "cashier"],
   inventory: ["admin", "manager", "inventory_staff"],
   menu: ["admin", "manager", "cashier", "waiter", "kitchen_staff"],
@@ -199,19 +199,11 @@ export function useCanEdit(): (page: keyof RolePermissions) => boolean {
 }
 
 export function canAccessRevenueReport(role?: string): boolean {
-  return (
-    role === ROLES.ADMIN ||
-    role === ROLES.MANAGER ||
-    role === ROLES.CASHIER
-  );
+  return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
 export function canArchiveOrders(role?: string): boolean {
-  return (
-    role === ROLES.ADMIN ||
-    role === ROLES.MANAGER ||
-    role === ROLES.CASHIER
-  );
+  return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
 // Recipe management is restricted to Admin / Manager only (inventory_staff may

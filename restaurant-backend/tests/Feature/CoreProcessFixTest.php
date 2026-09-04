@@ -85,6 +85,7 @@ class CoreProcessFixTest extends TestCase
     public function test_completed_releases_table(): void
     {
         $waiter = $this->userWithRole('waiter');
+        $kitchen = $this->userWithRole('kitchen_staff');
         $admin = $this->userWithRole('admin');
         $cat = MenuCategory::create(['name'=>'FixCat'.uniqid(),'slug'=>'fix-'.uniqid()]);
         $item = MenuItem::create(['category_id'=>$cat->id,'name'=>'FixItem'.uniqid(),'slug'=>'fix-'.uniqid(),'price'=>60]);
@@ -92,12 +93,15 @@ class CoreProcessFixTest extends TestCase
         $table = Table::create(['floor_plan_id'=>$plan->id,'number'=>'T-REL-'.uniqid(),'capacity'=>4,'status'=>'available','is_active'=>true]);
         $orderId = $this->actingAs($waiter)->postJson('/api/v1/orders', ['order_type'=>'dine_in','table_id'=>$table->id,'items'=>[['menu_item_id'=>$item->id,'quantity'=>1]]])->assertStatus(201)->json('data.id');
         $this->actingAs($waiter)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'confirmed'])->assertSuccessful();
-        // Simulate kitchen progress via order status (KOT exists after confirmed)
-        $this->actingAs($waiter)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'preparing'])->assertSuccessful();
-        // Simulate kitchen: directly set served then pay
-        Order::where('id',$orderId)->update(['status'=>'served']);
-        \App\Models\Invoice::create(['invoice_number'=>'INV-'.uniqid(),'order_id'=>$orderId,'subtotal'=>60,'tax_amount'=>7.2,'discount_amount'=>0,'service_charge'=>0,'total'=>67.2,'amount_paid'=>0,'balance'=>67.2,'status'=>'pending']);
+        $this->assertEquals('confirmed', Order::find($orderId)->status);
+        $this->assertTrue(\App\Models\KotTicket::where('order_id', $orderId)->exists());
+        // Kitchen owns preparing/ready
+        $this->actingAs($waiter)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'preparing'])->assertStatus(403);
+        $this->actingAs($kitchen)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'preparing'])->assertSuccessful();
+        $this->actingAs($kitchen)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'ready'])->assertSuccessful();
+        $this->actingAs($waiter)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'served'])->assertSuccessful();
         $this->actingAs($admin)->postJson("/api/v1/orders/{$orderId}/payments", ['payment_method'=>'cash','amount'=>67.2])->assertStatus(201);
+        $this->assertEquals('completed', Order::find($orderId)->status);
         $table->refresh(); $this->assertEquals('available',$table->status);
     }
 

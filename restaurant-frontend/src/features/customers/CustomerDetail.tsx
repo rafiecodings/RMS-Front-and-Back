@@ -71,11 +71,13 @@ export function CustomerDetail({
   reservations = [],
   canEdit = false,
   onEdit,
+  variant = "page",
 }: {
   customer: Customer;
   reservations?: CustomerReservation[];
   canEdit?: boolean;
   onEdit?: () => void;
+  variant?: "page" | "dialog";
 }) {
   const upcoming = reservations.filter(
     (r) => r.status !== "cancelled" && r.status !== "completed"
@@ -85,42 +87,44 @@ export function CustomerDetail({
   );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-bold">
-            {customer.name
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold truncate">{customer.name}</h2>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">
-                Registered Customer
-              </Badge>
-              {!customer.is_active && (
-                <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0">
-                  Inactive
-                </Badge>
-              )}
+    <div className={variant === "dialog" ? "space-y-4" : "space-y-5"}>
+      {variant === "page" && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-bold">
+              {customer.name
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Customer since {formatDate(customer.created_at)}</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-bold truncate">{customer.name}</h2>
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">
+                  Registered Customer
+                </Badge>
+                {!customer.is_active && (
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0">
+                    Inactive
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Customer since {formatDate(customer.created_at)}</p>
+            </div>
           </div>
+          {canEdit && (
+            <Button variant="outline" size="sm" className="shrink-0" onClick={onEdit} render={onEdit ? undefined : (<Link href={`/customers/${customer.id}/edit`} /> as unknown as undefined)}>
+              <Pencil className="h-4 w-4 mr-1.5" />
+              Edit
+            </Button>
+          )}
         </div>
-        {canEdit && (
-          <Button variant="outline" size="sm" className="shrink-0" onClick={onEdit} render={onEdit ? undefined : (<Link href={`/customers/${customer.id}/edit`} /> as unknown as undefined)}>
-            <Pencil className="h-4 w-4 mr-1.5" />
-            Edit
-          </Button>
-        )}
-      </div>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      <div className={variant === "dialog" ? "grid gap-4 sm:grid-cols-2" : "grid gap-4 lg:grid-cols-3"}>
+        <Card className={variant === "dialog" ? "sm:col-span-2" : "lg:col-span-1"}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">Contact</CardTitle>
           </CardHeader>

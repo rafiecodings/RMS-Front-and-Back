@@ -24,16 +24,24 @@ interface Props {
 export function CustomerDetailsDialog({ open, onOpenChange, customer, isLoading, isError, onRetry, canEdit, onEdit, onArchive }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+      <DialogContent className="w-[calc(100vw-24px)] sm:max-w-3xl max-w-3xl sm:!max-w-3xl max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
-          <div className="flex items-start justify-between gap-4 pr-8">
-            <div className="min-w-0">
+          <div className="flex items-start gap-3 pr-8">
+            {customer && (
+              <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                {customer.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg font-bold truncate">{customer?.name ?? "Customer Details"}</DialogTitle>
               {customer && (
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">Registered Customer</Badge>
-                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${customer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>{customer.is_active ? "Active" : "Inactive"}</Badge>
-                </div>
+                <>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">Registered Customer</Badge>
+                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${customer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>{customer.is_active ? "Active" : "Inactive"}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Customer since {new Date(customer.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                </>
               )}
             </div>
           </div>
@@ -46,7 +54,7 @@ export function CustomerDetailsDialog({ open, onOpenChange, customer, isLoading,
           ) : !customer ? (
             <p className="text-sm text-muted-foreground py-8 text-center">Customer not found.</p>
           ) : (
-            <CustomerDetail customer={customer} reservations={customer.reservations ?? []} canEdit={false} />
+            <CustomerDetail customer={customer} reservations={customer.reservations ?? []} canEdit={false} variant="dialog" />
           )}
         </div>
         {customer && !isLoading && !isError && (

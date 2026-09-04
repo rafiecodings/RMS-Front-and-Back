@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Order\OrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'role:admin,manager,waiter,cashier'])->prefix('orders')->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin,manager,waiter,cashier,kitchen_staff'])->prefix('orders')->group(function () {
     Route::get('/', [OrderController::class, 'index']);
     Route::post('/', [OrderController::class, 'store']);
     Route::get('/{id}', [OrderController::class, 'show']);

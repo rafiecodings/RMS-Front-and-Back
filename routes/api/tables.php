@@ -20,7 +20,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [TableController::class, 'store'])->middleware('role:admin,manager,waiter');
         Route::get('/{id}', [TableController::class, 'show'])->whereUuid('id');
         Route::put('/{id}', [TableController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
-        Route::patch('/{id}/status', [TableController::class, 'updateStatus'])->whereUuid('id');
+        Route::patch('/{id}/status', [TableController::class, 'updateStatus'])->middleware('role:admin,manager,waiter')->whereUuid('id');
         // Archive (is_active=false) instead of destructive delete — historical
         // orders/reservations keep their table reference.
         Route::delete('/{id}/archive', [TableController::class, 'archive'])->middleware('role:admin,manager')->whereUuid('id');

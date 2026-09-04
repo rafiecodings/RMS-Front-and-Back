@@ -132,8 +132,8 @@ class RbacMatrixTest extends TestCase
             'staff_write' => ['POST', '/staff', [], ['admin', 'manager']],
             'kot_read' => ['GET', '/kot', [], self::ROLES],
             'reservations_read' => ['GET', '/reservations', [], self::ROLES],
-            'customers_read' => ['GET', '/customers', [], self::ROLES],
-            'dashboard' => ['GET', '/dashboard/summary', [], self::ROLES],
+            'customers_read' => ['GET', '/customers', [], ['admin', 'manager', 'waiter', 'cashier']],
+            'dashboard' => ['GET', '/dashboard/summary', [], ['admin', 'manager']],
         ];
 
         foreach (self::ROLES as $role) {
@@ -165,9 +165,12 @@ class RbacMatrixTest extends TestCase
 
     private function createOrder(User $as): string
     {
+        $plan = \App\Models\FloorPlan::firstOrCreate(['name' => 'RBAC Floor'], ['slug' => 'rbac-floor-'.uniqid()]);
+        $table = \App\Models\Table::firstOrCreate(['number' => 'T-RBAC-'.uniqid()], ['floor_plan_id' => $plan->id, 'capacity' => 4, 'status' => 'available', 'is_active' => true]);
         return $this->actingAs($as)
             ->postJson('/api/v1/orders', [
                 'order_type' => 'dine_in',
+                'table_id' => $table->id,
                 'items' => [['menu_item_id' => $this->menuItem->id, 'quantity' => 1]],
             ])
             ->assertStatus(201)

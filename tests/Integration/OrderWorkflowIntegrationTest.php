@@ -254,9 +254,12 @@ class OrderWorkflowIntegrationTest extends TestCase
 
     private function createOrderViaApi(MenuItem $menuItem): string
     {
+        $plan = \App\Models\FloorPlan::firstOrCreate(['name' => 'Test Floor'], ['slug' => 'test-floor-'.uniqid()]);
+        $table = \App\Models\Table::firstOrCreate(['number' => 'T-TEST-'.uniqid()], ['floor_plan_id' => $plan->id, 'capacity' => 4, 'status' => 'available', 'is_active' => true]);
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/orders', [
                 'order_type' => 'dine_in',
+                'table_id' => $table->id,
                 'items' => [
                     [
                         'menu_item_id' => $menuItem->id,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader, LoadingSpinner, ConfirmDialog } from "@/components/shared";
 import { CustomerDetail, EditCustomerDialog } from "@/features/customers";
@@ -10,6 +10,7 @@ import { useCustomer, useCustomers } from "@/lib/hooks";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { canEdit } from "@/lib/utils/permissions";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbContext";
 import type { CustomerFormData } from "@/lib/types";
 
 export default function CustomerDetailPage({
@@ -24,6 +25,12 @@ export default function CustomerDetailPage({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const { user } = useAuth();
   const canArchive = canEdit(user?.role, "customers");
+  const { setLabel } = useBreadcrumbLabel();
+  useEffect(() => {
+    if (customer?.name) setLabel(customer.name);
+    else if (!isLoading) setLabel(null);
+    return () => setLabel(null);
+  }, [customer?.name, isLoading, setLabel]);
 
   function handleArchiveConfirm() {
     archive.mutate(id, {

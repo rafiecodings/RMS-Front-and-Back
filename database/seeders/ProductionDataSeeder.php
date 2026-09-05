@@ -66,16 +66,11 @@ class ProductionDataSeeder extends Seeder
             'kot_ticket_items', 'invoices', 'payments', 'refunds',
             'discounts', 'cash_register_sessions', 'gift_cards',
             'stock_movements', 'purchase_orders', 'purchase_order_items',
-            'wastage', 'staff_profiles', 'staff_shifts', 'shift_schedules',
-            'attendance', 'staff_performance', 'staff_commissions', 'outlets',
-            'model_has_roles',
+            'wastage', 'outlets',
         ];
         foreach ($tables as $table) {
             DB::table($table)->truncate();
         }
-
-        DB::table('users')->whereNotIn('email', ['admin@rms.com', 'jaysonkitchenstaff@gmail.com'])->delete();
-        DB::table('roles')->whereNotIn('name', ['admin', 'manager', 'cashier', 'waiter', 'kitchen_staff'])->delete();
     }
 
     private function uid(string $prefix, int $num): string
@@ -158,16 +153,56 @@ class ProductionDataSeeder extends Seeder
     {
         $adminId = DB::table('users')->where('email', 'admin@rms.com')->value('id');
         $this->ids['users'][] = $adminId;
+        $adminRoleId = DB::table('roles')->where('name', 'admin')->value('id');
+        if ($adminId && $adminRoleId) {
+            $hasAdminRole = DB::table('model_has_roles')->where('model_id', $adminId)->where('role_id', $adminRoleId)->where('model_type', 'App\Models\User')->exists();
+            if (! $hasAdminRole) {
+                DB::table('model_has_roles')->insert([
+                    'role_id' => $adminRoleId,
+                    'model_type' => 'App\Models\User',
+                    'model_id' => $adminId,
+                ]);
+            }
+        }
 
         $kitchenRoleId = DB::table('roles')->where('name', 'kitchen_staff')->value('id');
         $jaysonEmail = 'jaysonkitchenstaff@gmail.com';
         $existing = DB::table('users')->where('email', $jaysonEmail)->first();
         if ($existing) {
             $this->ids['users'][] = $existing->id;
+            $hasKitchenRole = DB::table('model_has_roles')->where('model_id', $existing->id)->where('role_id', $kitchenRoleId)->where('model_type', 'App\Models\User')->exists();
+            if (! $hasKitchenRole && $kitchenRoleId) {
+                DB::table('model_has_roles')->insert([
+                    'role_id' => $kitchenRoleId,
+                    'model_type' => 'App\Models\User',
+                    'model_id' => $existing->id,
+                ]);
+            }
             $existingStaff = DB::table('staff_profiles')->where('user_id', $existing->id)->first();
             if ($existingStaff) {
                 $this->ids['staff_profiles'][] = $existingStaff->id;
+                return;
             }
+            // Staff profile missing (e.g., after operational truncate) — recreate it
+            $staffId = $this->uid('staff', 99);
+            $this->ids['staff_profiles'][] = $staffId;
+            $createdAt = $existing->created_at ?? $this->sixMonthsAgo;
+            DB::table('staff_profiles')->insert([
+                'id' => $staffId,
+                'user_id' => $existing->id,
+                'employee_id' => 'EMP-JAYSON01',
+                'position' => 'Kitchen Staff',
+                'department' => 'Kitchen',
+                'hourly_rate' => $this->randomFloat(60, 180),
+                'base_salary' => $this->randomFloat(15000, 45000),
+                'hire_date' => $this->randomDate($this->sixMonthsAgo),
+                'employment_type' => 'full_time',
+                'phone' => '09919999999',
+                'address' => 'Caloocan City',
+                'is_active' => true,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ]);
             return;
         }
 

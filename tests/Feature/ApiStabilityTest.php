@@ -23,7 +23,12 @@ class ApiStabilityTest extends TestCase
         ]);
         $res->assertStatus(200);
 
-        return (string) ($res->json('data.token') ?? $res->json('data.access_token'));
+        $cookie = $res->getCookie('auth_token', false);
+        if ($cookie) {
+            return rawurldecode((string) $cookie->getValue());
+        }
+
+        return '';
     }
 
     public function test_login_profile_refresh_logout_lifecycle(): void
@@ -39,12 +44,12 @@ class ApiStabilityTest extends TestCase
         // Profile works with the fresh token.
         $this->getJson('/api/v1/auth/profile', ['Authorization' => "Bearer {$token}"])
             ->assertStatus(200);
-        dump('after login: '.$admin->tokens()->pluck('id')->implode(','));
 
         // Refresh issues a working token.
         $refresh = $this->postJson('/api/v1/auth/refresh', [], ['Authorization' => "Bearer {$token}"]);
         $refresh->assertStatus(200);
-        $newToken = (string) ($refresh->json('data.token') ?? '');
+        $newCookie = $refresh->getCookie('auth_token', false);
+        $newToken = $newCookie ? rawurldecode((string) $newCookie->getValue()) : '';
         $this->assertNotSame('', $newToken);
 
         $this->getJson('/api/v1/auth/profile', ['Authorization' => "Bearer {$newToken}"])

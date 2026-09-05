@@ -29,17 +29,13 @@ class RefreshTokenController extends Controller
                 'created_at' => $user->created_at?->toISOString(),
                 'updated_at' => $user->updated_at?->toISOString(),
             ],
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => (int) (config('sanctum.expiration')
-                ? config('sanctum.expiration') * 60
-                : env('JWT_EXPIRY', 900)),
+            'expires_in' => (int) config('sanctum.expiration') * 60,
         ], 'Token refreshed successfully.')
             ->withCookie(
                 cookie(
                     'auth_token',
                     $token,
-                    60 * 24 * 7,
+                    (int) config('sanctum.expiration'),
                     '/',
                     null,
                     env('APP_ENV') === 'production',

@@ -4,13 +4,14 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { useStaff, useShiftSchedule } from "@/lib/hooks";
-import { StaffStats } from "@/features/staff";
+import { AddStaffDialog, StaffStats } from "@/features/staff";
 import { Users, CalendarCheck, ClipboardList, BarChart3, ArrowRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 
 export default function StaffPage() {
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
+  const [addOpen, setAddOpen] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -40,7 +41,7 @@ export default function StaffPage() {
         description="Manage employees, shifts, attendance, and performance"
         action={
           isAdmin && (
-            <Button render={<Link href="/staff/employees/new" />}>
+            <Button onClick={() => setAddOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add Staff
             </Button>
@@ -103,6 +104,7 @@ export default function StaffPage() {
           </div>
         </Link>
       </div>
+      {isAdmin && <AddStaffDialog open={addOpen} onOpenChange={setAddOpen} />}
     </div>
   );
 }

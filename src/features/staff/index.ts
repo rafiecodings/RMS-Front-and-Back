@@ -1,5 +1,6 @@
 export { StaffTable } from "./components/StaffTable";
 export { StaffForm } from "./components/StaffForm";
+export { AddStaffDialog } from "./components/AddStaffDialog";
 export { StaffStats } from "./components/StaffStats";
 export { StaffDetail } from "./components/StaffDetail";
 export { RoleBadge } from "./components/RoleBadge";

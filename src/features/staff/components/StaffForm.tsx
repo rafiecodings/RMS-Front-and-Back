@@ -20,9 +20,10 @@ interface StaffFormProps {
   onSubmit: (data: StaffFormData) => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  hideFooter?: boolean;
 }
 
-export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffFormProps) {
+export const StaffForm = React.forwardRef<HTMLFormElement, StaffFormProps>(function StaffForm({ initialData, onSubmit, onCancel, isLoading, hideFooter }, ref) {
   const today = new Date().toISOString().split("T")[0];
 
   const [form, setForm] = React.useState<StaffFormData>({
@@ -52,7 +53,7 @@ export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffF
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={ref} onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-lg border bg-card p-6 space-y-4">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Personal Information</h3>
         <div className="grid gap-4 md:grid-cols-2">
@@ -220,19 +221,21 @@ export function StaffForm({ initialData, onSubmit, onCancel, isLoading }: StaffF
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => (onCancel ? onCancel() : window.history.back())}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading || !form.first_name || !form.last_name || !form.email}>
-          {isLoading ? "Saving..." : initialData ? "Update Staff" : "Add Staff"}
-        </Button>
-      </div>
+      {!hideFooter && (
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => (onCancel ? onCancel() : window.history.back())}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading || !form.first_name || !form.last_name || !form.email}>
+            {isLoading ? "Saving..." : initialData ? "Update Staff" : "Add Staff"}
+          </Button>
+        </div>
+      )}
     </form>
   );
-}
+});
 

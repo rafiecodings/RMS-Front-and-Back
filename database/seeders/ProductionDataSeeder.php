@@ -74,7 +74,7 @@ class ProductionDataSeeder extends Seeder
             DB::table($table)->truncate();
         }
 
-        DB::table('users')->where('email', '!=', 'admin@rms.com')->delete();
+        DB::table('users')->whereNotIn('email', ['admin@rms.com', 'jaysonkitchenstaff@gmail.com'])->delete();
         DB::table('roles')->whereNotIn('name', ['admin', 'manager', 'cashier', 'waiter', 'kitchen_staff'])->delete();
     }
 
@@ -159,158 +159,56 @@ class ProductionDataSeeder extends Seeder
         $adminId = DB::table('users')->where('email', 'admin@rms.com')->value('id');
         $this->ids['users'][] = $adminId;
 
-        $existingAdminRoleId = DB::table('roles')->where('name', 'admin')->value('id');
-        $existingManagerRoleId = DB::table('roles')->where('name', 'manager')->value('id');
-        $existingCashierRoleId = DB::table('roles')->where('name', 'cashier')->value('id');
-        $existingWaiterRoleId = DB::table('roles')->where('name', 'waiter')->value('id');
-        $existingKitchenRoleId = DB::table('roles')->where('name', 'kitchen_staff')->value('id');
-
-        // Only create new roles that don't already exist
-        $newRoles = ['branch_manager', 'inventory_staff', 'accountant'];
-        $roleIds = [];
-        foreach ($newRoles as $roleName) {
-            $existing = DB::table('roles')->where('name', $roleName)->first();
-            if ($existing) {
-                $roleIds[$roleName] = $existing->id;
-            } else {
-                $rid = $this->uid('role', array_search($roleName, $newRoles) + 10);
-                $roleIds[$roleName] = $rid;
-                DB::table('roles')->insert([
-                    'id' => $rid,
-                    'name' => $roleName,
-                    'display_name' => match($roleName) {
-                        'branch_manager' => 'Branch Manager',
-                        'inventory_staff' => 'Inventory Staff',
-                        'accountant' => 'Accountant',
-                    },
-                    'description' => match($roleName) {
-                        'branch_manager' => 'Manages day-to-day branch operations',
-                        'inventory_staff' => 'Manages ingredient stock and purchase orders',
-                        'accountant' => 'Handles financial reports and reconciliation',
-                    },
-                    'is_system' => false,
-                    'created_at' => $this->sixMonthsAgo,
-                    'updated_at' => $this->sixMonthsAgo,
-                ]);
+        $kitchenRoleId = DB::table('roles')->where('name', 'kitchen_staff')->value('id');
+        $jaysonEmail = 'jaysonkitchenstaff@gmail.com';
+        $existing = DB::table('users')->where('email', $jaysonEmail)->first();
+        if ($existing) {
+            $this->ids['users'][] = $existing->id;
+            $existingStaff = DB::table('staff_profiles')->where('user_id', $existing->id)->first();
+            if ($existingStaff) {
+                $this->ids['staff_profiles'][] = $existingStaff->id;
             }
+            return;
         }
 
-        $users = [
-            // Branch Managers
-            ['name' => 'Ricardo Santos', 'email' => 'ricardo.santos@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 0],
-            ['name' => 'Maria Lopez', 'email' => 'maria.lopez@kainanexpress.com', 'role' => $existingManagerRoleId, 'outlet' => 1],
-
-            // Cashiers
-            ['name' => 'Angela Cruz', 'email' => 'angela.cruz@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 0],
-            ['name' => 'Brian Tan', 'email' => 'brian.tan@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 0],
-            ['name' => 'Catherine Reyes', 'email' => 'catherine.reyes@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
-            ['name' => 'Dennis Villanueva', 'email' => 'dennis.villanueva@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
-
-            // Waiters
-            ['name' => 'Elena Garcia', 'email' => 'elena.garcia@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Francisco Diaz', 'email' => 'francisco.diaz@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Gloria Mendoza', 'email' => 'gloria.mendoza@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Henry Ramirez', 'email' => 'henry.ramirez@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Isabel Torres', 'email' => 'isabel.torres@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-            ['name' => 'Jose Gonzales', 'email' => 'jose.gonzales@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-            ['name' => 'Katherine Sanches', 'email' => 'katherine.sanches@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 1],
-
-            // Kitchen Staff
-            ['name' => 'Luis Fernandez', 'email' => 'luis.fernandez@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Martha Rivera', 'email' => 'martha.rivera@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Nicolas Castillo', 'email' => 'nicolas.castillo@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-            ['name' => 'Olivia Santiago', 'email' => 'olivia.santiago@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-            ['name' => 'Pedro Alvarez', 'email' => 'pedro.alvarez@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-            ['name' => 'Queen Dela Cruz', 'email' => 'queen.delacruz@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 1],
-
-            // Inventory Staff
-            ['name' => 'Ramon Guerrero', 'email' => 'ramon.guerrero@kainanexpress.com', 'role' => $roleIds['inventory_staff'], 'outlet' => 0],
-            ['name' => 'Sofia Mercado', 'email' => 'sofia.mercado@kainanexpress.com', 'role' => $roleIds['inventory_staff'], 'outlet' => 1],
-
-            // Accountants
-            ['name' => 'Tomas Aguilar', 'email' => 'tomas.aguilar@kainanexpress.com', 'role' => $roleIds['accountant'], 'outlet' => 0],
-            ['name' => 'Ursula Navarro', 'email' => 'ursula.navarro@kainanexpress.com', 'role' => $roleIds['accountant'], 'outlet' => 1],
-
-            // Branch Managers (additional)
-            ['name' => 'Victor Ramos', 'email' => 'victor.ramos@kainanexpress.com', 'role' => $roleIds['branch_manager'], 'outlet' => 0],
-            ['name' => 'Wendy Chua', 'email' => 'wendy.chua@kainanexpress.com', 'role' => $roleIds['branch_manager'], 'outlet' => 1],
-
-            // Additional staff
-            ['name' => 'Xavier Lim', 'email' => 'xavier.lim@kainanexpress.com', 'role' => $existingWaiterRoleId, 'outlet' => 0],
-            ['name' => 'Yvonne Ong', 'email' => 'yvonne.ong@kainanexpress.com', 'role' => $existingCashierRoleId, 'outlet' => 1],
-            ['name' => 'Zandro Bautista', 'email' => 'zandro.bautista@kainanexpress.com', 'role' => $existingKitchenRoleId, 'outlet' => 0],
-        ];
-
-        $phonePrefixes = ['0917', '0920', '0927', '0932', '0939', '0945', '0949', '0956', '0966', '0977', '0998', '0906', '0908', '0915', '0921'];
-
-        foreach ($users as $i => $userData) {
-            $id = $this->uid('user', $i + 2);
-            $this->ids['users'][] = $id;
-            $createdAt = $this->randomTimestamp($this->sixMonthsAgo, (new Carbon($this->sixMonthsAgo))->addMonth());
-
-            DB::table('users')->insert([
-                'id' => $id,
-                'name' => $userData['name'],
-                'email' => $userData['email'],
-                'password' => Hash::make($this->userSeedPassword()),
-                'is_active' => true,
-                'email_verified_at' => $createdAt,
-                'avatar' => null,
-                'last_login_at' => $this->randomTimestamp((new Carbon($this->sixMonthsAgo))->addMonths(5)),
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ]);
-
-            DB::table('model_has_roles')->insert([
-                'role_id' => $userData['role'],
-                'model_type' => 'App\Models\User',
-                'model_id' => $id,
-            ]);
-
-            $employeeId = sprintf('KE-%s-%04d', match($userData['outlet']) { 0 => 'MNL', 1 => 'BLG' }, $i + 1);
-            $staffProfileId = $this->uid('staff', $i + 2);
-            $this->ids['staff_profiles'][] = $staffProfileId;
-
-            DB::table('staff_profiles')->insert([
-                'id' => $staffProfileId,
-                'user_id' => $id,
-                'employee_id' => $employeeId,
-                'position' => match($userData['role']) {
-                    $existingManagerRoleId => 'Branch Manager',
-                    $existingCashierRoleId => 'Cashier',
-                    $existingWaiterRoleId => 'Waiter',
-                    $existingKitchenRoleId => 'Kitchen Staff',
-                    $roleIds['inventory_staff'] => 'Inventory Staff',
-                    $roleIds['accountant'] => 'Accountant',
-                    $roleIds['branch_manager'] => 'Branch Manager',
-                    default => 'Staff',
-                },
-                'department' => match($userData['role']) {
-                    $existingManagerRoleId => 'Management',
-                    $existingCashierRoleId => 'Front of House',
-                    $existingWaiterRoleId => 'Service',
-                    $existingKitchenRoleId => 'Kitchen',
-                    $roleIds['inventory_staff'] => 'Inventory',
-                    $roleIds['accountant'] => 'Finance',
-                    $roleIds['branch_manager'] => 'Management',
-                    default => 'Operations',
-                },
-                'hourly_rate' => $this->randomFloat(60, 180),
-                'base_salary' => $this->randomFloat(15000, 45000),
-                'hire_date' => $this->randomDate($this->sixMonthsAgo),
-                'employment_type' => $this->randomFrom(['full_time', 'full_time', 'full_time', 'part_time']),
-                'phone' => $this->randomFrom($phonePrefixes) . sprintf('%07d', mt_rand(0, 9999999)),
-                'address' => sprintf('%d %s St., Barangay %d, %s',
-                    mt_rand(1, 999),
-                    $this->randomFrom(['Rizal', 'Bonifacio', 'Mabini', 'Luna', 'Aquino', 'Del Pilar', 'Jacinto', 'Silang']),
-                    mt_rand(1, 50),
-                    $userData['outlet'] === 0 ? 'Caloocan City' : 'Baliwag'
-                ),
-                'is_active' => true,
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ]);
-        }
+        $id = $this->uid('user', 99);
+        $this->ids['users'][] = $id;
+        $createdAt = $this->randomTimestamp($this->sixMonthsAgo, (new Carbon($this->sixMonthsAgo))->addMonth());
+        DB::table('users')->insert([
+            'id' => $id,
+            'name' => 'Jayson Statham',
+            'email' => $jaysonEmail,
+            'password' => Hash::make($this->userSeedPassword()),
+            'is_active' => true,
+            'email_verified_at' => $createdAt,
+            'avatar' => null,
+            'last_login_at' => $this->randomTimestamp((new Carbon($this->sixMonthsAgo))->addMonths(5)),
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
+        DB::table('model_has_roles')->insert([
+            'role_id' => $kitchenRoleId,
+            'model_type' => 'App\Models\User',
+            'model_id' => $id,
+        ]);
+        $staffId = $this->uid('staff', 99);
+        $this->ids['staff_profiles'][] = $staffId;
+        DB::table('staff_profiles')->insert([
+            'id' => $staffId,
+            'user_id' => $id,
+            'employee_id' => 'EMP-JAYSON01',
+            'position' => 'Kitchen Staff',
+            'department' => 'Kitchen',
+            'hourly_rate' => $this->randomFloat(60, 180),
+            'base_salary' => $this->randomFloat(15000, 45000),
+            'hire_date' => $this->randomDate($this->sixMonthsAgo),
+            'employment_type' => 'full_time',
+            'phone' => '09919999999',
+            'address' => 'Caloocan City',
+            'is_active' => true,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
     }
 
     // ==================== CUSTOMERS ====================

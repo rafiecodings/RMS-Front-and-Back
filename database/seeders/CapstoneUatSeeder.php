@@ -41,30 +41,7 @@ class CapstoneUatSeeder extends Seeder
 
     private function seedStaff(): void
     {
-        $roles = ['manager', 'cashier', 'waiter', 'kitchen_staff'];
-        foreach ($roles as $index => $roleName) {
-            $role = Role::where('name', $roleName)->first();
-            if (! $role) {
-                continue;
-            }
-
-            $exists = User::where('email', strtolower($roleName).'@rms.com')->first();
-            if ($exists) {
-                continue;
-            }
-
-            // Role-test accounts are archived (deactivated) rather than
-            // deleted so audit/historical references stay intact. The
-            // Administrator (admin@rms.com) remains the only active seed
-            // account of this kind.
-            $user = User::create([
-                'name' => ucfirst(str_replace('_', ' ', $roleName)).' Demo',
-                'email' => strtolower($roleName).'@rms.com',
-                'password' => Hash::make('password123'),
-                'is_active' => false,
-            ]);
-            $user->roles()->attach($role);
-        }
+        return;
     }
 
     // ------------------------------------------------------------------

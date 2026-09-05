@@ -18,8 +18,8 @@ use Illuminate\Support\Str;
 /**
  * Intentional UAT scenarios for the capstone demo.
  *
- * ADDITIVE only — never wipes anything, and deliberately preserves the real
- * historical daily orders that Timecho/local forecasting depends on.
+ * DESTRUCTIVE: seedStaff() removes all users except Admin + Jayson.
+ * Guarded to run only in local/testing/development. Never run in production.
  *
  * Run: php artisan db:seed --class=CapstoneUatSeeder
  */
@@ -27,6 +27,10 @@ class CapstoneUatSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing', 'development', 'dev'])) {
+            throw new \RuntimeException('CapstoneUatSeeder is destructive and may only run in local/testing/development environments. Current environment: '.app()->environment());
+        }
+
         $this->seedStaff();
         $this->seedTieredCustomers();
         $this->seedIngredientScenarios();
@@ -41,7 +45,75 @@ class CapstoneUatSeeder extends Seeder
 
     private function seedStaff(): void
     {
-        return;
+        $keep = ['admin@rms.com', 'jaysonkitchenstaff@gmail.com'];
+
+        $removeIds = DB::table('users')->whereNotIn('email', $keep)->pluck('id')->toArray();
+        if (! empty($removeIds)) {
+            DB::table('personal_access_tokens')->whereIn('tokenable_id', $removeIds)->delete();
+            DB::table('model_has_roles')->whereIn('model_id', $removeIds)->where('model_type', 'App\Models\User')->delete();
+            DB::table('staff_profiles')->whereIn('user_id', $removeIds)->delete();
+            DB::table('sessions')->whereIn('user_id', $removeIds)->delete();
+            DB::table('users')->whereIn('id', $removeIds)->delete();
+        }
+
+        $admin = User::where('email', 'admin@rms.com')->first();
+        if (! $admin) {
+            $admin = User::create([
+                'name' => 'Administrator',
+                'email' => 'admin@rms.com',
+                'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]);
+            $adminRole = Role::where('name', 'admin')->first();
+            if ($adminRole) $admin->roles()->attach($adminRole);
+        }
+
+        $jayson = User::where('email', 'jaysonkitchenstaff@gmail.com')->first();
+        $kitchenRole = Role::where('name', 'kitchen_staff')->first();
+        if (! $jayson) {
+            $jayson = User::create([
+                'name' => 'Jayson Statham',
+                'email' => 'jaysonkitchenstaff@gmail.com',
+                'password' => Hash::make(env('DEMO_USER_PASSWORD', 'password')),
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]);
+            if ($kitchenRole) $jayson->roles()->attach($kitchenRole);
+            DB::table('staff_profiles')->insert([
+                'id' => (string) Str::uuid(),
+                'user_id' => $jayson->id,
+                'employee_id' => 'EMP-JAYSON01',
+                'position' => 'Kitchen Staff',
+                'department' => 'Kitchen',
+                'hire_date' => now()->subMonths(2),
+                'employment_type' => 'full_time',
+                'phone' => '09919999999',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            if ($kitchenRole && ! $jayson->roles()->where('name', 'kitchen_staff')->exists()) {
+                $jayson->roles()->attach($kitchenRole);
+            }
+            $hasProfile = DB::table('staff_profiles')->where('user_id', $jayson->id)->exists();
+            if (! $hasProfile) {
+                DB::table('staff_profiles')->insert([
+                    'id' => (string) Str::uuid(),
+                    'user_id' => $jayson->id,
+                    'employee_id' => 'EMP-JAYSON01',
+                    'position' => 'Kitchen Staff',
+                    'department' => 'Kitchen',
+                    'hire_date' => now()->subMonths(2),
+                    'employment_type' => 'full_time',
+                    'phone' => '09919999999',
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
     }
 
     // ------------------------------------------------------------------

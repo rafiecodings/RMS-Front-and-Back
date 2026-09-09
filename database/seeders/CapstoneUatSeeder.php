@@ -32,11 +32,9 @@ class CapstoneUatSeeder extends Seeder
         }
 
         $this->seedStaff();
-        $this->seedTieredCustomers();
-        $this->seedIngredientScenarios();
-        $this->seedReplenishmentRequests();
-        $this->seedReservationScenarios();
-        $this->seedOrderStates();
+        // Local cleanup: demo/UAT business data (tiered Demo customers, UAT
+        // ingredients, RPL/RSV/ORD-UAT records) is intentionally no longer
+        // seeded so repeated runs cannot recreate user-visible demo clutter.
     }
 
     // ------------------------------------------------------------------

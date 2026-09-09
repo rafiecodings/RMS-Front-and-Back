@@ -56,6 +56,7 @@ class IngredientController extends Controller
             'storage_location' => $i->storage_location,
             'is_active' => $i->is_active,
             'is_low_stock' => (float) $i->current_stock <= (float) $i->minimum_stock,
+            'supplier_id' => $i->supplier_id,
             'supplier' => $i->supplier ? [
                 'id' => $i->supplier->id,
                 'name' => $i->supplier->name,
@@ -132,6 +133,7 @@ class IngredientController extends Controller
             'storage_location' => $ingredient->storage_location,
             'is_active' => $ingredient->is_active,
             'is_low_stock' => (float) $ingredient->current_stock <= (float) $ingredient->minimum_stock,
+            'supplier_id' => $ingredient->supplier_id,
             'supplier' => $ingredient->supplier ? [
                 'id' => $ingredient->supplier->id,
                 'name' => $ingredient->supplier->name,

@@ -49,8 +49,8 @@ export function RecipeDetail({ recipe, canEdit, onEdit }: RecipeDetailProps) {
             {(recipe.ingredients ?? []).map((ri) => (
               <tr key={ri.id} className="hover:bg-muted/30">
 <td className="px-4 py-3">
-                    <p className="font-medium">{ri.ingredient?.name ?? "Unknown Ingredient"}</p>
-                  {ri.ingredient?.category && (
+                    <p className="font-medium">{ri.ingredient?.name ?? ri.name ?? "Unknown Ingredient"}</p>
+                  {(ri.ingredient?.category) && (
                     <p className="text-xs text-muted-foreground capitalize">{ri.ingredient.category}</p>
                   )}
                 </td>

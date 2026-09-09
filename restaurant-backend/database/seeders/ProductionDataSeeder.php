@@ -66,7 +66,7 @@ class ProductionDataSeeder extends Seeder
             'kot_ticket_items', 'invoices', 'payments', 'refunds',
             'discounts', 'cash_register_sessions', 'gift_cards',
             'stock_movements', 'purchase_orders', 'purchase_order_items',
-            'wastage', 'outlets',
+            'wastage', 'outlets', 'staff_shifts', 'shift_schedules',
         ];
         foreach ($tables as $table) {
             DB::table($table)->truncate();
@@ -250,6 +250,8 @@ class ProductionDataSeeder extends Seeder
 
     private function createCustomers(): void
     {
+        // Local cleanup: keep customers at 0. truncateRelevantTables() already clears the table.
+        return;
         $firstNames = [
             'Juan', 'Maria', 'Jose', 'Ana', 'Pedro', 'Rosa', 'Antonio', 'Luz', 'Manuel', 'Elena',
             'Carlos', 'Teresa', 'Ramon', 'Cecilia', 'Luis', 'Carmen', 'Miguel', 'Josefina', 'Andres', 'Beatriz',
@@ -497,9 +499,15 @@ class ProductionDataSeeder extends Seeder
             ['Oatmeal with Fruits', 119, 44, 12, 'Warm oatmeal topped with fresh banana and mango', 5, true, 280],
         ];
 
+        // Local cleanup: retain exactly 60 items (4 per category block) = 3 pages at 20/page.
+        $retainedMenu = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27, 30, 31, 32, 33, 36, 37, 38, 39, 42, 43, 44, 45, 48, 49, 50, 51, 54, 55, 56, 57, 62, 63, 64, 65, 70, 71, 72, 73, 76, 77, 78, 79, 83, 84, 85, 86, 89, 90, 91, 92, 95, 96, 97, 98];
         foreach ($menuItems as $i => $item) {
+            if (! in_array($i, $retainedMenu, true)) {
+                continue;
+            }
             $id = $this->uid('menuitem', $i + 1);
             $this->ids['menu_items'][] = $id;
+            $this->ids['menu_map'][$i] = $id;
 
             $catIdx = 0;
             $cumulative = 0;
@@ -662,9 +670,15 @@ class ProductionDataSeeder extends Seeder
             ['Cooking Wine', 'Pantry', 'L', 8, 2, 25, 8],
         ];
 
+        // Local cleanup: retain 40 ingredients covering every retained recipe's main ingredient.
+        $retainedIng = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 19, 21, 22, 24, 26, 27, 28, 29, 32, 34, 51, 52, 53, 57, 58, 62, 63, 64, 69, 70, 72, 73, 75];
         foreach ($ingredients as $i => $ing) {
+            if (! in_array($i, $retainedIng, true)) {
+                continue;
+            }
             $id = $this->uid('ingredient', $i + 1);
             $this->ids['ingredients'][] = $id;
+            $this->ids['ingredient_map'][$i] = $id;
             $supplierIdx = $ing[6] - 1;
             DB::table('ingredients')->insert([
                 'id' => $id,
@@ -823,8 +837,12 @@ class ProductionDataSeeder extends Seeder
         ];
 
         foreach ($recipeData as $i => $recipe) {
-            $menuItemId = $this->ids['menu_items'][$i];
-            $recipeId = $this->uid('recipe', $i + 1);
+            $menuIdx = $recipe[0];
+            if (! isset($this->ids['menu_map'][$menuIdx])) {
+                continue;
+            }
+            $menuItemId = $this->ids['menu_map'][$menuIdx];
+            $recipeId = $this->uid('recipe', $menuIdx + 1);
             DB::table('recipes')->insert([
                 'id' => $recipeId,
                 'menu_item_id' => $menuItemId,
@@ -843,7 +861,10 @@ class ProductionDataSeeder extends Seeder
                     $aggregated[$ingIdx] = ($aggregated[$ingIdx] ?? 0) + $qty;
                 }
                 foreach ($aggregated as $ingIdx => $qty) {
-                    $ingId = $this->ids['ingredients'][$ingIdx];
+                    if (! isset($this->ids['ingredient_map'][$ingIdx])) {
+                        continue;
+                    }
+                    $ingId = $this->ids['ingredient_map'][$ingIdx];
                     $unit = DB::table('ingredients')->where('id', $ingId)->value('unit') ?? 'kg';
                     $costPerUnit = DB::table('ingredients')->where('id', $ingId)->value('cost_per_unit') ?? 0;
                     DB::table('recipe_ingredients')->insert([
@@ -882,6 +903,8 @@ class ProductionDataSeeder extends Seeder
 
     private function createTables(): void
     {
+        // Local cleanup: keep tables at 0. truncateRelevantTables() already clears the table.
+        return;
         $outletTables = [
             [1, 8, 12, 6, 2], // Outlet 0: 1x 8-seat, 8x 4-seat, 12x 2-seat, 6x 6-seat, 2x 10-seat
             [1, 7, 10, 5, 2], // Outlet 1: slightly fewer
@@ -963,6 +986,8 @@ class ProductionDataSeeder extends Seeder
 
     private function createReservations(): void
     {
+        // Local cleanup: keep reservations at 0. truncateRelevantTables() already clears the table.
+        return;
         $statuses = ['confirmed', 'confirmed', 'confirmed', 'completed', 'completed', 'cancelled', 'no_show', 'pending'];
         $sources = ['phone', 'phone', 'phone', 'walk_in', 'online', 'facebook'];
         $guestFirstNames = ['Juan', 'Maria', 'Jose', 'Ana', 'Pedro', 'Rosa', 'Antonio', 'Luz', 'Carlo', 'Megan',
@@ -1013,6 +1038,8 @@ class ProductionDataSeeder extends Seeder
 
     private function createOrders(): void
     {
+        // Local cleanup: keep orders (and invoices/payments/status history via this method) at 0.
+        return;
         $orderTypes = ['dine_in', 'dine_in', 'dine_in', 'dine_in', 'takeaway', 'delivery'];
         $itemStatuses = ['pending', 'preparing', 'preparing', 'ready', 'served', 'served', 'cancelled'];
         $hours = [7,8,8,9,10,11,11,12,12,13,13,14,15,17,17,18,18,19,19,20,20,21,21,22,22,23];
@@ -1205,6 +1232,8 @@ class ProductionDataSeeder extends Seeder
 
     private function createKitchenTickets(): void
     {
+        // Local cleanup: no orders means no kitchen tickets.
+        return;
         $completedOrders = DB::table('orders')
             ->whereIn('status', ['completed', 'served', 'ready'])
             ->orderBy('created_at')

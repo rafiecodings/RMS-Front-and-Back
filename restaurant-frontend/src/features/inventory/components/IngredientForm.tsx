@@ -44,7 +44,7 @@ export function IngredientForm({
     maximum_stock: initialData?.maximum_stock ?? 100,
     cost_per_unit: initialData?.cost_per_unit ?? 0,
     category: initialData?.category ?? "",
-    supplier_id: initialData?.supplier_id ?? "",
+    supplier_id: initialData?.supplier_id ?? initialData?.supplier?.id ?? "",
     storage_location: initialData?.storage_location ?? "",
   });
 
@@ -79,6 +79,7 @@ export function IngredientForm({
       ...form,
       name: name(form.name),
       description: form.description?.trim() || undefined,
+      supplier_id: form.supplier_id || undefined,
     });
   }
 
@@ -203,9 +204,9 @@ export function IngredientForm({
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium">Supplier</Label>
-            <Select value={form.supplier_id ?? "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
+            <Select value={form.supplier_id && suppliers.some((s) => s.id === form.supplier_id) ? form.supplier_id : "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
+                <SelectValue placeholder="No supplier" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>

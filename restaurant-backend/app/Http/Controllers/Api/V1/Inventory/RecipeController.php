@@ -33,6 +33,12 @@ class RecipeController extends Controller
                 'id' => $i->pivot->id ?? ($r->id . '-' . $i->id),
                 'ingredient_id' => $i->id,
                 'name' => $i->name,
+                'ingredient' => [
+                    'id' => $i->id,
+                    'name' => $i->name,
+                    'unit' => $i->unit,
+                    'category' => $i->category,
+                ],
                 'quantity' => (float) $i->pivot->quantity,
                 'unit' => $i->unit,
                 'cost' => (float) $i->pivot->quantity * (float) $i->cost_per_unit,

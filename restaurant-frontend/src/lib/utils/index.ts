@@ -32,6 +32,17 @@ export function formatLabel(value: string): string {
   return safeString(value).replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
+// Format an ISO datetime as its calendar date without timezone shift:
+// the backend stores date-only schedules as UTC midnights, and
+// new Date(iso).toLocaleDateString() renders the previous day in
+// negative-offset timezones.
+export function formatCalendarDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return "—";
+  return new Date(y, m - 1, d).toLocaleDateString();
+}
+
 export function formatDate(date: string | Date | null | undefined) {
   if (!date) return "—";
   const d = new Date(date);

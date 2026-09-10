@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import api from "@/lib/api/client";
 import { normalizePaginated } from "@/lib/utils/api";
-import { formatCurrency, formatLabel } from "@/lib/utils";
+import { formatCurrency, formatLabel, formatCalendarDate } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { canEdit } from "@/lib/utils/permissions";
 
@@ -192,7 +192,7 @@ export default function PromotionsPage() {
                     <td className="px-3 py-3">{formatLabel(discount.applies_to)}</td>
                     <td className="px-3 py-3">{discount.eligibility_type === "loyalty_tier" ? `${discount.minimum_loyalty_tier} and above` : formatLabel(discount.eligibility_type)}</td>
                     <td className="px-3 py-3">{discount.min_order_amount > 0 ? formatCurrency(discount.min_order_amount) : "None"}</td>
-                    <td className="px-3 py-3 text-xs">{discount.start_date ? new Date(discount.start_date).toLocaleDateString() : "—"} – {discount.end_date ? new Date(discount.end_date).toLocaleDateString() : "No expiry"}</td>
+                    <td className="px-3 py-3 text-xs">{formatCalendarDate(discount.start_date)} – {discount.end_date ? formatCalendarDate(discount.end_date) : "No expiry"}</td>
                     <td className="px-3 py-3"><span className={discount.is_active ? "text-emerald-700" : "text-muted-foreground"}>{discount.is_active ? "Active" : "Inactive"}</span></td>
                     <td className="px-3 py-3">{canManagePromotions ? (
                       <DropdownMenu>
@@ -246,7 +246,7 @@ export default function PromotionsPage() {
                     <div className="min-w-0"><p className="text-xs text-muted-foreground">Mode</p><p className="truncate capitalize">{discount.promotion_kind}</p></div>
                     <div className="min-w-0"><p className="text-xs text-muted-foreground">Discount</p><p className="font-medium truncate">{discount.type === "percentage" ? `${discount.value}%` : formatCurrency(discount.value)}</p></div>
                     <div className="min-w-0"><p className="text-xs text-muted-foreground">Applies To</p><p className="truncate">{formatLabel(discount.applies_to)}</p></div>
-                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Validity</p><p className="text-xs truncate">{discount.start_date ? new Date(discount.start_date).toLocaleDateString() : "—"} – {discount.end_date ? new Date(discount.end_date).toLocaleDateString() : "No expiry"}</p></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Validity</p><p className="text-xs truncate">{formatCalendarDate(discount.start_date)} – {discount.end_date ? formatCalendarDate(discount.end_date) : "No expiry"}</p></div>
                   </div>
                   <div className="flex items-center justify-between pt-3 mt-3 border-t gap-2">
                     <span className={discount.is_active ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-muted-foreground"}>Status: {discount.is_active ? "Active" : "Inactive"}</span>

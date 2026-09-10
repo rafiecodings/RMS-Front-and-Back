@@ -150,8 +150,8 @@ class ReservationController extends Controller
         }
 
         if (! empty($validated['table_id'])) {
-            $table = Table::where('id', $validated['table_id'])->where('is_active', true)->first();
-            if (! $table) {
+            $table = Table::where('id', $validated['table_id'])->first();
+            if (! $table || ! $table->is_active || in_array($table->status, ['needs_cleaning', 'maintenance'], true)) {
                 return $this->error('The selected table is not available.', 422);
             }
             if ((int) $validated['party_size'] > (int) $table->capacity) {
@@ -384,8 +384,8 @@ class ReservationController extends Controller
         $time = $validated['reservation_time'] ?? $reservation->reservation_time;
 
         if (! empty($tableId)) {
-            $table = Table::where('id', $tableId)->where('is_active', true)->first();
-            if (! $table) {
+            $table = Table::where('id', $tableId)->first();
+            if (! $table || ! $table->is_active || in_array($table->status, ['needs_cleaning', 'maintenance'], true)) {
                 return $this->error('The selected table is not available.', 422);
             }
             if (isset($validated['party_size']) && (int) $validated['party_size'] > (int) $table->capacity) {

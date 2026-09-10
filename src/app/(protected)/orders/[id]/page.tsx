@@ -33,7 +33,7 @@ import { useOrder, useOrders } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 import type { OrderStatus } from "@/lib/types";
-import { canConfirmOrder } from "@/lib/utils/permissions";
+import { canConfirmOrder, canServeOrder } from "@/lib/utils/permissions";
 
 const REFUND_ROLES = ["admin", "manager", "cashier"];
 const TERMINAL_STATUSES = ["completed", "cancelled", "voided"];
@@ -220,6 +220,7 @@ export default function OrderDetailPage({
                 onStatusChange={handleStatusChange}
                 disabled={updateStatus.isPending}
                 canConfirm={canConfirmOrder(role)}
+                canServe={canServeOrder(role)}
               />
             )}
             {canVoid && (

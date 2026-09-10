@@ -23,7 +23,7 @@ import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { Order, OrderFormData, OrderItemFormData } from "@/lib/types";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { canEdit, canArchiveOrders, canConfirmOrder } from "@/lib/utils/permissions";
+import { canEdit, canArchiveOrders, canConfirmOrder, canServeOrder } from "@/lib/utils/permissions";
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
@@ -129,6 +129,25 @@ export default function OrdersPage() {
   }
 
   const canConfirm = canConfirmOrder(user?.role);
+  const canServe = canServeOrder(user?.role);
+
+  function handleServeOrder(order: Order) {
+    updateStatus.mutate(
+      { id: order.id, status: "served" },
+      {
+        onSuccess: () =>
+          toast.success(`Order ${order.order_number} marked as served`),
+        onError: (error) => {
+          const message =
+            (error as { response?: { data?: { message?: string } }; message?: string })
+              ?.response?.data?.message ||
+            (error as { message?: string })?.message ||
+            "Failed to mark order as served";
+          toast.error(message);
+        },
+      }
+    );
+  }
 
   function handleSendToKitchen(order: Order) {
     updateStatus.mutate(
@@ -229,6 +248,7 @@ export default function OrdersPage() {
           onEdit={(o) => setEditId(o.id)}
           onArchive={canArchive ? setArchiveTarget : undefined}
           onSendToKitchen={canConfirm && !updateStatus.isPending ? handleSendToKitchen : undefined}
+          onServeOrder={canServe && !updateStatus.isPending ? handleServeOrder : undefined}
         />
 
         {list.isError && (

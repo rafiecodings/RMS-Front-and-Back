@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, CheckCircle2, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
 import type { Order, OrderType } from "@/lib/types";
 import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -47,6 +47,7 @@ interface OrderTableProps {
   onEdit?: (order: Order) => void;
   onArchive?: (order: Order) => void;
   onSendToKitchen?: (order: Order) => void;
+  onServeOrder?: (order: Order) => void;
 }
 
 export function OrderTable({
@@ -57,6 +58,7 @@ export function OrderTable({
   onEdit,
   onArchive,
   onSendToKitchen,
+  onServeOrder,
 }: OrderTableProps) {
   if (isLoading) {
     return (
@@ -165,6 +167,12 @@ export function OrderTable({
                       Send to Kitchen
                     </DropdownMenuItem>
                   )}
+                  {order.status === "ready" && onServeOrder && (
+                    <DropdownMenuItem onClick={() => onServeOrder(order)}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark as Served
+                    </DropdownMenuItem>
+                  )}
                       {onCancel &&
                         // Backend state machine: served orders can only move
                         // to completed — offering Cancel would 409.
@@ -220,6 +228,7 @@ export function OrderTable({
                       {onView && <DropdownMenuItem onClick={() => onView(order)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>}
                       {(order.status === "pending" || order.status === "confirmed") && onEdit && <DropdownMenuItem onClick={() => onEdit(order)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>}
                       {order.status === "pending" && onSendToKitchen && <DropdownMenuItem onClick={() => onSendToKitchen(order)}><Send className="h-4 w-4 mr-2" />Send to Kitchen</DropdownMenuItem>}
+                      {order.status === "ready" && onServeOrder && <DropdownMenuItem onClick={() => onServeOrder(order)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark as Served</DropdownMenuItem>}
                       {onCancel && (["pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
                       {onArchive && (["completed","cancelled"].includes(order.status)) && <DropdownMenuItem onClick={() => onArchive(order)}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>}
                     </DropdownMenuContent>

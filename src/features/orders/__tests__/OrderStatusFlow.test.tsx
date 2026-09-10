@@ -65,4 +65,67 @@ describe("OrderStatusSelect", () => {
       screen.getByRole("button", { name: /Send to Kitchen/i })
     ).toBeDisabled();
   });
+
+  it("shows Mark as Served for a ready order when serving is allowed", () => {
+    const onStatusChange = vi.fn();
+    render(
+      <OrderStatusSelect
+        currentStatus="ready"
+        onStatusChange={onStatusChange}
+        canServe
+      />
+    );
+    const button = screen.getByRole("button", { name: /Mark as Served/i });
+    expect(button).toBeInTheDocument();
+  });
+
+  it("hides Mark as Served for non-ready or unauthorized roles", () => {
+    const { container, rerender } = render(
+      <OrderStatusSelect
+        currentStatus="confirmed"
+        onStatusChange={vi.fn()}
+        canServe
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: /Mark as Served/i })
+    ).toBeNull();
+
+    rerender(
+      <OrderStatusSelect
+        currentStatus="ready"
+        onStatusChange={vi.fn()}
+        canServe={false}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: /Mark as Served/i })
+    ).toBeNull();
+    expect(container.querySelector("button")).toBeNull();
+
+    rerender(
+      <OrderStatusSelect
+        currentStatus="served"
+        onStatusChange={vi.fn()}
+        canServe
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: /Mark as Served/i })
+    ).toBeNull();
+  });
+
+  it("fires a single served transition on click", async () => {
+    const onStatusChange = vi.fn();
+    const { getByRole } = render(
+      <OrderStatusSelect
+        currentStatus="ready"
+        onStatusChange={onStatusChange}
+        canServe
+      />
+    );
+    getByRole("button", { name: /Mark as Served/i }).click();
+    expect(onStatusChange).toHaveBeenCalledTimes(1);
+    expect(onStatusChange).toHaveBeenCalledWith("served");
+  });
 });

@@ -23,7 +23,7 @@ import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { Order, OrderFormData, OrderItemFormData } from "@/lib/types";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { canEdit, canArchiveOrders } from "@/lib/utils/permissions";
+import { canEdit, canArchiveOrders, canConfirmOrder } from "@/lib/utils/permissions";
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
@@ -50,7 +50,7 @@ export default function OrdersPage() {
     [page, debouncedSearch, statusFilter]
   );
 
-  const { list, create, update, cancel, archive } = useOrders(params);
+  const { list, create, update, cancel, archive, updateStatus } = useOrders(params);
   const { list: miList } = useMenuItems({ per_page: 200 });
   const { list: custList } = useCustomers({ per_page: 200 });
   const { list: tableList } = useTables();
@@ -128,6 +128,26 @@ export default function OrdersPage() {
     });
   }
 
+  const canConfirm = canConfirmOrder(user?.role);
+
+  function handleSendToKitchen(order: Order) {
+    updateStatus.mutate(
+      { id: order.id, status: "confirmed" },
+      {
+        onSuccess: () =>
+          toast.success(`Order ${order.order_number} sent to kitchen`),
+        onError: (error) => {
+          const message =
+            (error as { response?: { data?: { message?: string } }; message?: string })
+              ?.response?.data?.message ||
+            (error as { message?: string })?.message ||
+            "Failed to send order to kitchen";
+          toast.error(message);
+        },
+      }
+    );
+  }
+
   const editInitialData = editOrder
     ? ({
         order_type: editOrder.order_type,
@@ -146,8 +166,7 @@ export default function OrdersPage() {
 
   const canEditOrder =
     editOrder &&
-    (editOrder.status === "draft" ||
-      editOrder.status === "pending" ||
+    (editOrder.status === "pending" ||
       editOrder.status === "confirmed");
 
   return (
@@ -188,7 +207,6 @@ export default function OrdersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="preparing">Preparing</SelectItem>
@@ -210,6 +228,7 @@ export default function OrdersPage() {
           onView={(o) => setViewId(o.id)}
           onEdit={(o) => setEditId(o.id)}
           onArchive={canArchive ? setArchiveTarget : undefined}
+          onSendToKitchen={canConfirm && !updateStatus.isPending ? handleSendToKitchen : undefined}
         />
 
         {list.isError && (

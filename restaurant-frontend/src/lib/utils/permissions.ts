@@ -206,6 +206,17 @@ export function canArchiveOrders(role?: string): boolean {
   return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
+// Mirrors the backend confirm gate (OrderController::updateStatus):
+// only admin/manager/waiter/cashier may move an order to confirmed.
+export function canConfirmOrder(role?: string): boolean {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.MANAGER ||
+    role === ROLES.WAITER ||
+    role === ROLES.CASHIER
+  );
+}
+
 // Recipe management is restricted to Admin / Manager only (inventory_staff may
 // manage ingredients but not recipes, per the restaurant process).
 export function canManageRecipes(role: string | undefined): boolean {

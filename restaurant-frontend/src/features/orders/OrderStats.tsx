@@ -49,7 +49,6 @@ export function OrderStats({ orders }: { orders: Order[] }) {
   const avgOrder = total > 0 ? revenue / total : 0;
   const active = orders.filter(
     (o) =>
-      o.status === "draft" ||
       o.status === "pending" ||
       o.status === "confirmed" ||
       o.status === "preparing" ||

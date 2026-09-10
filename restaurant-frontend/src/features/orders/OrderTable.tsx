@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, XCircle, Archive, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
 import type { Order, OrderType } from "@/lib/types";
 import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -46,6 +46,7 @@ interface OrderTableProps {
   onView?: (order: Order) => void;
   onEdit?: (order: Order) => void;
   onArchive?: (order: Order) => void;
+  onSendToKitchen?: (order: Order) => void;
 }
 
 export function OrderTable({
@@ -55,6 +56,7 @@ export function OrderTable({
   onView,
   onEdit,
   onArchive,
+  onSendToKitchen,
 }: OrderTableProps) {
   if (isLoading) {
     return (
@@ -151,17 +153,22 @@ export function OrderTable({
                       View
                     </DropdownMenuItem>
                   )}
-                  {(order.status === "draft" || order.status === "pending" || order.status === "confirmed") && onEdit && (
+                  {(order.status === "pending" || order.status === "confirmed") && onEdit && (
                     <DropdownMenuItem onClick={() => onEdit(order)}>
                       <Pencil className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
                   )}
+                  {order.status === "pending" && onSendToKitchen && (
+                    <DropdownMenuItem onClick={() => onSendToKitchen(order)}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send to Kitchen
+                    </DropdownMenuItem>
+                  )}
                       {onCancel &&
                         // Backend state machine: served orders can only move
                         // to completed — offering Cancel would 409.
-                        (order.status === "draft" ||
-                          order.status === "pending" ||
+                        (order.status === "pending" ||
                           order.status === "confirmed" ||
                           order.status === "preparing" ||
                           order.status === "ready") && (
@@ -211,8 +218,9 @@ export function OrderTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {onView && <DropdownMenuItem onClick={() => onView(order)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>}
-                      {(order.status === "draft" || order.status === "pending" || order.status === "confirmed") && onEdit && <DropdownMenuItem onClick={() => onEdit(order)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>}
-                      {onCancel && (["draft","pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
+                      {(order.status === "pending" || order.status === "confirmed") && onEdit && <DropdownMenuItem onClick={() => onEdit(order)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>}
+                      {order.status === "pending" && onSendToKitchen && <DropdownMenuItem onClick={() => onSendToKitchen(order)}><Send className="h-4 w-4 mr-2" />Send to Kitchen</DropdownMenuItem>}
+                      {onCancel && (["pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
                       {onArchive && (["completed","cancelled"].includes(order.status)) && <DropdownMenuItem onClick={() => onArchive(order)}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>}
                     </DropdownMenuContent>
                   </DropdownMenu>

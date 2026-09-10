@@ -130,7 +130,8 @@ class PricingService
             return ['discount' => null, 'amount' => 0.0, 'error' => 'Discount has not started yet.'];
         }
 
-        if ($discount->end_date && now()->gt($discount->end_date)) {
+        // Date-only schedules are valid through the whole end date.
+        if ($discount->end_date && now()->gt($discount->end_date->copy()->endOfDay())) {
             return ['discount' => null, 'amount' => 0.0, 'error' => 'Discount has expired.'];
         }
 
@@ -186,7 +187,8 @@ class PricingService
             if ($discount->start_date && now()->lt($discount->start_date)) {
                 continue;
             }
-            if ($discount->end_date && now()->gt($discount->end_date)) {
+            // Date-only schedules are valid through the whole end date.
+            if ($discount->end_date && now()->gt($discount->end_date->copy()->endOfDay())) {
                 continue;
             }
             if ($discount->max_uses !== null && (int) $discount->used_count >= (int) $discount->max_uses) {

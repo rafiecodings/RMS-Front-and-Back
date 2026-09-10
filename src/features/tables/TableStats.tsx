@@ -77,8 +77,14 @@ function StatCard({
   );
 }
 
-export function TableStats({ tables }: { tables: Table[] }) {
-  const total = tables.length;
+export function isTableArchived(t: Pick<Table, "is_active">): boolean {
+  return t.is_active === false;
+}
+
+export function countActiveByStatus(tables: Table[]): {
+  total: number;
+  counts: Record<TableStatus, number>;
+} {
   const counts: Record<TableStatus, number> = {
     available: 0,
     occupied: 0,
@@ -86,10 +92,24 @@ export function TableStats({ tables }: { tables: Table[] }) {
     needs_cleaning: 0,
     maintenance: 0,
   };
+  let total = 0;
 
   for (const t of tables) {
+    // Operational counters count active tables only. Archived tables are
+    // shown for visibility but must never contribute to status totals,
+    // regardless of the "Show archived" toggle.
+    if (isTableArchived(t)) {
+      continue;
+    }
     counts[t.status]++;
+    total++;
   }
+
+  return { total, counts };
+}
+
+export function TableStats({ tables }: { tables: Table[] }) {
+  const { total, counts } = countActiveByStatus(tables);
 
   return (
     <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 min-w-0">

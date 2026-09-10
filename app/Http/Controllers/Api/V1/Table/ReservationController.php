@@ -23,6 +23,8 @@ class ReservationController extends Controller
         ?string $excludeId = null
     ): bool {
         $windowMinutes = (int) config('app.reservation_window_minutes', 90);
+        // Normalize: callers may pass a full ISO datetime; only the date part is relevant here.
+        $date = Carbon::parse($date)->toDateString();
         $slotStart = Carbon::parse("{$date} {$time}");
         $slotEnd = $slotStart->copy()->addMinutes($windowMinutes);
 
@@ -133,6 +135,9 @@ class ReservationController extends Controller
             'source' => 'sometimes|string|in:phone,online,walk_in,app',
             'special_requests' => 'nullable|string|max:2000',
         ]);
+
+        // Normalize to a pure date: clients may send an ISO datetime (date+T+time).
+        $validated['reservation_date'] = Carbon::parse($validated['reservation_date'])->toDateString();
 
         if (! empty($validated['customer_id'])) {
             $customer = Customer::where('is_active', true)->find($validated['customer_id']);
@@ -346,6 +351,10 @@ class ReservationController extends Controller
             'source' => 'sometimes|string|in:phone,online,walk_in,app',
             'special_requests' => 'nullable|string|max:2000',
         ]);
+
+        if (isset($validated['reservation_date'])) {
+            $validated['reservation_date'] = Carbon::parse($validated['reservation_date'])->toDateString();
+        }
 
         $customerId = array_key_exists('customer_id', $validated)
             ? $validated['customer_id']

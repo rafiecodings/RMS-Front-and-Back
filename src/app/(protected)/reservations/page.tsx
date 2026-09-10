@@ -335,7 +335,7 @@ export default function ReservationsPage() {
                 create.mutate(
                   {
                     ...data,
-                    reservation_date: `${data.reservation_date}T${data.reservation_time}`,
+                    reservation_date: data.reservation_date.split("T")[0],
                   },
                   {
                     onSuccess: () => {

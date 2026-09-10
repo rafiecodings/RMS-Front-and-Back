@@ -206,6 +206,16 @@ export function canArchiveOrders(role?: string): boolean {
   return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
+// Mirrors the backend serve gate (OrderController::updateStatus):
+// only admin/manager/waiter may mark a ready order as served.
+export function canServeOrder(role?: string): boolean {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.MANAGER ||
+    role === ROLES.WAITER
+  );
+}
+
 // Mirrors the backend confirm gate (OrderController::updateStatus):
 // only admin/manager/waiter/cashier may move an order to confirmed.
 export function canConfirmOrder(role?: string): boolean {

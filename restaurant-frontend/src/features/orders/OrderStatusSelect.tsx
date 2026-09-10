@@ -9,6 +9,7 @@ interface OrderStatusSelectProps {
   onStatusChange: (status: OrderStatus) => void;
   disabled?: boolean;
   canConfirm?: boolean;
+  canServe?: boolean;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -26,6 +27,7 @@ export function OrderStatusSelect({
   onStatusChange,
   disabled,
   canConfirm = true,
+  canServe = true,
 }: OrderStatusSelectProps) {
   if (currentStatus === "pending") {
     if (!canConfirm) {
@@ -40,6 +42,9 @@ export function OrderStatusSelect({
   }
 
   if (currentStatus === "ready") {
+    if (!canServe) {
+      return null;
+    }
     return (
       <Button
         size="sm"
@@ -47,7 +52,7 @@ export function OrderStatusSelect({
         disabled={disabled}
       >
         <CheckCircle2 className="h-4 w-4 mr-1.5" />
-        Mark Served
+        Mark as Served
       </Button>
     );
   }

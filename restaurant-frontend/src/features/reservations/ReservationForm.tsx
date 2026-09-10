@@ -183,7 +183,7 @@ export function ReservationForm({
         <div className="space-y-2">
           <Label>Customer *</Label>
           <Select
-            value={formData.customer_id ?? ""}
+            value={formData.customer_id && customers.some((c) => c.id === formData.customer_id) ? formData.customer_id : ""}
             onValueChange={(value) =>
               setFormData((previous) => ({ ...previous, customer_id: value ?? "" }))
             }
@@ -338,7 +338,7 @@ export function ReservationForm({
         <div className="space-y-2">
           <Label>Table (optional)</Label>
           <Select
-            value={formData.table_id ?? ""}
+            value={formData.table_id && availableTables.some((t) => t.id === formData.table_id) ? formData.table_id : ""}
             onValueChange={(val) =>
               setFormData((prev) => ({
                 ...prev,

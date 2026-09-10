@@ -67,6 +67,11 @@ export function ReservationForm({
     String(initialData?.party_size ?? 2)
   );
   const [availableTables, setAvailableTables] = useState<Table[]>([]);
+  // Operationally unusable tables are never selectable, even if a cached
+  // availability response still lists them. The backend enforces the same rule.
+  const assignableTables = availableTables.filter(
+    (t) => t.is_active !== false && t.status !== "needs_cleaning" && t.status !== "maintenance"
+  );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const { list: customersList } = useCustomers({ per_page: 300, is_active: true });
   const customers = customersList.data?.data?.data ?? [];
@@ -338,7 +343,7 @@ export function ReservationForm({
         <div className="space-y-2">
           <Label>Table (optional)</Label>
           <Select
-            value={formData.table_id && availableTables.some((t) => t.id === formData.table_id) ? formData.table_id : ""}
+            value={formData.table_id && assignableTables.some((t) => t.id === formData.table_id) ? formData.table_id : ""}
             onValueChange={(val) =>
               setFormData((prev) => ({
                 ...prev,
@@ -356,12 +361,12 @@ export function ReservationForm({
                   Checking availability...
                 </SelectItem>
               )}
-              {!isCheckingAvailability && availableTables.length === 0 && (
+              {!isCheckingAvailability && assignableTables.length === 0 && (
                 <SelectItem disabled value="__none">
                   No tables available for this time/party size
                 </SelectItem>
               )}
-              {availableTables.map((t: Table) => (
+              {assignableTables.map((t: Table) => (
                 <SelectItem key={t.id} value={t.id}>
                   T{t.number} — {t.name ?? "Table"} (cap: {t.capacity})
                 </SelectItem>

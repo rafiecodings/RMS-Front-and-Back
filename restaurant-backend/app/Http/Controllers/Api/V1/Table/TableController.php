@@ -482,6 +482,9 @@ class TableController extends Controller
 
         $query = Table::query()
             ->where('is_active', true)
+            // Operationally unusable tables are never assignable,
+            // regardless of time-slot availability.
+            ->whereNotIn('status', ['needs_cleaning', 'maintenance'])
             ->whereNotIn('id', array_unique($blockedTableIds));
 
         if ($floorPlanId = $request->input('floor_plan_id')) {

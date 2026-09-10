@@ -8,10 +8,10 @@ interface OrderStatusSelectProps {
   currentStatus: OrderStatus;
   onStatusChange: (status: OrderStatus) => void;
   disabled?: boolean;
+  canConfirm?: boolean;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  draft: "Draft",
   pending: "Pending",
   confirmed: "Confirmed",
   preparing: "Preparing",
@@ -25,12 +25,16 @@ export function OrderStatusSelect({
   currentStatus,
   onStatusChange,
   disabled,
+  canConfirm = true,
 }: OrderStatusSelectProps) {
-  if (currentStatus === "draft" || currentStatus === "pending") {
+  if (currentStatus === "pending") {
+    if (!canConfirm) {
+      return null;
+    }
     return (
       <Button size="sm" onClick={() => onStatusChange("confirmed")} disabled={disabled}>
         <Send className="h-4 w-4 mr-1.5" />
-        Confirm Order
+        Send to Kitchen
       </Button>
     );
   }

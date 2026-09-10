@@ -36,7 +36,7 @@ export default function EditOrderPage({
   const tables = tableList.data ?? [];
 
   const canEdit =
-    order && (order.status === "draft" || order.status === "pending" || order.status === "confirmed");
+    order && (order.status === "pending" || order.status === "confirmed");
 
   function handleSubmit(data: OrderFormData) {
     update.mutate(

@@ -113,7 +113,7 @@ export interface RecentOrder {
   customer_name: string | null;
   table_number: string | null;
   order_type: OrderType;
-  status: "draft" | "pending" | "confirmed" | "preparing" | "ready" | "served" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "served" | "completed" | "cancelled";
   total: number;
   items_count: number;
   created_at: string;

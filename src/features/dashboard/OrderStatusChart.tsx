@@ -14,7 +14,6 @@ import { CHART_TOOLTIP_STYLE } from "@/lib/utils/constants";
 import { ChartEmptyState } from "@/components/shared";
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "#94a3b8",
   pending: "#3b82f6",
   confirmed: "#6366f1",
   preparing: "#f59e0b",
@@ -25,7 +24,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
   pending: "Pending",
   confirmed: "Confirmed",
   preparing: "Preparing",

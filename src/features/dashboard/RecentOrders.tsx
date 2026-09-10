@@ -8,7 +8,6 @@ import { cn, formatCurrency, timeAgo } from "@/lib/utils";
 import type { DashboardSummary } from "@/lib/types";
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
   pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   confirmed: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
   preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",

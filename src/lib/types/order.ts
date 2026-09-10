@@ -76,7 +76,6 @@ export interface OrderItemModifier {
 export type OrderType = "dine_in" | "takeaway";
 
 export type OrderStatus =
-  | "draft"
   | "pending"
   | "confirmed"
   | "preparing"

@@ -80,7 +80,9 @@ export function OrderForm({
   const itemBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const availableTables = tables.filter(
-    (t) => t.status === "available" || t.id === formData.table_id
+    (t) =>
+      (t.is_active !== false && t.status === "available") ||
+      t.id === formData.table_id
   );
 
   const filteredMenuItems = menuItems.filter(

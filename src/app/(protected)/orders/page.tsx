@@ -87,7 +87,9 @@ export default function OrdersPage() {
   }
 
   function handleOrderSubmit(data: OrderFormData) {
-    create.mutate(data, {
+    // Opt into server-side automatic promotion evaluation so eligible
+    // automatic promos (e.g. TEST10) snapshot onto waiter-created orders.
+    create.mutate({ ...data, auto_apply_promotions: true }, {
       onSuccess: () => {
         toast.success("Order placed successfully");
         setShowNewDialog(false);

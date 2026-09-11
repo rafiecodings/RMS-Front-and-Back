@@ -114,6 +114,10 @@ class ItemController extends Controller
 
         $item->load('modifiers');
 
+        \App\Services\AuditLogger::record('menu_item_created', $item, [
+            'description' => "Menu item {$item->name} created",
+        ]);
+
         return $this->created([
             'id' => $item->id,
             'name' => $item->name,
@@ -214,6 +218,10 @@ class ItemController extends Controller
 
         $item->load('modifiers');
 
+        \App\Services\AuditLogger::record('menu_item_updated', $item, [
+            'description' => "Menu item {$item->name} updated",
+        ]);
+
         return $this->success([
             'id' => $item->id,
             'name' => $item->name,
@@ -249,6 +257,10 @@ class ItemController extends Controller
         $item->modifiers()->detach();
         $item->delete();
 
+        \App\Services\AuditLogger::record('menu_item_archived', $item, [
+            'description' => "Menu item {$item->name} archived",
+        ]);
+
         return $this->success(['id' => $id], 'Menu item deleted successfully.');
     }
 
@@ -261,6 +273,12 @@ class ItemController extends Controller
         }
 
         $item->update(['is_available' => !$item->is_available]);
+
+        \App\Services\AuditLogger::record('menu_item_updated', $item, [
+            'description' => "Menu item {$item->name} marked "
+                .($item->is_available ? 'Available' : 'Unavailable'),
+            'is_available' => $item->is_available,
+        ]);
 
         return $this->success([
             'id' => $item->id,

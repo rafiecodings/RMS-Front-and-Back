@@ -106,6 +106,11 @@ class SettingController extends Controller
             $settings->update($validated);
         }
 
+        \App\Services\AuditLogger::record('settings_updated', $settings, [
+            'description' => 'Restaurant settings updated',
+            'changed' => array_keys($validated),
+        ]);
+
         return $this->success([
             'restaurant' => [
                 'id' => $settings->id,

@@ -174,6 +174,10 @@ class ReservationController extends Controller
         $reservation = Reservation::create($validated);
         $reservation->load(['customer', 'table']);
 
+        \App\Services\AuditLogger::record('reservation_created', $reservation, [
+            'description' => "Reservation {$reservation->reservation_number} created for {$reservation->guest_name} (party of {$reservation->party_size})",
+        ]);
+
         return $this->created([
             'id' => $reservation->id,
             'customer_id' => $reservation->customer_id,
@@ -227,6 +231,10 @@ class ReservationController extends Controller
             $reservation->update(['archived_at' => now()]);
         }
 
+        \App\Services\AuditLogger::record('reservation_archived', $reservation, [
+            'description' => "Reservation {$reservation->reservation_number} archived",
+        ]);
+
         return $this->success([
             'id' => $reservation->id,
             'customer_id' => $reservation->customer_id,
@@ -249,6 +257,10 @@ class ReservationController extends Controller
         }
 
         $reservation->update(['archived_at' => null]);
+
+        \App\Services\AuditLogger::record('reservation_restored', $reservation, [
+            'description' => "Reservation {$reservation->reservation_number} restored",
+        ]);
 
         return $this->success([
             'id' => $reservation->id,
@@ -404,6 +416,10 @@ class ReservationController extends Controller
         $reservation->update($validated);
         $reservation->load(['customer', 'table']);
 
+        \App\Services\AuditLogger::record('reservation_updated', $reservation, [
+            'description' => "Reservation {$reservation->reservation_number} updated",
+        ]);
+
         return $this->success([
             'id' => $reservation->id,
             'customer_id' => $reservation->customer_id,
@@ -448,7 +464,33 @@ class ReservationController extends Controller
             return $this->error('Cancellation reason is required.', 422);
         }
 
+        $previousStatus = $reservation->status;
         $reservation->update($validated);
+
+        if ($validated['status'] !== $previousStatus) {
+            $statusActions = [
+                'confirmed' => 'reservation_confirmed',
+                'seated' => 'reservation_seated',
+                'completed' => 'reservation_completed',
+                'cancelled' => 'reservation_cancelled',
+                'no_show' => 'reservation_no_show',
+                'pending' => 'reservation_reopened',
+            ];
+            \App\Services\AuditLogger::record(
+                $statusActions[$validated['status']] ?? 'reservation_updated',
+                $reservation,
+                [
+                    'description' => "Reservation {$reservation->reservation_number} "
+                        .\App\Services\AuditLogger::label($validated['status'])
+                        .($validated['status'] === 'cancelled' && !empty($validated['cancellation_reason'])
+                            ? ": {$validated['cancellation_reason']}" : ''),
+                    'from' => $previousStatus,
+                    'to' => $validated['status'],
+                ],
+                null,
+                ['status' => $previousStatus]
+            );
+        }
 
         if ($validated['status'] === 'cancelled' && $reservation->table_id) {
             Table::where('id', $reservation->table_id)

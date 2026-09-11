@@ -74,6 +74,10 @@ class ComboController extends Controller
 
         $combo->load('items');
 
+        \App\Services\AuditLogger::record('combo_created', $combo, [
+            'description' => "Menu combo {$combo->name} created",
+        ]);
+
         return $this->created([
             'id' => $combo->id,
             'name' => $combo->name,
@@ -142,6 +146,10 @@ class ComboController extends Controller
 
         $combo->load('items');
 
+        \App\Services\AuditLogger::record('combo_updated', $combo, [
+            'description' => "Menu combo {$combo->name} updated",
+        ]);
+
         return $this->success([
             'id' => $combo->id,
             'name' => $combo->name,
@@ -168,6 +176,10 @@ class ComboController extends Controller
 
         $combo->items()->detach();
         $combo->delete();
+
+        \App\Services\AuditLogger::record('combo_archived', $combo, [
+            'description' => "Menu combo {$combo->name} archived",
+        ]);
 
         return $this->noContent('Combo deleted successfully.');
     }

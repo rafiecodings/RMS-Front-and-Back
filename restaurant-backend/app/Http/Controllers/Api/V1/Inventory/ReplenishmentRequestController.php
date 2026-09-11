@@ -104,6 +104,19 @@ class ReplenishmentRequestController extends Controller
 
         $replenishment = DB::transaction(fn () => ReplenishmentRequest::create($payload));
 
+        $replenishment->load(['ingredient', 'requester']);
+
+        \App\Services\AuditLogger::record(
+            $replenishment->status === 'draft' ? 'replenishment_drafted' : 'replenishment_submitted',
+            $replenishment,
+            [
+                'description' => "Replenishment {$replenishment->request_number} submitted for "
+                    .($replenishment->ingredient?->name ?? 'ingredient')
+                    ." (+{$replenishment->quantity} {$replenishment->unit})",
+                'quantity' => (float) $replenishment->quantity,
+            ]
+        );
+
         return $this->created($this->mapRow($replenishment->load(['ingredient', 'requester'])), 'Replenishment request created successfully.');
     }
 
@@ -143,9 +156,9 @@ class ReplenishmentRequestController extends Controller
             );
         }
 
-        if ($target === 'fulfilled') {
-            $replenishment = DB::transaction(function () use ($replenishment, $request) {
-                $fresh = ReplenishmentRequest::lockForUpdate()->find($replenishment->id);
+        $fromStatus = $replenishment->status;
+
+        if ($target === 'fulfilled') {            $replenishment = DB::transaction(function () use ($replenishment, $request) {                $fresh = ReplenishmentRequest::lockForUpdate()->find($replenishment->id);
                 if ($fresh->status === 'fulfilled') {
                     return $fresh;
                 }
@@ -175,6 +188,21 @@ class ReplenishmentRequestController extends Controller
             $replenishment->update(['status' => $target]);
         }
 
+        $replenishment->load(['ingredient', 'requester']);
+
+        // Idempotent re-fulfill is a no-op: do not log a second event.
+        if ($fromStatus !== $target) {
+            \App\Services\AuditLogger::record("replenishment_{$target}", $replenishment, [
+                'description' => "Replenishment {$replenishment->request_number} "
+                    .\App\Services\AuditLogger::label($target)
+                    .($target === 'fulfilled'
+                        ? " for ".($replenishment->ingredient?->name ?? 'ingredient')." (+{$replenishment->quantity} {$replenishment->unit})"
+                        : ''),
+                'from' => $fromStatus,
+                'to' => $target,
+            ], null, ['status' => $fromStatus]);
+        }
+
         return $this->success($this->mapRow($replenishment->load(['ingredient', 'requester'])), 'Replenishment request updated.');
     }
 
@@ -194,6 +222,10 @@ class ReplenishmentRequestController extends Controller
         }
 
         $replenishment->delete();
+
+        \App\Services\AuditLogger::record('replenishment_deleted', $replenishment, [
+            'description' => "Replenishment {$replenishment->request_number} deleted",
+        ]);
 
         return $this->noContent();
     }

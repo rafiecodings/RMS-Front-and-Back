@@ -97,6 +97,11 @@ class WastageController extends Controller
             return $this->error($result['error'], 422);
         }
 
+        \App\Services\AuditLogger::record('wastage_recorded', $result['wastage'], [
+            'description' => "Wastage recorded: {$result['ingredient']->name} ({$validated['quantity']}): {$validated['reason']}",
+            'quantity' => (float) $validated['quantity'],
+        ]);
+
         return $this->created([
             'id' => $result['wastage']->id,
             'quantity' => (float) $result['wastage']->quantity,

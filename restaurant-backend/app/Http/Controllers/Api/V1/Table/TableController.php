@@ -186,7 +186,23 @@ class TableController extends Controller
             }
         }
 
+        $previousStatus = $table->status;
+
         $table->update($validated);
+
+        if (array_key_exists('status', $validated) && $validated['status'] !== $previousStatus) {
+            \App\Services\AuditLogger::record('table_status_changed', $table, [
+                'description' => "Table {$table->number} status changed from "
+                    .\App\Services\AuditLogger::label($previousStatus).' to '
+                    .\App\Services\AuditLogger::label($table->status),
+                'from' => $previousStatus,
+                'to' => $table->status,
+            ], null, ['status' => $previousStatus]);
+        } else {
+            \App\Services\AuditLogger::record('table_updated', $table, [
+                'description' => "Table {$table->number} updated",
+            ]);
+        }
 
         return $this->success([
             'id' => $table->id,
@@ -217,7 +233,18 @@ class TableController extends Controller
             'status' => 'required|string|in:available,occupied,reserved,maintenance',
         ]);
 
+        $previousStatus = $table->status;
         $table->update(['status' => $validated['status']]);
+
+        if ($validated['status'] !== $previousStatus) {
+            \App\Services\AuditLogger::record('table_status_changed', $table, [
+                'description' => "Table {$table->number} status changed from "
+                    .\App\Services\AuditLogger::label($previousStatus).' to '
+                    .\App\Services\AuditLogger::label($table->status),
+                'from' => $previousStatus,
+                'to' => $table->status,
+            ], null, ['status' => $previousStatus]);
+        }
 
         return $this->success([
             'id' => $table->id,
@@ -291,6 +318,10 @@ class TableController extends Controller
         }
 
         $table->update(['is_active' => true]);
+
+        \App\Services\AuditLogger::record('table_restored', $table, [
+            'description' => "Table {$table->number} restored",
+        ]);
 
         return $this->success([
             'id' => $table->id,

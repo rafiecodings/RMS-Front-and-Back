@@ -89,6 +89,10 @@ class RoleController extends Controller
 
         $role->load('permissions');
 
+        \App\Services\AuditLogger::record('role_created', $role, [
+            'description' => "Role {$role->display_name} ({$role->name}) created",
+        ]);
+
         return $this->created([
             'id' => $role->id,
             'name' => $role->name,
@@ -164,6 +168,10 @@ class RoleController extends Controller
 
         $role->load('permissions');
 
+        \App\Services\AuditLogger::record('role_updated', $role, [
+            'description' => "Role {$role->display_name} ({$role->name}) updated",
+        ]);
+
         return $this->success([
             'id' => $role->id,
             'name' => $role->name,
@@ -202,6 +210,10 @@ class RoleController extends Controller
 
         $role->permissions()->detach();
         $role->delete();
+
+        \App\Services\AuditLogger::record('role_deleted', $role, [
+            'description' => "Role {$role->display_name} ({$role->name}) deleted",
+        ]);
 
         return $this->noContent('Role deleted successfully.');
     }

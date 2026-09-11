@@ -119,6 +119,12 @@ class UserController extends Controller
 
         $user->load('roles');
 
+        \App\Services\AuditLogger::record('user_created', $user, [
+            'description' => "User {$user->name} ({$user->email}) created with role "
+                .\App\Services\AuditLogger::label($user->roles->first()?->name ?? 'user'),
+            'role' => $user->roles->first()?->name,
+        ]);
+
         return $this->created([
             'id' => $user->id,
             'name' => $user->name,
@@ -163,6 +169,9 @@ class UserController extends Controller
             return $this->notFound('User not found.');
         }
 
+        $previousRole = $user->roles()->first()?->name;
+        $wasActive = (bool) $user->is_active;
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => "sometimes|email|unique:users,email,{$id}",
@@ -191,6 +200,30 @@ class UserController extends Controller
         }
         if ($newRole) {
             $user->roles()->sync([$newRole->id]);
+        }
+
+        $user->refresh()->load('roles');
+        $currentRole = $user->roles->first()?->name;
+        $nowActive = (bool) $user->is_active;
+
+        // One meaningful row per update: role change wins over status,
+        // status change wins over a generic update. Never log passwords.
+        if ($newRole && $currentRole !== $previousRole) {
+            \App\Services\AuditLogger::record('user_role_changed', $user, [
+                'description' => "User {$user->name} role changed from "
+                    .\App\Services\AuditLogger::label($previousRole ?? 'none').' to '
+                    .\App\Services\AuditLogger::label($currentRole),
+                'from' => $previousRole,
+                'to' => $currentRole,
+            ], null, ['role' => $previousRole]);
+        } elseif (array_key_exists('is_active', $validated) && $nowActive !== $wasActive) {
+            \App\Services\AuditLogger::record($nowActive ? 'user_activated' : 'user_deactivated', $user, [
+                'description' => "User {$user->name} ".($nowActive ? 'activated' : 'deactivated'),
+            ], null, ['is_active' => $wasActive]);
+        } else {
+            \App\Services\AuditLogger::record('user_updated', $user, [
+                'description' => "User {$user->name} updated",
+            ]);
         }
 
         $user->load('roles');
@@ -225,6 +258,10 @@ class UserController extends Controller
 
         $user->roles()->detach();
         $user->delete();
+
+        \App\Services\AuditLogger::record('user_deleted', $user, [
+            'description' => "User {$user->name} ({$user->email}) deleted",
+        ]);
 
         return $this->noContent('User deleted successfully.');
     }

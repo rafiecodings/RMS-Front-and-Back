@@ -93,6 +93,10 @@ class DiscountController extends Controller
 
         $discount = Discount::create($validated);
 
+        \App\Services\AuditLogger::record('promotion_created', $discount, [
+            'description' => "Promotion {$discount->name} created",
+        ]);
+
         return $this->created([
             'id' => $discount->id,
             'name' => $discount->name,
@@ -180,7 +184,20 @@ class DiscountController extends Controller
             $validated['verification_required'] = true;
         }
 
+        $wasActive = (bool) $discount->is_active;
         $discount->update($validated);
+
+        if (array_key_exists('is_active', $validated) && (bool) $discount->is_active !== $wasActive) {
+            $action = $discount->is_active ? 'promotion_activated' : 'promotion_deactivated';
+            $verb = $discount->is_active ? 'activated' : 'deactivated';
+            \App\Services\AuditLogger::record($action, $discount, [
+                'description' => "Promotion {$discount->name} {$verb}",
+            ]);
+        } else {
+            \App\Services\AuditLogger::record('promotion_updated', $discount, [
+                'description' => "Promotion {$discount->name} updated",
+            ]);
+        }
 
         return $this->success([
             'id' => $discount->id,
@@ -215,6 +232,10 @@ class DiscountController extends Controller
         }
 
         $discount->delete();
+
+        \App\Services\AuditLogger::record('promotion_archived', $discount, [
+            'description' => "Promotion {$discount->name} archived",
+        ]);
 
         return $this->noContent('Promotion archived successfully.');
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,7 @@ interface FormErrors {
   reservation_date?: string;
   reservation_time?: string;
   party_size?: string;
+  table_id?: string;
 }
 
 export function ReservationForm({
@@ -73,6 +74,22 @@ export function ReservationForm({
     (t) => t.is_active !== false && t.status !== "needs_cleaning" && t.status !== "maintenance"
   );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  // Conflict UX: when a previously selected table drops out of the
+  // assignable list (date/time/party change or availability refresh), the
+  // selection is cleared and the user must explicitly reconfirm — another
+  // table or No table — before submit. Never silently keep a stale UUID and
+  // never imply auto-assignment (the backend has none).
+  const [tableConflict, setTableConflict] = useState<string | null>(null);
+  // Human label ("T1") of the last explicitly chosen table, for messages.
+  const selectedTableLabelRef = useRef<string | null>(null);
+  // Whether the user has explicitly touched the table Select. Untouched
+  // initial selections (edit forms) are never flagged on first load.
+  const tableTouchedRef = useRef(false);
+  // Original slot, so edits that move date/time re-evaluate the initial
+  // selection instead of silently keeping a now-blocked table.
+  const initialSlotRef = useRef(
+    `${initialData?.reservation_date ?? new Date().toISOString().split("T")[0]}|${initialData?.reservation_time ?? "18:00"}|${initialData?.party_size ?? 2}`
+  );
   const { list: customersList } = useCustomers({ per_page: 300, is_active: true });
   const customers = customersList.data?.data?.data ?? [];
 
@@ -82,6 +99,7 @@ export function ReservationForm({
     party_size: formData.party_size,
     exclude_reservation_id: initialData?.id,
   });
+  const tablesReady = fetchAvailableTables.isSuccess;
 
   useEffect(() => {
     if (formData.reservation_date && formData.reservation_time) {
@@ -102,6 +120,59 @@ export function ReservationForm({
     fetchAvailableTables.data,
     fetchAvailableTables.isSuccess,
   ]);
+
+  function tableDisplayLabel(id: string): string | null {
+    const found = availableTables.find((t) => t.id === id);
+    return found ? `T${found.number}` : null;
+  }
+
+  function handleTableChange(val: string | null) {
+    const id = val ?? "";
+    tableTouchedRef.current = true;
+    setFormData((prev) => ({ ...prev, table_id: id }));
+    if (id) {
+      // Selection only comes from the assignable list, so a human label
+      // always exists here — never store a raw UUID for user-facing text.
+      selectedTableLabelRef.current = tableDisplayLabel(id);
+    } else {
+      selectedTableLabelRef.current = null;
+    }
+    // Any explicit choice (a table or No table) reconfirms the selection.
+    setTableConflict(null);
+    setErrors((prev) => ({ ...prev, table_id: undefined }));
+  }
+
+  // Invalidate a previously selected table that is no longer assignable.
+  // State updates live in an effect event: the effect itself only decides
+  // whether the current selection went stale.
+  const assignableIdsKey = assignableTables.map((t) => t.id).join(",");
+  const invalidateTableSelection = useEffectEvent((label: string | null) => {
+    selectedTableLabelRef.current = null;
+    setFormData((prev) => (prev.table_id ? { ...prev, table_id: "" } : prev));
+    setTableConflict(
+      label
+        ? `Table ${label} is no longer available for this time. Please choose another table or select No table.`
+        : "Your previously selected table is no longer available for this time. Please choose another table or select No table."
+    );
+  });
+  useEffect(() => {
+    if (!tablesReady) return;
+    // Pristine edit state (untouched initial selection on its original
+    // slot) is never flagged — this also preserves the previous behavior
+    // where the backend ignores the self-block quirk. Anything the user
+    // selected, or any slot move, is evaluated.
+    const slotKey = `${formData.reservation_date}|${formData.reservation_time}|${formData.party_size}`;
+    if (!tableTouchedRef.current && slotKey === initialSlotRef.current) {
+      return;
+    }
+    if (formData.table_id && !assignableTables.some((t) => t.id === formData.table_id)) {
+      const staleId = formData.table_id;
+      invalidateTableSelection(
+        selectedTableLabelRef.current ?? tableDisplayLabel(staleId)
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignableIdsKey, tablesReady]);
 
   function validate(): FormErrors {
     const errs: FormErrors = {};
@@ -144,7 +215,12 @@ export function ReservationForm({
       reservation_date: true,
       reservation_time: true,
       party_size: true,
+      table_id: true,
     });
+    if (tableConflict) {
+      setErrors((prev) => ({ ...prev, table_id: tableConflict }));
+      return;
+    }
     if (Object.keys(errs).length === 0) {
       onSubmit({
         ...formData,
@@ -344,18 +420,13 @@ export function ReservationForm({
           <Label>Table (optional)</Label>
           <Select
             value={formData.table_id && assignableTables.some((t) => t.id === formData.table_id) ? formData.table_id : ""}
-            onValueChange={(val) =>
-              setFormData((prev) => ({
-                ...prev,
-                table_id: val ?? "",
-              }))
-            }
+            onValueChange={handleTableChange}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Auto-assign or select" />
+            <SelectTrigger className="w-full" aria-invalid={!!errors.table_id}>
+              <SelectValue placeholder="Select a table (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No table (auto-assign)</SelectItem>
+              <SelectItem value="">No table</SelectItem>
               {isCheckingAvailability && (
                 <SelectItem disabled value="__loading">
                   Checking availability...
@@ -373,6 +444,11 @@ export function ReservationForm({
               ))}
             </SelectContent>
           </Select>
+          {(tableConflict || errors.table_id) && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              {tableConflict ?? errors.table_id}
+            </p>
+          )}
         </div>
       </div>
 

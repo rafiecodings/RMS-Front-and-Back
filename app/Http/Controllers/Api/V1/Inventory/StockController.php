@@ -84,6 +84,11 @@ class StockController extends Controller
             return ['ingredient' => $ingredient, 'movement' => $movement];
         });
 
+        \App\Services\AuditLogger::record('stock_restocked', $result['movement'], [
+            'description' => "Stock restocked: {$result['ingredient']->name} (+{$validated['quantity']})",
+            'quantity' => (float) $validated['quantity'],
+        ]);
+
         return $this->created([
             'movement' => [
                 'id' => $result['movement']->id,
@@ -132,6 +137,11 @@ class StockController extends Controller
             return $this->error($result['error'], 422);
         }
 
+        \App\Services\AuditLogger::record('stock_deducted', $result['movement'], [
+            'description' => "Stock deducted: {$result['ingredient']->name} (-{$validated['quantity']})",
+            'quantity' => (float) $validated['quantity'],
+        ]);
+
         return $this->created([
             'movement' => [
                 'id' => $result['movement']->id,
@@ -172,6 +182,11 @@ class StockController extends Controller
 
             return ['ingredient' => $ingredient, 'movement' => $movement];
         });
+
+        \App\Services\AuditLogger::record('ingredient_adjusted', $result['movement'], [
+            'description' => "Stock adjusted: {$result['ingredient']->name} set to {$validated['new_stock']}",
+            'new_stock' => (float) $validated['new_stock'],
+        ]);
 
         return $this->success([
             'movement' => [
@@ -234,6 +249,13 @@ class StockController extends Controller
         if (isset($result['error'])) {
             return $this->error($result['error'], 422);
         }
+
+        \App\Services\AuditLogger::record('stock_transferred', $result['from'], [
+            'description' => "Stock transferred: {$result['from']->name} → {$result['to']->name} ({$validated['quantity']})",
+            'quantity' => (float) $validated['quantity'],
+            'from_ingredient_id' => $result['from']->id,
+            'to_ingredient_id' => $result['to']->id,
+        ]);
 
         return $this->success([
             'from_ingredient' => [

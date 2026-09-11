@@ -82,6 +82,10 @@ class CustomerController extends Controller
 
         $customer = Customer::create($validated);
 
+        \App\Services\AuditLogger::record('customer_created', $customer, [
+            'description' => "Customer {$customer->name} created",
+        ]);
+
         return $this->created([
             'id' => $customer->id,
             'name' => $customer->name,
@@ -172,6 +176,10 @@ class CustomerController extends Controller
 
         $customer->update($validated);
 
+        \App\Services\AuditLogger::record('customer_updated', $customer, [
+            'description' => "Customer {$customer->name} updated",
+        ]);
+
         return $this->success([
             'id' => $customer->id,
             'name' => $customer->name,
@@ -206,6 +214,10 @@ class CustomerController extends Controller
         }
 
         $customer->delete();
+
+        \App\Services\AuditLogger::record('customer_deleted', $customer, [
+            'description' => "Customer {$customer->name} deleted",
+        ]);
 
         return $this->noContent('Customer deleted successfully.');
     }
@@ -292,6 +304,10 @@ class CustomerController extends Controller
         if ((bool) $customer->is_active) {
             $customer->update(['is_active' => false]);
         }
+
+        \App\Services\AuditLogger::record('customer_archived', $customer, [
+            'description' => "Customer {$customer->name} archived",
+        ]);
 
         return $this->success([
             'id' => $customer->id,

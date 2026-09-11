@@ -185,6 +185,12 @@ class PaymentController extends Controller
             return $refund;
         });
 
+        \App\Services\AuditLogger::record('refund_processed', $refund, [
+            'description' => "Refund of ₱".number_format((float) $refund->amount, 2)
+                ." processed for invoice {$invoice->invoice_number}: {$refund->reason}",
+            'amount' => (float) $refund->amount,
+        ]);
+
         return $this->created([
             'id' => $refund->id,
             'amount' => (float) $refund->amount,

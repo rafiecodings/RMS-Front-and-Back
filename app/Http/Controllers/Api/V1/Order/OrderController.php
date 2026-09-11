@@ -306,6 +306,11 @@ class OrderController extends Controller
 
         $result->load(['customer', 'table', 'items.modifiers']);
 
+        \App\Services\AuditLogger::record('order_created', $result, [
+            'description' => "Order {$result->order_number} created"
+                .($result->table ? " for table {$result->table->number}" : ''),
+        ]);
+
         return $this->created([
             'id' => $result->id,
             'order_number' => $result->order_number,
@@ -564,9 +569,20 @@ class OrderController extends Controller
             ]);
         }
 
+        // Kitchen progress via direct patch. The kitchen board (KOT) is the
+        // primary owner of preparing/ready and logs the same actions there;
+        // only log here on an actual change so a no-op re-set after the
+        // board already moved the order cannot duplicate the event.
+        if (in_array($target, ['preparing', 'ready'], true) && $current !== $target) {
+            \App\Services\AuditLogger::record("order_{$target}", $order, [
+                'description' => "Order {$order->order_number} marked ".\App\Services\AuditLogger::label($target),
+                'from' => $current,
+                'to' => $target,
+            ], null, ['status' => $current]);
+        }
+
         // Waiter served the table → close out any open kitchen tickets.
-        if ($target === 'served') {
-            \App\Models\KotTicket::where('order_id', $order->id)
+        if ($target === 'served') {            \App\Models\KotTicket::where('order_id', $order->id)
                 ->whereIn('status', ['received', 'pending', 'in_progress', 'ready'])
                 ->update(['status' => 'completed', 'completed_at' => now()]);
             \App\Services\AuditLogger::record('order_served', $order, [
@@ -1065,6 +1081,10 @@ class OrderController extends Controller
             'status' => 'voided',
             'notes' => "Order voided: {$validated['reason']}",
             'changed_by' => $request->user()->id,
+        ]);
+
+        \App\Services\AuditLogger::record('order_voided', $order, [
+            'description' => "Order {$order->order_number} voided: {$validated['reason']}",
         ]);
 
         return $this->success([

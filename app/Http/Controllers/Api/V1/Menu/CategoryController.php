@@ -59,6 +59,10 @@ class CategoryController extends Controller
 
         $category = MenuCategory::create($validated);
 
+        \App\Services\AuditLogger::record('category_created', $category, [
+            'description' => "Menu category {$category->name} created",
+        ]);
+
         return $this->created([
             'id' => $category->id,
             'name' => $category->name,
@@ -124,6 +128,10 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
+        \App\Services\AuditLogger::record('category_updated', $category, [
+            'description' => "Menu category {$category->name} updated",
+        ]);
+
         return $this->success([
             'id' => $category->id,
             'name' => $category->name,
@@ -150,6 +158,10 @@ class CategoryController extends Controller
         }
 
         $category->delete();
+
+        \App\Services\AuditLogger::record('category_archived', $category, [
+            'description' => "Menu category {$category->name} archived",
+        ]);
 
         return $this->noContent('Category deleted successfully.');
     }

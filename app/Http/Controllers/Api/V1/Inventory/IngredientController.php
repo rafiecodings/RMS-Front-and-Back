@@ -94,6 +94,10 @@ class IngredientController extends Controller
 
         $ingredient = Ingredient::create($validated);
 
+        \App\Services\AuditLogger::record('ingredient_created', $ingredient, [
+            'description' => "Ingredient {$ingredient->name} created",
+        ]);
+
         return $this->created([
             'id' => $ingredient->id,
             'name' => $ingredient->name,
@@ -166,6 +170,10 @@ class IngredientController extends Controller
 
         $ingredient->update($validated);
 
+        \App\Services\AuditLogger::record('ingredient_updated', $ingredient, [
+            'description' => "Ingredient {$ingredient->name} updated",
+        ]);
+
         return $this->success([
             'id' => $ingredient->id,
             'name' => $ingredient->name,
@@ -193,6 +201,10 @@ class IngredientController extends Controller
         }
 
         $ingredient->delete();
+
+        \App\Services\AuditLogger::record('ingredient_deleted', $ingredient, [
+            'description' => "Ingredient {$ingredient->name} deleted",
+        ]);
 
         return $this->noContent('Ingredient deleted successfully.');
     }

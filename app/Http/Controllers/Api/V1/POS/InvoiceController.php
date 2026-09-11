@@ -99,6 +99,10 @@ class InvoiceController extends Controller
             'status' => 'pending',
         ]);
 
+        \App\Services\AuditLogger::record('invoice_generated', $invoice, [
+            'description' => "Invoice {$invoice->invoice_number} generated for order {$order->order_number}",
+        ]);
+
         return $this->created([
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number,

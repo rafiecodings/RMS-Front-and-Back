@@ -97,6 +97,12 @@ class StaffController extends Controller
 
         $staff->load('user');
 
+        \App\Services\AuditLogger::record('staff_created', $staff, [
+            'description' => "Staff profile {$staff->employee_id} created"
+                .($staff->user ? " for {$staff->user->name}" : ''),
+            'position' => $staff->position,
+        ]);
+
         return $this->created([
             'id' => $staff->id,
             'employee_id' => $staff->employee_id,
@@ -172,6 +178,10 @@ class StaffController extends Controller
         ]);
 
         $staff->update($validated);
+
+        \App\Services\AuditLogger::record('staff_updated', $staff, [
+            'description' => "Staff profile {$staff->employee_id} updated",
+        ]);
 
         return $this->success([
             'id' => $staff->id,
@@ -269,6 +279,10 @@ class StaffController extends Controller
             'status' => 'present',
         ]);
 
+        \App\Services\AuditLogger::record('clock_in', $attendance, [
+            'description' => 'Clock in recorded for staff '.$validated['staff_id'],
+        ]);
+
         return $this->created([
             'id' => $attendance->id,
             'staff_id' => $attendance->staff_id,
@@ -304,6 +318,10 @@ class StaffController extends Controller
         $attendance->update([
             'clock_out' => $clockOut,
             'hours_worked' => round($hoursWorked, 2),
+        ]);
+
+        \App\Services\AuditLogger::record('clock_out', $attendance, [
+            'description' => 'Clock out recorded for staff '.$attendance->staff_id,
         ]);
 
         return $this->success([
@@ -489,6 +507,12 @@ class StaffController extends Controller
 
         $schedule->load(['staff.user', 'shift']);
 
+        \App\Services\AuditLogger::record('shift_schedule_updated', $schedule, [
+            'description' => 'Shift schedule updated for '
+                .($schedule->staff?->user?->name ?? $schedule->staff?->employee_id ?? 'staff')
+                .' on '.($schedule->date?->toDateString() ?? ''),
+        ]);
+
         return $this->success([
             'id' => $schedule->id,
             'date' => $schedule->date?->toDateString(),
@@ -522,6 +546,10 @@ class StaffController extends Controller
 
         $schedule->delete();
 
+        \App\Services\AuditLogger::record('shift_schedule_deleted', $schedule, [
+            'description' => 'Shift schedule deleted',
+        ]);
+
         return $this->noContent();
     }
 
@@ -546,6 +574,12 @@ class StaffController extends Controller
         $schedule = ShiftSchedule::create($validated);
 
         $schedule->load(['staff.user', 'shift']);
+
+        \App\Services\AuditLogger::record('shift_scheduled', $schedule, [
+            'description' => 'Shift scheduled for '
+                .($schedule->staff?->user?->name ?? $schedule->staff?->employee_id ?? 'staff')
+                .' on '.($schedule->date?->toDateString() ?? ''),
+        ]);
 
         return $this->created([
             'id' => $schedule->id,
@@ -624,8 +658,9 @@ class StaffController extends Controller
 
         if ($existing) {
             $existing->update(['status' => 'absent', 'notes' => $validated['reason']]);
+            $leaveSchedule = $existing;
         } else {
-            ShiftSchedule::create([
+            $leaveSchedule = ShiftSchedule::create([
                 'staff_id' => $id,
                 'shift_id' => StaffShift::first()?->id,
                 'date' => $validated['date'],
@@ -633,6 +668,10 @@ class StaffController extends Controller
                 'notes' => $validated['reason'],
             ]);
         }
+
+        \App\Services\AuditLogger::record('leave_requested', $leaveSchedule, [
+            'description' => "Leave requested for {$staff->employee_id} on {$validated['date']}: {$validated['reason']}",
+        ]);
 
         return $this->success([
             'staff_id' => $staff->id,

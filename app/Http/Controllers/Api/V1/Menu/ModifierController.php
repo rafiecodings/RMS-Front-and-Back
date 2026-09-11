@@ -47,6 +47,10 @@ class ModifierController extends Controller
 
         $modifier = MenuModifier::create($validated);
 
+        \App\Services\AuditLogger::record('modifier_created', $modifier, [
+            'description' => "Menu modifier {$modifier->name} created",
+        ]);
+
         return $this->created([
             'id' => $modifier->id,
             'name' => $modifier->name,
@@ -91,6 +95,10 @@ class ModifierController extends Controller
 
         $modifier->update($validated);
 
+        \App\Services\AuditLogger::record('modifier_updated', $modifier, [
+            'description' => "Menu modifier {$modifier->name} updated",
+        ]);
+
         return $this->success([
             'id' => $modifier->id,
             'name' => $modifier->name,
@@ -110,6 +118,10 @@ class ModifierController extends Controller
         }
 
         $modifier->delete();
+
+        \App\Services\AuditLogger::record('modifier_archived', $modifier, [
+            'description' => "Menu modifier {$modifier->name} archived",
+        ]);
 
         return $this->noContent('Modifier deleted successfully.');
     }

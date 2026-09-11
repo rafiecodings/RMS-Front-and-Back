@@ -188,6 +188,7 @@ class KOTController extends Controller
             $nextOrderStatus = $orderStatusMap[$validated['status']] ?? null;
 
             if ($nextOrderStatus && ! in_array($ticket->order->status, ['completed', 'cancelled', 'voided'], true)) {
+                $previousOrderStatus = $ticket->order->status;
                 \App\Models\Order::where('id', $ticket->order_id)->update(['status' => $nextOrderStatus]);
                 \App\Models\OrderStatusHistory::create([
                     'order_id' => $ticket->order_id,
@@ -195,6 +196,24 @@ class KOTController extends Controller
                     'notes' => "Kitchen marked {$validated['status']} ({$ticket->kot_number})",
                     'changed_by' => $request->user()->id,
                 ]);
+                // Kitchen board owns preparing/ready: one audit row here.
+                // A later direct order PATCH to the same status is a no-op
+                // re-set and must not log again (guarded there).
+                if ($previousOrderStatus !== $nextOrderStatus) {
+                    \App\Services\AuditLogger::record(
+                        "order_{$nextOrderStatus}",
+                        $ticket->order,
+                        [
+                            'description' => "Order {$ticket->order->order_number} marked "
+                                .\App\Services\AuditLogger::label($nextOrderStatus)
+                                ." (kitchen ticket {$ticket->kot_number})",
+                            'from' => $previousOrderStatus,
+                            'to' => $nextOrderStatus,
+                        ],
+                        null,
+                        ['status' => $previousOrderStatus]
+                    );
+                }
             }
         }
 

@@ -84,6 +84,10 @@ class RecipeController extends Controller
 
         $recipe->load('ingredients');
 
+        \App\Services\AuditLogger::record('recipe_created', $recipe, [
+            'description' => 'Recipe created for menu item '.($recipe->menuItem?->name ?? $recipe->menu_item_id),
+        ]);
+
         return $this->created([
             'id' => $recipe->id,
             'instructions' => $recipe->instructions,
@@ -174,6 +178,10 @@ class RecipeController extends Controller
 
         $recipe->load('ingredients');
 
+        \App\Services\AuditLogger::record('recipe_updated', $recipe, [
+            'description' => 'Recipe updated for menu item '.($recipe->menuItem?->name ?? $recipe->menu_item_id),
+        ]);
+
         return $this->success([
             'id' => $recipe->id,
             'instructions' => $recipe->instructions,
@@ -200,6 +208,10 @@ class RecipeController extends Controller
 
         $recipe->ingredients()->detach();
         $recipe->delete();
+
+        \App\Services\AuditLogger::record('recipe_deleted', $recipe, [
+            'description' => 'Recipe deleted for menu item '.($recipe->menuItem?->name ?? $recipe->menu_item_id),
+        ]);
 
         return $this->noContent('Recipe deleted successfully.');
     }

@@ -17,19 +17,25 @@ Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('admin')->grou
     });
 
     Route::prefix('users')->group(function () {
+        // Read-only oversight: admin + manager may list/view accounts.
         Route::get('/', [UserController::class, 'index']);
-        Route::post('/', [UserController::class, 'store']);
         Route::get('/{id}', [UserController::class, 'show']);
-        Route::put('/{id}', [UserController::class, 'update']);
-        Route::delete('/{id}', [UserController::class, 'destroy']);
+        // Mutations are admin-only (server-side RBAC). The Users & Roles UI
+        // renders read-only controls for managers; the backend enforces it
+        // authoritatively so direct API calls cannot bypass it.
+        Route::post('/', [UserController::class, 'store'])->middleware('role:admin');
+        Route::put('/{id}', [UserController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{id}', [UserController::class, 'destroy'])->middleware('role:admin');
     });
 
     Route::prefix('roles')->group(function () {
+        // Role catalog reads stay visible to managers for oversight.
         Route::get('/', [RoleController::class, 'index']);
-        Route::post('/', [RoleController::class, 'store']);
         Route::get('/{id}', [RoleController::class, 'show']);
-        Route::put('/{id}', [RoleController::class, 'update']);
-        Route::delete('/{id}', [RoleController::class, 'destroy']);
+        // Role-definition and permission-sync mutations are admin-only.
+        Route::post('/', [RoleController::class, 'store'])->middleware('role:admin');
+        Route::put('/{id}', [RoleController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{id}', [RoleController::class, 'destroy'])->middleware('role:admin');
     });
 
     Route::get('/permissions', [PermissionController::class, 'index']);

@@ -6,6 +6,7 @@ import api from "@/lib/api/client";
 import { normalizePaginated } from "@/lib/utils/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface AdminUser {
   id: string;
@@ -26,6 +27,11 @@ const STATUS_TABS: { value: StatusTab; label: string }[] = [
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  // Policy: Admin mutates; Manager/others get read-only oversight.
+  // Backend PUT/POST/DELETE /admin/users is role:admin — this only controls
+  // whether the dropdown is interactive.
+  const canEditRoles = currentUser?.role === "admin";
   const [savingId, setSavingId] = useState<string | null>(null);
   // Default to Active so the page stays focused on live accounts; archived
   // demo accounts remain reachable under Inactive or All.
@@ -59,6 +65,7 @@ export default function UsersPage() {
   );
 
   async function changeRole(user: AdminUser, roleId: string) {
+    if (!canEditRoles) return;
     const roleName = roles.find((r) => r.id === roleId)?.name;
     if (!roleName || roleName === user.role) return;
     setSavingId(user.id);
@@ -144,7 +151,9 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 sticky right-0 bg-background">
+                      {canEditRoles ? (
                       <select
+                        data-testid={`role-select-${u.id}`}
                         className="rounded-md border bg-background px-2 py-1 text-xs capitalize w-full max-w-[160px] truncate"
                         value={roles.find((r) => r.name === u.role)?.id ?? ""}
                         disabled={savingId === u.id}
@@ -155,6 +164,14 @@ export default function UsersPage() {
                           <option key={r.id} value={r.id}>{r.name}</option>
                         ))}
                       </select>
+                      ) : (
+                      <span
+                        data-testid={`role-readonly-${u.id}`}
+                        className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize"
+                      >
+                        {u.role.replace(/_/g, " ")}
+                      </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -180,7 +197,9 @@ export default function UsersPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">Role</p>
+                  {canEditRoles ? (
                   <select
+                    data-testid={`role-select-${u.id}-mobile`}
                     className="w-full max-w-full truncate rounded-md border bg-background px-2 py-2 text-sm capitalize"
                     value={roles.find((r) => r.name === u.role)?.id ?? ""}
                     disabled={savingId === u.id}
@@ -191,6 +210,14 @@ export default function UsersPage() {
                       <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                   </select>
+                  ) : (
+                  <span
+                    data-testid={`role-readonly-${u.id}-mobile`}
+                    className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize"
+                  >
+                    {u.role.replace(/_/g, " ")}
+                  </span>
+                  )}
                 </div>
               </div>
             ))}

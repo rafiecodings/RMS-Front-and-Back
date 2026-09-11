@@ -8,9 +8,28 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
+    /**
+     * Defense-in-depth: write routes carry role:admin middleware; the
+     * controller refuses non-admin mutations too so role-definition or
+     * permission-sync writes cannot be re-opened by a route mistake.
+     */
+    private function adminOnly(): ?JsonResponse
+    {
+        $actor = Auth::user();
+        if (!$actor) {
+            return $this->error('Forbidden: Insufficient permissions', 403);
+        }
+        $actor->loadMissing('roles');
+        if (!$actor->roles->pluck('name')->contains('admin')) {
+            return $this->error('Forbidden: Insufficient permissions', 403);
+        }
+
+        return null;
+    }
     public function index(Request $request): JsonResponse
     {
         $query = Role::with('permissions');
@@ -46,6 +65,9 @@ class RoleController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:roles,name',
             'display_name' => 'nullable|string|max:255',
@@ -112,6 +134,9 @@ class RoleController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $role = Role::find($id);
 
         if (!$role) {
@@ -158,6 +183,9 @@ class RoleController extends Controller
 
     public function destroy(string $id): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $role = Role::find($id);
 
         if (!$role) {

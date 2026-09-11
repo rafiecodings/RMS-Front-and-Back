@@ -13,6 +13,32 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+    /**
+     * Defense-in-depth: route middleware (role:admin on write routes) is
+     * authoritative, but the controller refuses non-admin mutations too so a
+     * future route misconfiguration cannot re-open privilege escalation
+     * (assign admin, elevate self, change roles, flip is_active, create an
+     * admin user, delete/deactivate anyone).
+     */
+    private function actorIsAdmin(): bool
+    {
+        $actor = Auth::user();
+        if (!$actor) {
+            return false;
+        }
+        $actor->loadMissing('roles');
+
+        return $actor->roles->pluck('name')->contains('admin');
+    }
+
+    private function adminOnly(): ?JsonResponse
+    {
+        if (!$this->actorIsAdmin()) {
+            return $this->error('Forbidden: Insufficient permissions', 403);
+        }
+
+        return null;
+    }
     public function index(Request $request): JsonResponse
     {
         $query = User::with('roles');
@@ -67,6 +93,9 @@ class UserController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -125,6 +154,9 @@ class UserController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $user = User::find($id);
 
         if (!$user) {
@@ -178,6 +210,9 @@ class UserController extends Controller
 
     public function destroy(string $id): JsonResponse
     {
+        if ($denied = $this->adminOnly()) {
+            return $denied;
+        }
         $user = User::find($id);
 
         if (!$user) {

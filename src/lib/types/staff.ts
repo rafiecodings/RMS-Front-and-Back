@@ -13,6 +13,7 @@ export interface Staff {
   employment_type?: string;
   commission_rate?: number;
   is_active: boolean;
+  active_attendance?: { id: string; clock_in: string } | null;
   hire_date: string;
   performance_score?: number;
   total_orders_handled?: number;
@@ -106,8 +107,8 @@ export interface AttendanceRecord {
   } | null;
   date?: string;
   clock_in: string;
-  clock_out?: string;
-  total_hours?: number;
+  clock_out?: string | null;
+  hours_worked?: number | null;
   status: "present" | "absent" | "late" | "half_day" | "on_leave";
   notes?: string;
 }

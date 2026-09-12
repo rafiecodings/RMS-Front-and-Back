@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
-import { AttendanceTable, ClockInOutButton } from "@/features/staff";
-import { useAttendance, useClockIn, useClockOut, useCurrentStaff } from "@/lib/hooks";
-import { toast } from "sonner";
+import { AttendanceTable } from "@/features/staff";
+import { useAttendance } from "@/lib/hooks";
+import { SelfAttendance } from "@/features/staff/components/SelfAttendance";
 
 export default function AttendancePage() {
   const [search, setSearch] = useState("");
@@ -23,40 +23,6 @@ export default function AttendancePage() {
   const records = attendanceQuery.data?.data?.data ?? [];
   const totalPages = attendanceQuery.data?.data?.meta?.last_page ?? 1;
 
-  const { data: currentStaff } = useCurrentStaff();
-  const clockIn = useClockIn();
-  const clockOut = useClockOut();
-
-  const isClockedIn = records.some((r) => r.status === "present" && !r.clock_out);
-
-  function handleClockIn() {
-    if (!currentStaff) {
-      toast.error("No staff profile found");
-      return;
-    }
-    clockIn.mutate(
-      { staff_id: currentStaff.id },
-      {
-        onSuccess: () => toast.success("Clocked in successfully"),
-        onError: (e: Error) => toast.error(e.message || "Failed to clock in"),
-      }
-    );
-  }
-
-  function handleClockOut() {
-    if (!currentStaff) {
-      toast.error("No staff profile found");
-      return;
-    }
-    clockOut.mutate(
-      { staff_id: currentStaff.id },
-      {
-        onSuccess: () => toast.success("Clocked out successfully"),
-        onError: (e: Error) => toast.error(e.message || "Failed to clock out"),
-      }
-    );
-  }
-
   const todayDisplay = new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   return (
@@ -64,14 +30,6 @@ export default function AttendancePage() {
       <PageHeader
         title="Attendance"
         description="Track staff attendance and clock in/out"
-        action={
-          <ClockInOutButton
-            isClockedIn={isClockedIn}
-            onClockIn={handleClockIn}
-            onClockOut={handleClockOut}
-            isLoading={clockIn.isPending || clockOut.isPending}
-          />
-        }
       />
 
       <div className="rounded-lg border bg-card p-4">
@@ -80,6 +38,9 @@ export default function AttendancePage() {
         </p>
       </div>
 
+      <SelfAttendance />
+
+      {attendanceQuery.isError && <p role="alert">Unable to load attendance records.</p>}
       <AttendanceTable
         records={records}
         isLoading={attendanceQuery.isLoading}

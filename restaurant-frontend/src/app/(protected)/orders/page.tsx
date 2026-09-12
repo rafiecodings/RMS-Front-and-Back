@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { useOrders, useMenuItems, useCustomers, useTables, useOrder } from "@/lib/hooks";
+import { useOrders, useMenuItems, useCustomers, useTables, useOrderEligibleTables, useOrder } from "@/lib/hooks";
 import { DEBOUNCE_DELAY, ITEMS_PER_PAGE } from "@/lib/utils/constants";
 import type { Order, OrderFormData, OrderItemFormData } from "@/lib/types";
 import { toast } from "sonner";
@@ -54,6 +54,7 @@ export default function OrdersPage() {
   const { list: miList } = useMenuItems({ per_page: 200 });
   const { list: custList } = useCustomers({ per_page: 200 });
   const { list: tableList } = useTables();
+  const { data: eligibleTables } = useOrderEligibleTables();
   const { data: viewOrder, isLoading: viewLoading } = useOrder(viewId ?? "");
   const { data: editOrder, isLoading: editLoading } = useOrder(editId ?? "");
 
@@ -307,7 +308,7 @@ export default function OrdersPage() {
           <OrderForm
             menuItems={menuItems}
             customers={customers}
-            tables={tables}
+            tables={eligibleTables ?? tables}
             onSubmit={handleOrderSubmit}
             isLoading={create.isPending || miList.isLoading}
             submitLabel="Place Order"

@@ -102,7 +102,9 @@ class CoreProcessFixTest extends TestCase
         $this->actingAs($waiter)->patchJson("/api/v1/orders/{$orderId}/status", ['status'=>'served'])->assertSuccessful();
         $this->actingAs($admin)->postJson("/api/v1/orders/{$orderId}/payments", ['payment_method'=>'cash','amount'=>67.2])->assertStatus(201);
         $this->assertEquals('completed', Order::find($orderId)->status);
-        $table->refresh(); $this->assertEquals('available',$table->status);
+        // Canonical lifecycle: a settled dine-in cover leaves needs_cleaning,
+        // never straight back to available.
+        $table->refresh(); $this->assertEquals('needs_cleaning',$table->status);
     }
 
     public function test_cancelled_releases_table(): void

@@ -458,6 +458,64 @@ class TableController extends Controller
     }
 
     /**
+     * Tables eligible for a brand-new dine-in order (GET /tables/order-eligible).
+     *
+     * Contract (order creation surfaces):
+     *   returns: { items: Table[] } with optional seating info.
+     *
+     * Eligible = active AND (
+     *   available
+     *   OR occupied by an active seated reservation with no other active
+     *   dine-in order (one cover → one active order)
+     * ).
+     * needs_cleaning / maintenance / reserved / inactive tables are never
+     * listed. Same rule as OrderController::store — the backend remains
+     * authoritative (409/422) if the client forces anything else.
+     */
+    public function orderEligible(Request $request): JsonResponse
+    {
+        $tables = Table::query()
+            ->where('is_active', true)
+            ->whereIn('status', ['available', 'occupied'])
+            ->orderBy('number')
+            ->get();
+
+        $items = [];
+        foreach ($tables as $table) {
+            if ($table->status === 'available') {
+                $items[] = $this->eligibleTablePayload($table, null);
+                continue;
+            }
+
+            $seated = \App\Services\TableDiningPolicy::activeSeatedReservation($table->id);
+            if ($seated === null
+                || \App\Services\TableDiningPolicy::hasActiveOrder($table->id)
+            ) {
+                continue;
+            }
+
+            $items[] = $this->eligibleTablePayload($table, $seated);
+        }
+
+        return $this->success(['items' => $items]);
+    }
+
+    private function eligibleTablePayload(Table $table, ?\App\Models\Reservation $seated): array
+    {
+        return [
+            'id' => $table->id,
+            'number' => $table->number,
+            'capacity' => $table->capacity,
+            'status' => $table->status,
+            'is_active' => $table->is_active,
+            'seating' => $seated ? [
+                'reservation_number' => $seated->reservation_number,
+                'guest_name' => $seated->guest_name,
+            ] : null,
+        ];
+    }
+
+    /**
      * Tables available for a reservation slot (GET /tables/available).
      *
      * Contract (useReservations.availableTables):
@@ -468,8 +526,8 @@ class TableController extends Controller
      *  - it is inactive, or
      *  - its capacity is below the requested party size, or
      *  - it currently holds an "occupied" status and the slot is today, or
-     *  - it has a pending/confirmed reservation on that date whose time
-     *    window overlaps the requested slot (default 90-minute window).
+     *  - it has a pending/confirmed/seated reservation on that date whose
+     *    time window overlaps the requested slot (default 90-minute window).
      * Cancelled / no-show / completed reservations never block availability.
      */
     public function available(Request $request): JsonResponse
@@ -488,7 +546,9 @@ class TableController extends Controller
         $windowMinutes = (int) config('app.reservation_window_minutes', 90);
 
         // Tables blocked by overlapping reservations on this date.
-        $blockingStatuses = ['pending', 'confirmed'];
+        // Pending, confirmed AND seated reservations block; completed /
+        // cancelled / no-show never do.
+        $blockingStatuses = ['pending', 'confirmed', 'seated'];
         $blockedTableIds = [];
 
         $sameDay = \App\Models\Reservation::whereIn('status', $blockingStatuses)

@@ -8,13 +8,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use App\Models\Customer;
 use App\Models\Table;
+use App\Services\AuditLogger;
+use App\Services\TableDiningPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReservationController extends Controller
 {
-    private const BLOCKING_STATUSES = ['pending', 'confirmed'];
+    private const BLOCKING_STATUSES = ['pending', 'confirmed', 'seated'];
 
     private function overlapsActiveReservation(
         string $tableId,
@@ -246,7 +249,9 @@ class ReservationController extends Controller
     }
 
     /**
-     * Restore an archived reservation (archived_at back to null).
+     * Whether another reservation blocks the same table in the 90-minute
+     * half-open overlap window. Pending, confirmed AND seated reservations
+     * block; completed / cancelled / no-show never do.
      */
     public function unarchive(Request $request, string $id): JsonResponse
     {
@@ -465,7 +470,65 @@ class ReservationController extends Controller
         }
 
         $previousStatus = $reservation->status;
-        $reservation->update($validated);
+
+        // Seat pre-check: the effective table must be operational. This runs
+        // before any write so a dirty table can never be seated onto.
+        if ($validated['status'] === 'seated') {
+            $seatTableId = $validated['table_id'] ?? $reservation->table_id;
+            if ($seatTableId) {
+                $seatTable = Table::find($seatTableId);
+                if (!$seatTable || !$seatTable->is_active
+                    || in_array($seatTable->status, ['maintenance', 'needs_cleaning'], true)
+                ) {
+                    return $this->error('The assigned table is not available for seating.', 409);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($reservation, $validated, $previousStatus) {
+            $reservation->update($validated);
+
+            $target = $validated['status'];
+            $tableId = $reservation->table_id;
+
+            // Seating physically occupies the assigned table (distinct
+            // domain event from the reservation transition itself).
+            if ($target === 'seated' && $tableId) {
+                $table = Table::lockForUpdate()->find($tableId);
+                if ($table && $table->is_active && $table->status !== 'occupied'
+                    && !in_array($table->status, ['maintenance', 'needs_cleaning'], true)
+                ) {
+                    $from = $table->status;
+                    $table->update(['status' => 'occupied']);
+                    AuditLogger::record('table_status_changed', $table, [
+                        'description' => "Table {$table->number} status changed from "
+                            .AuditLogger::label($from).' to Occupied',
+                        'from' => $from,
+                        'to' => 'occupied',
+                    ], null, ['status' => $from]);
+                }
+            }
+
+            // Release after seating: the cover leaves dirty. Cancellations
+            // and no-shows before seating leave the table untouched.
+            if (in_array($target, ['completed', 'cancelled'], true)
+                && $previousStatus === 'seated' && $tableId
+            ) {
+                $table = Table::lockForUpdate()->find($tableId);
+                if ($table && $table->is_active && $table->status !== 'needs_cleaning'
+                    && !in_array($table->status, ['maintenance'], true)
+                ) {
+                    $from = $table->status;
+                    $table->update(['status' => 'needs_cleaning']);
+                    AuditLogger::record('table_status_changed', $table, [
+                        'description' => "Table {$table->number} status changed from "
+                            .AuditLogger::label($from).' to Needs Cleaning',
+                        'from' => $from,
+                        'to' => 'needs_cleaning',
+                    ], null, ['status' => $from]);
+                }
+            }
+        });
 
         if ($validated['status'] !== $previousStatus) {
             $statusActions = [
@@ -492,11 +555,10 @@ class ReservationController extends Controller
             );
         }
 
-        if ($validated['status'] === 'cancelled' && $reservation->table_id) {
-            Table::where('id', $reservation->table_id)
-                ->where('status', 'reserved')
-                ->update(['status' => 'available']);
-        }
+        // Table release on completed/cancelled-after-seating is handled by
+        // the lifecycle transition inside the transaction above; the legacy
+        // status == reserved branch is removed (reservations never produce
+        // that state).
 
         return $this->success([
             'id' => $reservation->id,

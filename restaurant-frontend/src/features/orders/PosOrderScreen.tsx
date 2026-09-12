@@ -32,6 +32,7 @@ import {
   useMenuItems,
   useCustomers,
   useTables,
+  useOrderEligibleTables,
   useOrders,
 } from "@/lib/hooks";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -59,6 +60,10 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   const { list: miList } = useMenuItems({ is_available: true, per_page: 300 });
   const { list: custList } = useCustomers({ per_page: 300 });
   const { list: tableList } = useTables();
+  // Order-eligible tables: available ones plus occupied tables held by an
+  // active seated reservation with no active order yet. Backend stays
+  // authoritative (409) if anything changed underneath.
+  const { data: eligibleTables } = useOrderEligibleTables();
   const { create, updateStatus } = useOrders();
 
   const categories = useMemo(() => catList.data ?? [], [catList.data]);
@@ -91,8 +96,14 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   }, [menuItems, selectedCategory, search]);
 
   const availableTables = useMemo(
-    () => tables.filter((t) => t.status === "available" || t.id === tableId),
-    [tables, tableId]
+    () =>
+      (eligibleTables ?? tables).filter(
+        (t) =>
+          t.status === "available" ||
+          (t.status === "occupied" && !!t.seating) ||
+          t.id === tableId
+      ),
+    [eligibleTables, tables, tableId]
   );
 
   const cartCount = useMemo(
@@ -363,6 +374,7 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
                         <SelectItem key={t.id} value={t.id}>
                           T{t.number}
                           {t.section ? ` · ${t.section}` : ""} — {t.capacity} seats
+                          {t.seating ? " · Seated Reservation" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

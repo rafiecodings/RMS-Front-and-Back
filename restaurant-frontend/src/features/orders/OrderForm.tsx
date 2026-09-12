@@ -82,6 +82,7 @@ export function OrderForm({
   const availableTables = tables.filter(
     (t) =>
       (t.is_active !== false && t.status === "available") ||
+      (t.status === "occupied" && !!t.seating) ||
       t.id === formData.table_id
   );
 
@@ -254,6 +255,7 @@ export function OrderForm({
                 {availableTables.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     T{t.number} — {t.capacity} seats
+                    {t.seating ? " · Seated Reservation" : ""}
                   </SelectItem>
                 ))}
                 {availableTables.length === 0 && (

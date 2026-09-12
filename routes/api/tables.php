@@ -17,6 +17,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [TableController::class, 'index']);
         // Literal segment must be registered BEFORE /{id} so it is not shadowed.
         Route::get('/available', [TableController::class, 'available']);
+        Route::get('/order-eligible', [TableController::class, 'orderEligible']);
         Route::post('/', [TableController::class, 'store'])->middleware('role:admin,manager,waiter');
         Route::get('/{id}', [TableController::class, 'show'])->whereUuid('id');
         Route::put('/{id}', [TableController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');

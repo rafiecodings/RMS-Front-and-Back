@@ -219,11 +219,17 @@ class OrderController extends Controller
         $totals = $pricing->orderTotals($subtotal, $discountResolution['amount']);
 
         $result = DB::transaction(function () use ($validated, $request, $lineItems, $discountResolution, $totals) {
+            // Business-aware dine-in eligibility: available tables, or an
+            // occupied table held by an active seated reservation with no
+            // other active dine-in order (one cover → one active order).
+            // The guard is authoritative (409/422) — the frontend list is
+            // only a convenience filter.
             if (($validated['order_type'] ?? null) === 'dine_in' && !empty($validated['table_id'])) {
                 $table = Table::lockForUpdate()->find($validated['table_id']);
-                if (!$table || $table->status !== 'available') {
-                    abort(409, 'Selected table is not available.');
+                if (!$table) {
+                    abort(404, 'Selected table was not found.');
                 }
+                \App\Services\TableDiningPolicy::assertDineInCreatable($table);
             }
 
             $orderNumber = 'ORD-' . strtoupper(uniqid());
@@ -613,8 +619,19 @@ class OrderController extends Controller
             $workflow->reverseInventoryForCancelledOrder($order, $request->user());
         }
 
-        if (in_array($validated['status'], ['completed', 'cancelled']) && $order->table_id) {
-            Table::where('id', $order->table_id)->update(['status' => 'available']);
+        // Dine-in table reconciliation (takeaway carries no table):
+        // cancelled/voided-style ends keep an actively seated cover occupied
+        // and otherwise return the table to available; a completed cover
+        // always leaves needs_cleaning.
+        if ($order->order_type === 'dine_in' && $order->table_id) {
+            $releaseTable = Table::find($order->table_id);
+            if ($releaseTable) {
+                if ($validated['status'] === 'completed') {
+                    \App\Services\TableDiningPolicy::settleAfterPayment($releaseTable);
+                } elseif ($validated['status'] === 'cancelled') {
+                    \App\Services\TableDiningPolicy::releaseAfterOrderEnd($releaseTable);
+                }
+            }
         }
 
         return $this->success([
@@ -1072,16 +1089,26 @@ class OrderController extends Controller
 
         app(OrderWorkflowService::class)->reverseInventoryForCancelledOrder($order, $request->user());
 
-        if ($order->table_id) {
-            Table::where('id', $order->table_id)->update(['status' => 'available']);
-        }
-
         OrderStatusHistory::create([
             'order_id' => $order->id,
             'status' => 'voided',
             'notes' => "Order voided: {$validated['reason']}",
             'changed_by' => $request->user()->id,
         ]);
+
+        // Dine-in release: a still-seated reservation keeps the table
+        // occupied; otherwise it returns to available. Takeaway orders
+        // carry no table and never touch table state.
+        if ($order->table_id) {
+            if ($order->order_type === 'dine_in') {
+                $voidTable = Table::find($order->table_id);
+                if ($voidTable) {
+                    \App\Services\TableDiningPolicy::releaseAfterOrderEnd($voidTable);
+                }
+            } else {
+                Table::where('id', $order->table_id)->update(['status' => 'available']);
+            }
+        }
 
         \App\Services\AuditLogger::record('order_voided', $order, [
             'description' => "Order {$order->order_number} voided: {$validated['reason']}",
@@ -1194,7 +1221,7 @@ class OrderController extends Controller
             ]);
 
             // Atomic settlement side effects: complete the session exactly
-            // once, free the table, log history. Loyalty visit is recorded
+            // once, settle the table, log history. Loyalty visit is recorded
             // after commit (below) so retries can never double-count — a
             // retried request exits earlier at "already fully paid".
             if (! in_array($order->status, ['completed'], true)) {
@@ -1208,8 +1235,13 @@ class OrderController extends Controller
                 ]);
             }
 
-            if ($order->table_id) {
-                Table::where('id', $order->table_id)->update(['status' => 'available']);
+            // Dine-in settlement: the cover leaves dirty (needs_cleaning),
+            // never straight back to available. Takeaway carries no table.
+            if ($order->order_type === 'dine_in' && $order->table_id) {
+                $settleTable = Table::find($order->table_id);
+                if ($settleTable) {
+                    \App\Services\TableDiningPolicy::settleAfterPayment($settleTable);
+                }
             }
 
             return $payment;

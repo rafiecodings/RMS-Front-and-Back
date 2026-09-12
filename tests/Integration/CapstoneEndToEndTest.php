@@ -215,8 +215,8 @@ class CapstoneEndToEndTest extends TestCase
             (float) $receipt->json('data.totals.vatable_sales')
         );
 
-        // --- Table freed on completion ---
-        $this->assertEquals('available', Table::find($this->table->id)->status);
+        // --- Settled dine-in cover leaves needs_cleaning (canonical lifecycle) ---
+        $this->assertEquals('needs_cleaning', Table::find($this->table->id)->status);
 
         // --- Inventory deducted (200g of rice) ---
         $movement = StockMovement::where('reference_type', 'order')
@@ -294,7 +294,8 @@ class CapstoneEndToEndTest extends TestCase
         $this->assertNull($order->refresh()->customer_id);
         $this->assertSame($customerCount, Customer::count());
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
-        $this->assertEquals('available', $this->table->refresh()->status);
+        // Canonical lifecycle: settled dine-in cover leaves needs_cleaning.
+        $this->assertEquals('needs_cleaning', $this->table->refresh()->status);
     }
 
     private function createOrderViaApi(): string

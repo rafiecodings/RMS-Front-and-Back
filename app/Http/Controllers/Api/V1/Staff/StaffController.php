@@ -206,7 +206,15 @@ class StaffController extends Controller
             return $this->success(null, 'No staff profile found for current user.');
         }
 
+        // Do not limit this to today: an overnight or missed punch remains open.
+        $activeAttendance = Attendance::where('staff_id', $staff->id)
+            ->whereNull('clock_out')->orderBy('clock_in')->first();
+
         return $this->success([
+            'active_attendance' => $activeAttendance ? [
+                'id' => $activeAttendance->id,
+                'clock_in' => $activeAttendance->clock_in?->toISOString(),
+            ] : null,
             'id' => $staff->id,
             'employee_id' => $staff->employee_id,
             'position' => $staff->position,
@@ -265,6 +273,13 @@ class StaffController extends Controller
             }
         }
 
+        $target = StaffProfile::with('user')->find($validated['staff_id']);
+
+        // Inactive staff cannot start new attendance.
+        if ($target && !$target->is_active) {
+            return $this->error('This staff profile is inactive and cannot clock in.', 422);
+        }
+
         $existingClockIn = Attendance::where('staff_id', $validated['staff_id'])
             ->whereNull('clock_out')
             ->first();
@@ -280,7 +295,9 @@ class StaffController extends Controller
         ]);
 
         \App\Services\AuditLogger::record('clock_in', $attendance, [
-            'description' => 'Clock in recorded for staff '.$validated['staff_id'],
+            'description' => 'Clock in recorded for '
+                .($target?->employee_id ?? $validated['staff_id'])
+                .($target?->user?->name ? " — {$target->user->name}" : ''),
         ]);
 
         return $this->created([
@@ -312,6 +329,8 @@ class StaffController extends Controller
             return $this->error('No active clock-in found for this staff.', 404);
         }
 
+        // Closing an open record is always allowed (even for inactive
+        // staff) so punches never get stuck; starting new ones is blocked.
         $clockOut = now();
         $hoursWorked = $attendance->clock_in->diffInMinutes($clockOut) / 60;
 
@@ -320,8 +339,12 @@ class StaffController extends Controller
             'hours_worked' => round($hoursWorked, 2),
         ]);
 
+        $target = StaffProfile::with('user')->find($validated['staff_id']);
+
         \App\Services\AuditLogger::record('clock_out', $attendance, [
-            'description' => 'Clock out recorded for staff '.$attendance->staff_id,
+            'description' => 'Clock out recorded for '
+                .($target?->employee_id ?? $validated['staff_id'])
+                .($target?->user?->name ? " — {$target->user->name}" : ''),
         ]);
 
         return $this->success([
@@ -331,6 +354,52 @@ class StaffController extends Controller
             'clock_out' => $attendance->clock_out?->toISOString(),
             'hours_worked' => (float) $attendance->hours_worked,
         ], 'Clock out recorded successfully.');
+    }
+
+    /** Correct an open punch older than 24 hours using its actual end time. */
+    public function closeAttendance(Request $request, string $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'clock_out' => 'required|date|before_or_equal:now',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        return DB::transaction(function () use ($id, $validated) {
+            $attendance = Attendance::with('staff.user')->lockForUpdate()->find($id);
+            if (!$attendance) {
+                return $this->notFound('Attendance record not found.');
+            }
+            if ($attendance->clock_out !== null) {
+                return $this->error('Attendance record is already closed.', 409);
+            }
+            if ($attendance->clock_in->greaterThan(now()->subHours(24))) {
+                return $this->error('Only attendance open for at least 24 hours may be corrected.', 422);
+            }
+            $clockOut = \Illuminate\Support\Carbon::parse($validated['clock_out']);
+            if ($clockOut->lessThan($attendance->clock_in)) {
+                return $this->error('Clock out must be on or after clock in.', 422);
+            }
+            $attendance->update([
+                'clock_out' => $clockOut,
+                'hours_worked' => round($attendance->clock_in->diffInMinutes($clockOut) / 60, 2),
+            ]);
+            $staff = $attendance->staff;
+            \App\Services\AuditLogger::record('attendance_closed', $attendance, [
+                'description' => 'Stale attendance closed for '.($staff?->employee_id ?? 'deleted staff')
+                    .($staff?->user?->name ? " — {$staff->user->name}" : '')
+                    .': '.$validated['reason'],
+                'reason' => $validated['reason'],
+                'clock_out' => $clockOut->toISOString(),
+                'hours_worked' => (float) $attendance->hours_worked,
+            ], oldValues: ['clock_out' => null]);
+
+            return $this->success([
+                'id' => $attendance->id,
+                'staff_id' => $attendance->staff_id,
+                'clock_out' => $attendance->clock_out->toISOString(),
+                'hours_worked' => (float) $attendance->hours_worked,
+            ], 'Stale attendance closed successfully.');
+        });
     }
 
     public function schedule(Request $request): JsonResponse
@@ -404,8 +473,9 @@ class StaffController extends Controller
     /**
      * Attendance listing (GET /staff/attendance).
      *
-     * Supported filters: staff_id, date, date_from, date_to, status,
-     * page/per_page. Returns real attendance records with staff info.
+     * Supported filters: staff_id, date, date_from, date_to, status, search,
+     * page/per_page. Search matches employee name, employee ID, and user
+     * name/email. Returns real attendance records with staff info.
      */
     public function attendance(Request $request): JsonResponse
     {
@@ -415,6 +485,7 @@ class StaffController extends Controller
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
             'status' => 'nullable|string|max:30',
+            'search' => 'nullable|string|max:100',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
@@ -438,6 +509,20 @@ class StaffController extends Controller
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $like = '%'.strtolower($search).'%';
+            $query->where(function ($q) use ($like) {
+                $q->whereHas('staff', function ($sq) use ($like) {
+                    $sq->whereRaw('LOWER(employee_id) LIKE ?', [$like])
+                        ->orWhereHas('user', function ($uq) use ($like) {
+                            $uq->whereRaw('LOWER(name) LIKE ?', [$like])
+                                ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+                        });
+                });
+            });
         }
 
         $records = $query->orderByDesc('clock_in')

@@ -9,7 +9,9 @@ use App\Models\Customer;
 use App\Models\Ingredient;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\ReplenishmentRequest;
 use App\Models\Reservation;
+use App\Models\StockMovement;
 use App\Models\Table;
 use App\Models\Waitlist;
 use App\Models\KotTicket;
@@ -239,7 +241,31 @@ class DashboardController extends Controller
             ->count();
         $waitlistCount = Waitlist::where('status', 'waiting')->count();
 
-        return $this->success([
+        // Inventory operations (for the inventory_staff payload; quantities
+        // only — unit costs and inventory value are never exposed here).
+        $replenishmentByStatus = ReplenishmentRequest::selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+        $replenishmentPending = (int) ($replenishmentByStatus['submitted'] ?? 0)
+            + (int) ($replenishmentByStatus['approved'] ?? 0)
+            + (int) ($replenishmentByStatus['processing'] ?? 0);
+        $recentMovements = StockMovement::with('ingredient:id,name,unit')
+            ->orderBy('created_at', 'desc')
+            ->limit(8)
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'ingredient_name' => $m->ingredient?->name,
+                'type' => $m->type,
+                'quantity' => (float) $m->quantity,
+                'reference_type' => $m->reference_type,
+                'created_at' => $m->created_at?->toISOString(),
+            ]);
+        $outOfStockCount = Ingredient::where('is_active', true)
+            ->where('current_stock', '<=', 0)->count();
+        $lowStockCount = $lowStockIngredients->where('severity', '!=', 'out_of_stock')->count();
+
+        $full = [
             'revenue' => [
                 'today' => (float) $todayRevenue,
                 'yesterday' => (float) $yesterdayRevenue,
@@ -281,6 +307,11 @@ class DashboardController extends Controller
             'peak_hours' => $peakHours,
             'alerts' => $dashboardAlerts,
             'inventory_alerts' => $lowStockIngredients,
+            'inventory_low_count' => $lowStockCount,
+            'inventory_out_count' => $outOfStockCount,
+            'replenishment_pending' => $replenishmentPending,
+            'replenishment_by_status' => $replenishmentByStatus,
+            'recent_movements' => $recentMovements,
             'recent_orders' => $recentOrders,
             'recent_activities' => $recentActivities,
             'meta' => [
@@ -288,7 +319,79 @@ class DashboardController extends Controller
                 'today_reservations' => $todayReservations,
                 'waitlist_count' => $waitlistCount,
             ],
-        ]);
+        ];
+
+        return $this->success($this->payloadForRole($request->user(), $full, [
+            'today_reservations' => $todayReservations,
+            'waitlist_count' => $waitlistCount,
+        ]));
+    }
+
+    /**
+     * Role-aware payload filter. Admin/manager receive the full management
+     * payload; every operational role receives ONLY its job-relevant
+     * sections. Sensitive sections (revenue, sales, customer analytics,
+     * supplier data, inventory value) are never sent to unauthorized roles
+     * — frontend hiding alone would still leak them via direct API calls.
+     */
+    private function payloadForRole($user, array $full, array $serviceMeta): array
+    {
+        if ($user->hasRole('admin') || $user->hasRole('manager')) {
+            return $full;
+        }
+
+        $reservationAlerts = array_values(array_filter(
+            $full['alerts'],
+            fn ($a) => ($a['type'] ?? null) === 'reservation'
+        ));
+        $inventoryOnlyAlerts = array_values(array_filter(
+            $full['alerts'],
+            fn ($a) => ($a['type'] ?? null) === 'low_inventory'
+        ));
+
+        if ($user->hasRole('waiter')) {
+            return [
+                'orders' => $full['orders'],
+                'tables' => $full['tables'],
+                'kitchen' => $full['kitchen'],
+                'recent_orders' => $full['recent_orders'],
+                'alerts' => $reservationAlerts,
+                'meta' => $serviceMeta,
+            ];
+        }
+
+        if ($user->hasRole('cashier')) {
+            return [
+                'orders' => $full['orders'],
+                'tables' => $full['tables'],
+                'recent_orders' => $full['recent_orders'],
+                'meta' => $serviceMeta,
+            ];
+        }
+
+        if ($user->hasRole('kitchen_staff')) {
+            return [
+                'orders' => $full['orders'],
+                'kitchen' => $full['kitchen'],
+                'recent_orders' => $full['recent_orders'],
+            ];
+        }
+
+        if ($user->hasRole('inventory_staff')) {
+            return [
+                'inventory' => [
+                    'low_stock_count' => $full['inventory_low_count'] ?? 0,
+                    'out_of_stock_count' => $full['inventory_out_count'] ?? 0,
+                    'replenishment_pending' => $full['replenishment_pending'] ?? 0,
+                    'replenishment_by_status' => $full['replenishment_by_status'] ?? [],
+                    'recent_movements' => $full['recent_movements'] ?? [],
+                ],
+                'inventory_alerts' => $full['inventory_alerts'],
+                'alerts' => $inventoryOnlyAlerts,
+            ];
+        }
+
+        return [];
     }
 
     public function revenue(Request $request): JsonResponse

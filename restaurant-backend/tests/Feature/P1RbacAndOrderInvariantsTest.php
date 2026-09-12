@@ -61,11 +61,13 @@ class P1RbacAndOrderInvariantsTest extends TestCase
         return $this->actingAs($as)->postJson('/api/v1/orders', $payload)->assertStatus(201)->json('data.id');
     }
 
-    public function test_dashboard_only_admin_manager(): void
+    public function test_dashboard_role_aware_summary(): void
     {
-        foreach (['admin' => 200, 'manager' => 200, 'waiter' => 403, 'kitchen_staff' => 403, 'cashier' => 403, 'inventory_staff' => 403] as $role => $expected) {
+        // All RMS roles may call the summary; operational roles receive a
+        // filtered payload (asserted in depth by DashboardRoleTest).
+        foreach (['admin', 'manager', 'waiter', 'kitchen_staff', 'cashier', 'inventory_staff'] as $role) {
             $user = $this->userWithRole($role);
-            $this->actingAs($user)->getJson('/api/v1/dashboard/summary')->assertStatus($expected);
+            $this->actingAs($user)->getJson('/api/v1/dashboard/summary')->assertStatus(200);
         }
     }
 

@@ -24,7 +24,7 @@ class RbacMatrixTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ROLES = ['admin', 'manager', 'waiter', 'kitchen', 'cashier', 'inventory_staff'];
+    private const ROLES = ['admin', 'manager', 'waiter', 'kitchen_staff', 'cashier', 'inventory_staff'];
 
     private MenuItem $menuItem;
     private string $orderPendingId;
@@ -99,7 +99,7 @@ class RbacMatrixTest extends TestCase
             'create_order' => ['POST', "/orders", [
                 'order_type' => 'dine_in',
                 'items' => [['menu_item_id' => $this->menuItem->id, 'quantity' => 1]],
-            ], ['admin', 'manager', 'waiter', 'cashier']],
+            ], ['admin', 'manager', 'waiter', 'cashier', 'kitchen_staff']],
             'update_order_status' => ['PATCH', "/orders/{$this->orderPendingId}/status", [
                 'status' => 'confirmed',
             ], ['admin', 'manager', 'waiter', 'cashier']],
@@ -133,7 +133,7 @@ class RbacMatrixTest extends TestCase
             'kot_read' => ['GET', '/kot', [], self::ROLES],
             'reservations_read' => ['GET', '/reservations', [], self::ROLES],
             'customers_read' => ['GET', '/customers', [], ['admin', 'manager', 'waiter', 'cashier']],
-            'dashboard' => ['GET', '/dashboard/summary', [], ['admin', 'manager']],
+            'dashboard' => ['GET', '/dashboard/summary', [], self::ROLES],
         ];
 
         foreach (self::ROLES as $role) {

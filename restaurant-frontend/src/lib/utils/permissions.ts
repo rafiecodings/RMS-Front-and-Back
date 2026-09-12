@@ -149,6 +149,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
 };
 
 export const SIDEBAR_ROLES: Record<string, string[]> = {
+  attendance: ["admin", "manager", "waiter", "cashier", "kitchen_staff", "inventory_staff"],
   dashboard: ["admin", "manager", "waiter", "cashier", "kitchen_staff", "inventory_staff"],
   customers: ["admin", "manager", "waiter", "cashier"],
   tables: ["admin", "manager", "waiter"],

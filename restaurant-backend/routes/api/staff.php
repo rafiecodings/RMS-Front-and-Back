@@ -13,6 +13,7 @@ Route::middleware(['auth:sanctum'])->prefix('staff')->group(function () {
     Route::delete('/schedule/{id}', [StaffController::class, 'destroySchedule'])->middleware('role:admin,manager');
     Route::get('/shifts', [StaffController::class, 'shifts']);
     Route::get('/attendance', [StaffController::class, 'attendance'])->middleware('role:admin,manager');
+    Route::post('/attendance/{id}/close', [StaffController::class, 'closeAttendance'])->middleware('role:admin,manager')->whereUuid('id');
     // Employees aliases: same data layer / controller as /staff (no second table).
     Route::get('/employees', [StaffController::class, 'index']);
     Route::post('/employees', [StaffController::class, 'store'])->middleware('role:admin,manager');

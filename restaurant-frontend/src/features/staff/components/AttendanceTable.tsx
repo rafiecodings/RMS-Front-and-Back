@@ -93,7 +93,7 @@ export function AttendanceTable({
               records.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/30">
                    <td className="px-4 py-3">
-                     <p className="font-medium">{r.staff?.name ?? "—"}</p>
+                     <p className="font-medium">{r.staff?.name ?? r.staff?.employee_id ?? "—"}</p>
                    </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(r.date)}
@@ -105,7 +105,7 @@ export function AttendanceTable({
                     {r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : "—"}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {r.total_hours != null ? `${safeNumber(r.total_hours).toFixed(1)}h` : "—"}
+                    {r.hours_worked != null ? `${safeNumber(r.hours_worked).toFixed(1)}h` : "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status] ?? "bg-gray-100 text-gray-800"}`}>

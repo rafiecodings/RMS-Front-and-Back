@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api/client";
+import { useAuth } from "@/providers/AuthProvider";
 import { normalizePaginated } from "@/lib/utils/api";
 import type {
   ApiResponse,
@@ -125,8 +126,10 @@ export function useStaffShifts() {
 }
 
 export function useCurrentStaff() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["staff", "current"],
+    queryKey: ["staff", "current", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<Staff | null>>("/staff/me");
       return data.data;

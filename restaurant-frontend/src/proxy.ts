@@ -31,6 +31,7 @@ const ROLE_GUARDS: Record<string, string[] | "any"> = {
   "/reports": ["admin", "manager"],
   "/analytics": ["admin", "manager"],
   "/staff": ["admin", "manager"],
+  "/my-attendance": ["admin", "manager", "cashier", "waiter", "kitchen_staff", "inventory_staff"],
   "/billing": ["admin", "manager"],
 
   // Menu is viewable by front-of-house/kitchen roles; edits remain

@@ -47,6 +47,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
+      { label: "My Attendance", href: "/my-attendance", icon: ClipboardCheck, roles: SIDEBAR_ROLES.attendance },
       { label: "Customers", href: "/customers", icon: Users, roles: SIDEBAR_ROLES.customers },
       { label: "Tables", href: "/tables", icon: Grid3X3, roles: SIDEBAR_ROLES.tables },
       { label: "Reservations", href: "/reservations", icon: Calendar, roles: SIDEBAR_ROLES.reservations },

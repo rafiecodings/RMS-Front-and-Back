@@ -86,6 +86,7 @@ vi.mock("@/lib/hooks", () => {
         isLoading: false,
       },
     }),
+    useOrderEligibleTables: () => ({ data: undefined, isLoading: false }),
     useOrders: () => ({ create: mocks.create, updateStatus: mocks.updateStatus }),
   };
 });

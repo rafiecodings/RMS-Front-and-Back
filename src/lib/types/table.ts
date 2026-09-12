@@ -14,6 +14,12 @@ export interface Table {
   width: number;
   height: number;
   current_order_id?: string;
+  // Present on /tables/order-eligible: the active seated reservation that
+  // makes an occupied table bookable for its first dine-in order.
+  seating?: {
+    reservation_number: string;
+    guest_name: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }

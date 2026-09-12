@@ -45,3 +45,20 @@ export function useTables() {
 
   return { list, create, update, archive, restore };
 }
+
+/**
+ * Tables eligible for a brand-new dine-in order: available tables plus
+ * occupied tables held by an active seated reservation with no active
+ * order yet (one cover → one active order). The backend remains
+ * authoritative — this list is only a convenience filter.
+ */
+export function useOrderEligibleTables() {
+  return useQuery({
+    queryKey: ["tables", "order-eligible"],
+    queryFn: () =>
+      api
+        .get<ApiResponse<{ items: Table[] }>>("/tables/order-eligible")
+        .then((res) => res.data.data.items ?? []),
+    staleTime: 30_000,
+  });
+}

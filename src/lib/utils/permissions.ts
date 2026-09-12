@@ -87,7 +87,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "view",
   },
   cashier: {
-    dashboard: "none",
+    dashboard: "view",
     customers: "view",
     tables: "view",
     reservations: "none",
@@ -102,7 +102,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   waiter: {
-    dashboard: "none",
+    dashboard: "view",
     customers: "view",
     tables: "view",
     reservations: "view",
@@ -117,7 +117,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   kitchen_staff: {
-    dashboard: "none",
+    dashboard: "view",
     customers: "none",
     tables: "none",
     reservations: "none",
@@ -132,7 +132,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
     settings: "none",
   },
   inventory_staff: {
-    dashboard: "none",
+    dashboard: "view",
     customers: "none",
     tables: "none",
     reservations: "none",
@@ -149,7 +149,7 @@ export const PERMISSION_MATRIX: Record<string, RolePermissions> = {
 };
 
 export const SIDEBAR_ROLES: Record<string, string[]> = {
-  dashboard: ["admin", "manager"],
+  dashboard: ["admin", "manager", "waiter", "cashier", "kitchen_staff", "inventory_staff"],
   customers: ["admin", "manager", "waiter", "cashier"],
   tables: ["admin", "manager", "waiter"],
   reservations: ["admin", "manager", "waiter"],

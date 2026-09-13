@@ -402,39 +402,16 @@ class StaffController extends Controller
         });
     }
 
-    public function schedule(Request $request): JsonResponse
+    /**
+     * Canonical schedule payload. All schedule endpoints (list / create /
+     * update) share this shape so the week grid can key on staff_id.
+     */
+    private function formatSchedule(ShiftSchedule $s): array
     {
-        $request->validate([
-            'date' => 'nullable|date',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'staff_id' => 'nullable|uuid',
-            'per_page' => 'nullable|integer|min:1|max:100',
-        ]);
-
-        $query = ShiftSchedule::with(['staff.user', 'shift']);
-
-        if ($date = $request->input('date')) {
-            $query->whereDate('date', $date);
-        }
-
-        if ($startDate = $request->input('start_date')) {
-            $query->whereDate('date', '>=', $startDate);
-        }
-
-        if ($endDate = $request->input('end_date')) {
-            $query->whereDate('date', '<=', $endDate);
-        }
-
-        if ($staffId = $request->input('staff_id')) {
-            $query->where('staff_id', $staffId);
-        }
-
-        $schedules = $query->orderBy('date')
-            ->paginate($request->integer('per_page', 15));
-
-        $data = $schedules->getCollection()->map(fn (ShiftSchedule $s) => [
+        return [
             'id' => $s->id,
+            'staff_id' => $s->staff_id,
+            'shift_id' => $s->shift_id,
             'date' => $s->date?->toDateString(),
             'status' => $s->status,
             'notes' => $s->notes,
@@ -450,7 +427,67 @@ class StaffController extends Controller
                 'end_time' => $s->shift->end_time,
             ] : null,
             'created_at' => $s->created_at?->toISOString(),
+            'updated_at' => $s->updated_at?->toISOString(),
+        ];
+    }
+
+    public function schedule(Request $request): JsonResponse
+    {
+        $request->validate([
+            'date' => 'nullable|date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'staff_id' => 'nullable|uuid',
+            'per_page' => 'nullable|integer|min:1|max:100',
         ]);
+
+        $isPrivileged = $request->user()->hasRole('admin') || $request->user()->hasRole('manager');
+
+        // Operational roles are scoped to their own linked staff profile so
+        // one employee can never enumerate the whole roster through this
+        // endpoint. Admin/manager keep the full view.
+        if (!$isPrivileged) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (!$ownProfile) {
+                return $this->success([
+                    'items' => [],
+                    'pagination' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => $request->integer('per_page', 15),
+                        'total' => 0,
+                    ],
+                ]);
+            }
+            if ($request->filled('staff_id') && $request->input('staff_id') !== $ownProfile->id) {
+                return $this->error('You may only view your own schedule.', 403);
+            }
+        }
+
+        $query = ShiftSchedule::with(['staff.user', 'shift']);
+
+        if ($date = $request->input('date')) {
+            $query->whereDate('date', $date);
+        }
+
+        if ($startDate = $request->input('start_date')) {
+            $query->whereDate('date', '>=', $startDate);
+        }
+
+        if ($endDate = $request->input('end_date')) {
+            $query->whereDate('date', '<=', $endDate);
+        }
+
+        if (!$isPrivileged) {
+            $query->where('staff_id', $ownProfile->id);
+        } elseif ($staffId = $request->input('staff_id')) {
+            $query->where('staff_id', $staffId);
+        }
+
+        $schedules = $query->orderBy('date')
+            ->paginate($request->integer('per_page', 15));
+
+        $data = $schedules->getCollection()->map(fn (ShiftSchedule $s) => $this->formatSchedule($s));
 
         return $this->success([
             'items' => $data,
@@ -465,7 +502,9 @@ class StaffController extends Controller
 
     public function shifts(Request $request): JsonResponse
     {
-        $shifts = \App\Models\StaffShift::all(['id', 'name', 'start_time', 'end_time']);
+        // Eloquent global scope excludes soft-deleted templates, so archived
+        // shifts never appear as active scheduling choices.
+        $shifts = \App\Models\StaffShift::orderBy('name')->get(['id', 'name', 'start_time', 'end_time']);
 
         return $this->success($shifts->toArray());
     }
@@ -576,7 +615,23 @@ class StaffController extends Controller
         ]);
 
         $targetStaffId = $validated['staff_id'] ?? $schedule->staff_id;
+        $targetShiftId = $validated['shift_id'] ?? $schedule->shift_id;
         $targetDate = $validated['date'] ?? $schedule->date?->toDateString();
+
+        // Re-validate business rules on the resulting assignment: the target
+        // staff must exist and be active, the target shift must exist and not
+        // be soft-deleted. Night shifts crossing midnight stay valid because
+        // assignments are date-keyed, not time-range-keyed.
+        $targetStaff = StaffProfile::with('user')->find($targetStaffId);
+        if (!$targetStaff) {
+            return $this->notFound('Staff profile not found.');
+        }
+        if (!$targetStaff->is_active) {
+            return $this->error('Cannot schedule inactive staff.', 422);
+        }
+        if (!StaffShift::find($targetShiftId)) {
+            return $this->error('Selected shift is no longer available.', 422);
+        }
 
         // Conflict check: same staff may not hold two schedules on one date.
         $conflict = ShiftSchedule::where('staff_id', $targetStaffId)
@@ -594,28 +649,12 @@ class StaffController extends Controller
 
         \App\Services\AuditLogger::record('shift_schedule_updated', $schedule, [
             'description' => 'Shift schedule updated for '
-                .($schedule->staff?->user?->name ?? $schedule->staff?->employee_id ?? 'staff')
+                .($schedule->staff?->employee_id ?? $targetStaffId)
+                .($schedule->staff?->user?->name ? " — {$schedule->staff->user->name}" : '')
                 .' on '.($schedule->date?->toDateString() ?? ''),
         ]);
 
-        return $this->success([
-            'id' => $schedule->id,
-            'date' => $schedule->date?->toDateString(),
-            'status' => $schedule->status,
-            'notes' => $schedule->notes,
-            'staff' => $schedule->staff ? [
-                'id' => $schedule->staff->id,
-                'employee_id' => $schedule->staff->employee_id,
-                'name' => $schedule->staff->user?->name,
-            ] : null,
-            'shift' => $schedule->shift ? [
-                'id' => $schedule->shift->id,
-                'name' => $schedule->shift->name,
-                'start_time' => $schedule->shift->start_time,
-                'end_time' => $schedule->shift->end_time,
-            ] : null,
-            'created_at' => $schedule->created_at?->toISOString(),
-        ], 'Schedule updated successfully.');
+        return $this->success($this->formatSchedule($schedule), 'Schedule updated successfully.');
     }
 
     /**
@@ -623,16 +662,23 @@ class StaffController extends Controller
      */
     public function destroySchedule(string $id): JsonResponse
     {
-        $schedule = ShiftSchedule::find($id);
+        $schedule = ShiftSchedule::with(['staff.user'])->find($id);
 
         if (!$schedule) {
             return $this->notFound('Schedule not found.');
         }
 
+        $employeeId = $schedule->staff?->employee_id ?? $schedule->staff_id;
+        $employeeName = $schedule->staff?->user?->name;
+        $scheduleDate = $schedule->date?->toDateString() ?? '';
+
         $schedule->delete();
 
         \App\Services\AuditLogger::record('shift_schedule_deleted', $schedule, [
-            'description' => 'Shift schedule deleted',
+            'description' => 'Shift schedule deleted for '
+                .$employeeId
+                .($employeeName ? " — {$employeeName}" : '')
+                .' on '.$scheduleDate,
         ]);
 
         return $this->noContent();
@@ -648,6 +694,23 @@ class StaffController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        // Business rules: target staff must exist and be active; the shift
+        // template must exist and not be soft-deleted (the exists rule above
+        // queries the table directly, so trashed shifts need an explicit
+        // Eloquent check). Multiple employees may share one shift template,
+        // and night shifts crossing midnight remain valid because the model
+        // is date-keyed.
+        $targetStaff = StaffProfile::with('user')->find($validated['staff_id']);
+        if (!$targetStaff) {
+            return $this->notFound('Staff profile not found.');
+        }
+        if (!$targetStaff->is_active) {
+            return $this->error('Cannot schedule inactive staff.', 422);
+        }
+        if (!StaffShift::find($validated['shift_id'])) {
+            return $this->error('Selected shift is no longer available.', 422);
+        }
+
         $existing = ShiftSchedule::where('staff_id', $validated['staff_id'])
             ->whereDate('date', $validated['date'])
             ->first();
@@ -662,27 +725,12 @@ class StaffController extends Controller
 
         \App\Services\AuditLogger::record('shift_scheduled', $schedule, [
             'description' => 'Shift scheduled for '
-                .($schedule->staff?->user?->name ?? $schedule->staff?->employee_id ?? 'staff')
+                .($schedule->staff?->employee_id ?? $validated['staff_id'])
+                .($schedule->staff?->user?->name ? " — {$schedule->staff->user->name}" : '')
                 .' on '.($schedule->date?->toDateString() ?? ''),
         ]);
 
-        return $this->created([
-            'id' => $schedule->id,
-            'date' => $schedule->date?->toDateString(),
-            'status' => $schedule->status,
-            'staff' => $schedule->staff ? [
-                'id' => $schedule->staff->id,
-                'employee_id' => $schedule->staff->employee_id,
-                'name' => $schedule->staff->user?->name,
-            ] : null,
-            'shift' => $schedule->shift ? [
-                'id' => $schedule->shift->id,
-                'name' => $schedule->shift->name,
-                'start_time' => $schedule->shift->start_time,
-                'end_time' => $schedule->shift->end_time,
-            ] : null,
-            'created_at' => $schedule->created_at?->toISOString(),
-        ], 'Schedule created successfully.');
+        return $this->created($this->formatSchedule($schedule), 'Schedule created successfully.');
     }
 
     public function commissions(Request $request, string $id): JsonResponse
@@ -726,10 +774,20 @@ class StaffController extends Controller
 
     public function requestLeave(Request $request, string $id): JsonResponse
     {
-        $staff = StaffProfile::find($id);
+        $staff = StaffProfile::with('user')->find($id);
 
         if (!$staff) {
             return $this->notFound('Staff profile not found.');
+        }
+
+        // Ownership gate: operational roles may request leave only for their
+        // own linked staff profile. Never trust the frontend-provided ID
+        // alone. Admin/manager keep override access for any staff.
+        if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $ownProfile || $ownProfile->id !== $id) {
+                return $this->error('You may only request leave for your own staff profile.', 403);
+            }
         }
 
         $validated = $request->validate([
@@ -745,9 +803,16 @@ class StaffController extends Controller
             $existing->update(['status' => 'absent', 'notes' => $validated['reason']]);
             $leaveSchedule = $existing;
         } else {
+            // A leave without an existing assignment still needs a shift
+            // template row; fail cleanly instead of a NOT NULL crash when
+            // none exists.
+            $fallbackShiftId = StaffShift::first()?->id;
+            if (!$fallbackShiftId) {
+                return $this->error('No shift templates available for leave recording.', 422);
+            }
             $leaveSchedule = ShiftSchedule::create([
                 'staff_id' => $id,
-                'shift_id' => StaffShift::first()?->id,
+                'shift_id' => $fallbackShiftId,
                 'date' => $validated['date'],
                 'status' => 'absent',
                 'notes' => $validated['reason'],

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { AttendanceTable } from "@/features/staff";
 import { useAttendance } from "@/lib/hooks";
 import { SelfAttendance } from "@/features/staff/components/SelfAttendance";
+import { MySchedule } from "@/features/staff";
 
 export default function AttendancePage() {
   const [search, setSearch] = useState("");
@@ -39,6 +40,8 @@ export default function AttendancePage() {
       </div>
 
       <SelfAttendance />
+
+      <MySchedule />
 
       {attendanceQuery.isError && <p role="alert">Unable to load attendance records.</p>}
       <AttendanceTable

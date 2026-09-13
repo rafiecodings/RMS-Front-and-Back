@@ -6,6 +6,7 @@ export { StaffDetail } from "./components/StaffDetail";
 export { RoleBadge } from "./components/RoleBadge";
 export { ShiftScheduleTable } from "./components/ShiftScheduleTable";
 export { ShiftForm } from "./components/ShiftForm";
+export { MySchedule } from "./components/MySchedule";
 export { AttendanceTable } from "./components/AttendanceTable";
 export { PerformanceCard } from "./components/PerformanceCard";
 export { ClockInOutButton } from "./components/ClockInOutButton";

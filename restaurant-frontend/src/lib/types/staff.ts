@@ -70,6 +70,7 @@ export interface StaffFormData {
 export interface ShiftSchedule {
   id: string;
   staff_id: string;
+  shift_id: string;
   staff?: {
     id: string;
     employee_id: string;
@@ -78,15 +79,18 @@ export interface ShiftSchedule {
   date: string;
   shift?: StaffShiftOption | null;
   status: "scheduled" | "confirmed" | "completed" | "absent" | "swap" | "cancelled";
-  notes?: string;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type ShiftScheduleStatus = ShiftSchedule["status"];
 
 export interface ShiftScheduleFormData {
   staff_id: string;
   date: string;
   shift_id: string;
+  status?: ShiftScheduleStatus;
   notes?: string;
 }
 

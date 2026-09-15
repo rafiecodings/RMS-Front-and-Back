@@ -15,11 +15,16 @@ import {
 
 export default function PerformancePage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const { list: staffList } = useStaff({ per_page: 200 });
   const staff = staffList.data?.data?.data ?? [];
 
-  const { data: performance, isLoading: perfLoading } = useStaffPerformance(selectedStaffId);
+  const { data: performance, isLoading: perfLoading } = useStaffPerformance(selectedStaffId, {
+    start_date: startDate || undefined,
+    end_date: endDate || undefined,
+  });
 
   return (
     <div className="space-y-6">
@@ -28,7 +33,7 @@ export default function PerformancePage() {
         description="View staff performance metrics and analytics"
       />
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="w-full sm:w-[280px]">
           <Select value={selectedStaffId} onValueChange={(v) => setSelectedStaffId(v ?? "")}>
             <SelectTrigger>
@@ -43,6 +48,8 @@ export default function PerformancePage() {
             </SelectContent>
           </Select>
         </div>
+        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-10 rounded-xl border px-3 text-sm" aria-label="Start date" />
+        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-10 rounded-xl border px-3 text-sm" aria-label="End date" />
       </div>
 
       {selectedStaffId ? (
@@ -63,38 +70,26 @@ export default function PerformancePage() {
                 <span className="font-medium tabular-nums">₱{safeNumber(performance.total_sales).toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Tips Earned</span>
-                <span className="font-medium tabular-nums">₱{safeNumber(performance.tips_earned).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Orders Handled</span>
                 <span className="font-medium tabular-nums">{performance.orders_handled}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Tables Served</span>
-                <span className="font-medium tabular-nums">{performance.tables_served}</span>
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border bg-card p-6 space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Attendance & Feedback</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Attendance</h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Attendance Rate</span>
-                <span className="font-medium tabular-nums">{safeNumber(performance.attendance_rate).toFixed(1)}%</span>
+                <span className="text-sm text-muted-foreground">Hours Worked</span>
+                <span className="font-medium tabular-nums">{safeNumber(performance.hours_worked).toFixed(1)}h</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Punctuality Score</span>
-                <span className="font-medium tabular-nums">{safeNumber(performance.punctuality_score).toFixed(1)}%</span>
+                <span className="text-sm text-muted-foreground">Days Present</span>
+                <span className="font-medium tabular-nums">{performance.days_present}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Average Rating</span>
-                <span className="font-medium tabular-nums">{safeNumber(performance.average_rating).toFixed(1)} / 5.0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Customer Reviews</span>
-                <span className="font-medium tabular-nums">{performance.customer_feedback_count}</span>
+                <span className="text-sm text-muted-foreground">Period</span>
+                <span className="font-medium tabular-nums">{performance.period.start_date} to {performance.period.end_date}</span>
               </div>
             </div>
           </div>

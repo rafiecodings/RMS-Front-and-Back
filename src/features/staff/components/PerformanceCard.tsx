@@ -1,6 +1,6 @@
 "use client";
 
-import { Star, TrendingUp, Clock, Award } from "lucide-react";
+import { TrendingUp, Clock, Wallet, CalendarCheck } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
 import { safeNumber } from "@/lib/utils";
 import type { StaffPerformance } from "@/lib/types";
@@ -32,31 +32,31 @@ export function PerformanceCard({ performance, isLoading }: PerformanceCardProps
   const items = [
     {
       label: "Orders Handled",
-      value: performance.orders_handled,
+      value: safeNumber(performance.orders_handled).toLocaleString(),
       icon: TrendingUp,
       color: "bg-blue-100 text-blue-700",
-      sub: `${performance.tables_served} tables served`,
+      sub: `Period ${performance.period.start_date} to ${performance.period.end_date}`,
     },
     {
-      label: "Average Rating",
-      value: safeNumber(performance.average_rating).toFixed(1),
-      icon: Star,
-      color: "bg-amber-100 text-amber-700",
-      sub: `${performance.customer_feedback_count} reviews`,
+      label: "Total Sales",
+      value: `₱${safeNumber(performance.total_sales).toLocaleString()}`,
+      icon: Wallet,
+      color: "bg-purple-100 text-purple-700",
+      sub: `${performance.staff.employee_id}${performance.staff.name ? ` — ${performance.staff.name}` : ""}`,
     },
     {
-      label: "Attendance Rate",
-      value: `${safeNumber(performance.attendance_rate).toFixed(0)}%`,
+      label: "Hours Worked",
+      value: `${safeNumber(performance.hours_worked).toFixed(1)}h`,
       icon: Clock,
       color: "bg-emerald-100 text-emerald-700",
-      sub: `Punctuality: ${safeNumber(performance.punctuality_score).toFixed(0)}%`,
+      sub: `${performance.days_present} days present`,
     },
     {
-      label: "Tips Earned",
-      value: `₱${safeNumber(performance.tips_earned).toLocaleString()}`,
-      icon: Award,
-      color: "bg-purple-100 text-purple-700",
-      sub: `₱${safeNumber(performance.total_sales).toLocaleString()} total sales`,
+      label: "Days Present",
+      value: performance.days_present,
+      icon: CalendarCheck,
+      color: "bg-amber-100 text-amber-700",
+      sub: "From clock-in records",
     },
   ];
 

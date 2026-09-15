@@ -118,20 +118,12 @@ export interface AttendanceRecord {
 }
 
 export interface StaffPerformance {
-  id: string;
-  staff_id: string;
-  staff?: Staff;
-  period: string;
+  staff: { id: string; employee_id: string; name?: string | null };
+  period: { start_date: string; end_date: string };
   orders_handled: number;
-  tables_served: number;
   total_sales: number;
-  tips_earned: number;
-  average_rating: number;
-  attendance_rate: number;
-  punctuality_score: number;
-  customer_feedback_count: number;
-  created_at: string;
-  updated_at: string;
+  hours_worked: number;
+  days_present: number;
 }
 
 export type LeaveType = "sick" | "vacation" | "emergency" | "unpaid" | "other";

@@ -8,7 +8,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLeaveRequests } from "@/lib/hooks/useStaff";
 import { toast } from "sonner";
-import type { LeaveRequest } from "@/lib/types";
+import type { LeaveRequest, LeaveType } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+
+const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
+  sick: "Sick Leave",
+  vacation: "Vacation Leave",
+  emergency: "Emergency Leave",
+  unpaid: "Unpaid Leave",
+  other: "Other",
+};
+
+function formatFriendlyDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDateRange(start: string, end: string): string {
+  if (start === end) return formatFriendlyDate(start);
+  return `${formatFriendlyDate(start)} – ${formatFriendlyDate(end)}`;
+}
+
+function formatStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 export function LeaveQueue() {
   const [status, setStatus] = useState<string>("requested");
@@ -77,9 +100,9 @@ export function LeaveQueue() {
               <li key={r.id} className="flex items-center justify-between gap-4 py-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 flex-1 min-w-0">
                   <span className="font-medium truncate">{r.staff?.employee_id}{r.staff?.name ? ` — ${r.staff.name}` : ""}</span>
-                  <span className="capitalize">{r.leave_type}</span>
-                  <span className="text-muted-foreground">{r.start_date} to {r.end_date}</span>
-                  <span className="capitalize inline-flex rounded-full bg-muted px-2 py-0.5 text-xs">{r.status}</span>
+                  <span className="font-medium">{LEAVE_TYPE_LABELS[r.leave_type as LeaveType] ?? r.leave_type}</span>
+                  <span className="text-muted-foreground">{formatDateRange(r.start_date, r.end_date)}</span>
+                  <Badge variant="outline" className="capitalize">{formatStatus(r.status)}</Badge>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => openDetails(r)}>View</Button>
               </li>
@@ -90,8 +113,8 @@ export function LeaveQueue() {
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-            <DialogTitle>Leave Request Details</DialogTitle>
-            <DialogDescription>Review and take action on this request</DialogDescription>
+            <DialogTitle className="text-lg font-semibold">Leave Request Details</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5">Review and take action on this request</DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-5 text-sm">
@@ -101,16 +124,16 @@ export function LeaveQueue() {
                   <span className="font-medium text-right">{selected.staff?.employee_id}{selected.staff?.name ? ` — ${selected.staff.name}` : ""}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Leave Type</span>
-                  <span className="font-medium capitalize">{selected.leave_type}</span>
+                  <span className="text-muted-foreground font-medium">Leave Type</span>
+                  <span className="font-medium">{LEAVE_TYPE_LABELS[selected.leave_type as LeaveType] ?? selected.leave_type}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Date Range</span>
-                  <span className="font-medium">{selected.start_date} to {selected.end_date}</span>
+                  <span className="text-muted-foreground font-medium">Date Range</span>
+                  <span className="font-medium">{formatDateRange(selected.start_date, selected.end_date)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="font-medium capitalize">{selected.status}</span>
+                  <span className="text-muted-foreground font-medium">Status</span>
+                  <Badge variant="outline" className="capitalize">{formatStatus(selected.status)}</Badge>
                 </div>
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-muted-foreground shrink-0">Reason</span>

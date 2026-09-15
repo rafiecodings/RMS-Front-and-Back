@@ -25,7 +25,7 @@ describe("LeaveQueue", () => {
   it("renders pending request with View", () => {
     render(<LeaveQueue />);
     expect(screen.getByText("EMP-10 — Mona")).toBeInTheDocument();
-    expect(screen.getByText("2026-12-10 to 2026-12-11")).toBeInTheDocument();
+    expect(screen.getByText("Dec 10, 2026 – Dec 11, 2026")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "View" }).length).toBeGreaterThan(0);
   });
 
@@ -52,15 +52,22 @@ describe("LeaveQueue", () => {
     await userEvent.click(screen.getByRole("button", { name: "View" }));
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("approved").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Approved").length).toBeGreaterThan(0);
   });
 
   it("shows leave type and date range", async () => {
     render(<LeaveQueue />);
-    expect(screen.getByText("vacation")).toBeInTheDocument();
-    expect(screen.getByText("2026-12-10 to 2026-12-11")).toBeInTheDocument();
+    expect(screen.getByText("Vacation Leave")).toBeInTheDocument();
+    expect(screen.getByText("Dec 10, 2026 – Dec 11, 2026")).toBeInTheDocument();
     await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
     expect(screen.getByText("trip")).toBeInTheDocument();
+  });
+
+  it("shows human leave type labels not raw enum", () => {
+    render(<LeaveQueue />);
+    expect(screen.getByText("Vacation Leave")).toBeInTheDocument();
+    expect(screen.queryByText(/^vacation$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("emergency")).not.toBeInTheDocument();
   });
 
   it("shows no UUIDs", () => {

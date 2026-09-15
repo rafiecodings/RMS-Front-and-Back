@@ -1,6 +1,16 @@
 "use client";
 
 import { useCurrentStaff, useShiftSchedule } from "@/lib/hooks/useStaff";
+import { Badge } from "@/components/ui/badge";
+
+function formatFriendlyDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 /**
  * Self-service schedule view for operational staff.
@@ -21,12 +31,12 @@ function OwnScheduleList({ staffId }: { staffId: string }) {
     <ul className="divide-y text-sm">
       {ownOnly.map((s) => (
         <li key={s.id} className="flex items-center justify-between gap-4 py-2">
-          <span className="font-medium">{s.date}</span>
+          <span className="font-medium">{formatFriendlyDate(s.date)}</span>
           <span>
             {s.shift?.name ?? "Shift"}
-            {s.shift?.start_time ? ` (${s.shift.start_time} - ${s.shift.end_time})` : ""}
+            {s.shift?.start_time ? ` (${s.shift.start_time.slice(0, 5)} - ${s.shift.end_time.slice(0, 5)})` : ""}
           </span>
-          <span className="capitalize text-muted-foreground">{s.status}</span>
+          <Badge variant="outline" className="capitalize">{formatStatus(s.status)}</Badge>
         </li>
       ))}
     </ul>

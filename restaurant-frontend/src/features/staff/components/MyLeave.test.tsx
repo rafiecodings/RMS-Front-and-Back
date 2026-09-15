@@ -38,19 +38,26 @@ describe("MyLeave", () => {
     expect(screen.queryByLabelText("Leave request form")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Request Leave" }));
     expect(screen.getByLabelText("Leave request form")).toBeInTheDocument();
-    expect(screen.getAllByText("sick").length).toBeGreaterThan(0);
-    expect(screen.getByText("2026-12-01 to 2026-12-02")).toBeInTheDocument();
-    expect(screen.queryByText("2026-12-03 to 2026-12-03")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Sick Leave").length).toBeGreaterThan(0);
+    expect(screen.getByText("Dec 1, 2026 – Dec 2, 2026")).toBeInTheDocument();
+    expect(screen.queryByText("Dec 3, 2026")).not.toBeInTheDocument();
   });
 
   it("shows details modal with labeled fields and hides decision note when empty", async () => {
     render(<MyLeave />);
-    await userEvent.click(screen.getByText("2026-12-01 to 2026-12-02"));
+    await userEvent.click(screen.getByText("Dec 1, 2026 – Dec 2, 2026"));
     expect(screen.getByText("Leave Details")).toBeInTheDocument();
     expect(screen.getByText("Leave Type")).toBeInTheDocument();
     expect(screen.getByText("Date Range")).toBeInTheDocument();
     expect(screen.getByText("Reason")).toBeInTheDocument();
     expect(screen.queryByText("Decision Note")).not.toBeInTheDocument();
+  });
+
+  it("renders Sick Leave label not raw sick enum", () => {
+    render(<MyLeave />);
+    expect(screen.getByText("Sick Leave")).toBeInTheDocument();
+    expect(screen.queryByText(/^sick$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("vacation")).not.toBeInTheDocument();
   });
 
   it("can cancel requested leave", async () => {

@@ -62,11 +62,11 @@ export function useStaffMember(id: string) {
   });
 }
 
-export function useStaffPerformance(id: string) {
+export function useStaffPerformance(id: string, params?: { start_date?: string; end_date?: string }) {
   return useQuery({
-    queryKey: ["staff-performance", id],
+    queryKey: ["staff-performance", id, params],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<StaffPerformance>>(`/staff/${id}/performance`);
+      const { data } = await api.get<ApiResponse<StaffPerformance>>(`/staff/${id}/performance`, { params });
       return data.data;
     },
     enabled: !!id,

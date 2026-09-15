@@ -225,29 +225,34 @@ class ReportController extends Controller
     {
         $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
+        $startDt = \Carbon\Carbon::parse($startDate)->startOfDay();
+        $endDt = \Carbon\Carbon::parse($endDate)->endOfDay();
 
-        $performance = StaffPerformance::whereBetween('period_date', [$startDate, $endDate])
-            ->selectRaw("staff_id, sum(orders_served) as total_orders, sum(total_sales) as total_sales, avg(rating) as avg_rating")
-            ->groupBy('staff_id')
-            ->get();
-
-        $staffIds = $performance->pluck('staff_id');
-        $staffProfiles = \App\Models\StaffProfile::with('user')
-            ->whereIn('id', $staffIds)
-            ->get()
-            ->keyBy('id');
-
-        $staffData = $performance->map(function ($p) use ($staffProfiles) {
-            $staff = $staffProfiles->get($p->staff_id);
+        // Legacy StaffPerformance snapshots are unused for active analytics.
+        // Derive trustworthy metrics from orders (completed only) per staff,
+        // consistent with GET /staff/{id}/performance.
+        $staffProfiles = \App\Models\StaffProfile::with('user')->get();
+        $staffData = $staffProfiles->map(function ($staff) use ($startDt, $endDt) {
+            if (!$staff->user_id) {
+                return null;
+            }
+            $ordersQ = \App\Models\Order::where('created_by', $staff->user_id)
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$startDt, $endDt]);
+            $totalOrders = (int) $ordersQ->count();
+            $totalSales = (float) $ordersQ->sum('total');
+            if ($totalOrders === 0 && $totalSales === 0) {
+                return null;
+            }
             return [
-                'staff_id' => $p->staff_id,
-                'name' => $staff?->user?->name ?? 'Unknown',
-                'position' => $staff?->position ?? '',
-                'total_orders' => (int) $p->total_orders,
-                'total_sales' => (float) $p->total_sales,
-                'avg_rating' => round((float) $p->avg_rating, 2),
+                'staff_id' => $staff->id,
+                'name' => $staff->user?->name ?? 'Unknown',
+                'position' => $staff->position ?? '',
+                'total_orders' => $totalOrders,
+                'total_sales' => $totalSales,
+                'avg_rating' => 0,
             ];
-        })->sortByDesc('total_sales')->values();
+        })->filter()->sortByDesc('total_sales')->values();
 
         return $this->success([
             'period' => ['start' => $startDate, 'end' => $endDate],

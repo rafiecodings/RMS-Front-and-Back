@@ -134,6 +134,34 @@ export interface StaffPerformance {
   updated_at: string;
 }
 
+export type LeaveType = "sick" | "vacation" | "emergency" | "unpaid" | "other";
+export type LeaveStatus = "requested" | "approved" | "rejected" | "cancelled";
+
+export interface LeaveRequest {
+  id: string;
+  staff_id: string;
+  leave_type: LeaveType;
+  reason: string;
+  start_date: string;
+  end_date: string;
+  status: LeaveStatus;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_notes: string | null;
+  staff?: { id: string; employee_id: string; name?: string | null } | null;
+  decider?: { id: string; name: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaveRequestFormData {
+  leave_type: LeaveType;
+  reason: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface StaffStatsData {
   totalStaff: number;
   activeStaff: number;

@@ -33,12 +33,24 @@ beforeEach(() => {
 });
 
 describe("MyLeave", () => {
-  it("shows leave form and history for own requests only", () => {
+  it("shows leave form via Request Leave modal and history for own requests only", async () => {
     render(<MyLeave />);
+    expect(screen.queryByLabelText("Leave request form")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Request Leave" }));
     expect(screen.getByLabelText("Leave request form")).toBeInTheDocument();
     expect(screen.getAllByText("sick").length).toBeGreaterThan(0);
     expect(screen.getByText("2026-12-01 to 2026-12-02")).toBeInTheDocument();
     expect(screen.queryByText("2026-12-03 to 2026-12-03")).not.toBeInTheDocument();
+  });
+
+  it("shows details modal with labeled fields and hides decision note when empty", async () => {
+    render(<MyLeave />);
+    await userEvent.click(screen.getByText("2026-12-01 to 2026-12-02"));
+    expect(screen.getByText("Leave Details")).toBeInTheDocument();
+    expect(screen.getByText("Leave Type")).toBeInTheDocument();
+    expect(screen.getByText("Date Range")).toBeInTheDocument();
+    expect(screen.getByText("Reason")).toBeInTheDocument();
+    expect(screen.queryByText("Decision Note")).not.toBeInTheDocument();
   });
 
   it("can cancel requested leave", async () => {

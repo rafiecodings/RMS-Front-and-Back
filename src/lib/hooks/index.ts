@@ -31,6 +31,8 @@ export {
   useAttendance,
   useClockIn,
   useClockOut,
+  useCloseAttendance,
+  useLeaveRequests,
   useCurrentStaff,
 } from "./useStaff";
 export { useDashboard } from "./useDashboard";

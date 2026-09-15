@@ -250,7 +250,7 @@ export default function SchedulePage() {
                       </SelectTrigger>
                       <SelectContent>
                         {shiftOptions.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name} ({s.start_time} - {s.end_time})</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.name} ({s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

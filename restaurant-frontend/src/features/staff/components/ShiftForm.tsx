@@ -57,7 +57,7 @@ export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: Shift
               <div className="px-3 py-2 text-sm text-muted-foreground">No active staff available</div>
             ) : (
               schedulableStaff.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.user?.name ?? s.employee_id}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>{s.employee_id} — {s.user?.name ?? "Unassigned"}</SelectItem>
               ))
             )}
           </SelectContent>
@@ -82,7 +82,7 @@ export function ShiftForm({ staffList, onSubmit, isLoading, defaultDate }: Shift
             </SelectTrigger>
             <SelectContent>
               {shifts.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name} ({s.start_time} - {s.end_time})</SelectItem>
+                <SelectItem key={s.id} value={s.id}>{s.name} ({s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)})</SelectItem>
               ))}
             </SelectContent>
           </Select>

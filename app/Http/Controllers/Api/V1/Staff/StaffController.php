@@ -239,25 +239,62 @@ class StaffController extends Controller
 
     public function performance(Request $request, string $id): JsonResponse
     {
-        $staff = StaffProfile::find($id);
+        $staff = StaffProfile::with('user')->find($id);
 
         if (!$staff) {
             return $this->notFound('Staff profile not found.');
         }
 
-        $performances = StaffPerformance::where('staff_id', $id);
+        // Ownership: operational may view only own.
+        if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
+            $own = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $own || $own->id !== $id) {
+                return $this->error('You may only view your own performance.', 403);
+            }
+        }
 
-        // Operational performance only — attendance/punctuality belong to HRMS.
-        $summary = [
-            'orders_handled' => (int) $performances->sum('orders_served'),
-            'tables_served' => (int) $performances->sum('tables_served'),
-            'total_sales' => (float) $performances->sum('total_sales'),
-            'tips_earned' => (float) $performances->sum('tips_earned'),
-            'average_rating' => round((float) $performances->avg('rating'), 2),
-            'customer_feedback_count' => (int) $performances->sum('customer_feedback_count'),
-        ];
+        $validated = $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
 
-        return $this->success($summary);
+        $start = $validated['start_date'] ?? now()->startOfMonth()->toDateString();
+        $end = $validated['end_date'] ?? now()->toDateString();
+
+        $startDt = \Illuminate\Support\Carbon::parse($start)->startOfDay();
+        $endDt = \Illuminate\Support\Carbon::parse($end)->endOfDay();
+
+        // Orders attribution: orders.created_by -> users.id -> staff_profiles.user_id
+        $ordersQuery = \App\Models\Order::where('created_by', $staff->user_id)
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$startDt, $endDt]);
+        $ordersHandled = (int) (clone $ordersQuery)->count();
+        $totalSales = (float) (clone $ordersQuery)->sum('total');
+
+        // Attendance: trustworthy hours_worked / days_present
+        $attQuery = \App\Models\Attendance::where('staff_id', $id)
+            ->whereBetween('clock_in', [$startDt, $endDt])
+            ->whereNotNull('hours_worked');
+        $hoursWorked = round((float) $attQuery->sum('hours_worked'), 2);
+        $daysPresent = (int) \App\Models\Attendance::where('staff_id', $id)
+            ->whereBetween('clock_in', [$startDt, $endDt])
+            ->selectRaw('DATE(clock_in) as d')
+            ->distinct()
+            ->get()->count();
+
+        // StaffPerformance snapshot is legacy/unused for active analytics.
+        return $this->success([
+            'staff' => [
+                'id' => $staff->id,
+                'employee_id' => $staff->employee_id,
+                'name' => $staff->user?->name,
+            ],
+            'period' => ['start_date' => $start, 'end_date' => $end],
+            'orders_handled' => $ordersHandled,
+            'total_sales' => $totalSales,
+            'hours_worked' => $hoursWorked,
+            'days_present' => $daysPresent,
+        ]);
     }
 
     public function clockIn(Request $request): JsonResponse
@@ -741,8 +778,22 @@ class StaffController extends Controller
             return $this->notFound('Staff profile not found.');
         }
 
-        $commissions = StaffCommission::with('order')
+        if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
+            $own = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $own || $own->id !== $id) {
+                return $this->error('You may only view your own commissions.', 403);
+            }
+        }
+
+        // Read-only, no auto-creation; exclude legacy rows tied to cancelled/voided orders.
+        $baseQuery = StaffCommission::with('order')
             ->where('staff_id', $id)
+            ->whereHas('order', fn ($q) => $q->whereNotIn('status', ['cancelled', 'voided']))
+            ->whereDoesntHave('order', fn ($q) => $q->whereNotNull('archived_at'));
+
+        $totalCommission = (float) (clone $baseQuery)->sum('amount');
+
+        $commissions = (clone $baseQuery)
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 15));
 
@@ -757,8 +808,6 @@ class StaffController extends Controller
             ] : null,
             'created_at' => $c->created_at?->toISOString(),
         ]);
-
-        $totalCommission = $commissions->getCollection()->sum('amount');
 
         return $this->success([
             'items' => $data,

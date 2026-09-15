@@ -76,15 +76,15 @@ export function MyLeave() {
       </div>
 
       <Dialog open={showRequest} onOpenChange={setShowRequest}>
-        <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle className="text-lg font-semibold">Request Leave</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1.5">Choose the leave type, date range, and provide a reason for your request.</DialogDescription>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Submit a leave request by selecting the leave type, date range, and providing a brief reason.</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="flex flex-col flex-1 overflow-hidden" aria-label="Leave request form">
             <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="leave-type" className="text-sm font-medium">Leave Type *</Label>
+                <Label htmlFor="leave-type" className="text-sm font-medium mb-1.5 block">Leave Type *</Label>
                 <Select value={form.leave_type} onValueChange={(v) => setForm((p) => ({ ...p, leave_type: (v as LeaveType) ?? "sick" }))}>
                   <SelectTrigger id="leave-type" className="w-full">
                     <SelectValue />
@@ -96,19 +96,19 @@ export function MyLeave() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="leave-start" className="text-sm font-medium">Start Date *</Label>
+                  <Label htmlFor="leave-start" className="text-sm font-medium mb-1.5 block">Start Date *</Label>
                   <Input id="leave-start" type="date" value={form.start_date} onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))} required className="w-full" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="leave-end" className="text-sm font-medium">End Date *</Label>
+                  <Label htmlFor="leave-end" className="text-sm font-medium mb-1.5 block">End Date *</Label>
                   <Input id="leave-end" type="date" value={form.end_date} onChange={(e) => setForm((p) => ({ ...p, end_date: e.target.value }))} required className="w-full" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="leave-reason" className="text-sm font-medium">Reason *</Label>
-                <Textarea id="leave-reason" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Briefly explain the reason for your leave" required rows={3} className="min-h-[80px] resize-y w-full" />
+                <Label htmlFor="leave-reason" className="text-sm font-medium mb-1.5 block">Reason *</Label>
+                <Textarea id="leave-reason" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Briefly explain the reason for your leave" required rows={3} className="min-h-[96px] resize-y w-full" />
               </div>
             </div>
             <div className="shrink-0 border-t bg-muted/30 px-6 py-4 flex justify-end gap-2">
@@ -145,13 +145,13 @@ export function MyLeave() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle className="text-lg font-semibold">Leave Details</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1.5">View your leave request details</DialogDescription>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5 leading-relaxed">View your leave request details</DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-4 text-sm">
+            <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-5 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground font-medium">Leave Type</span>
                 <span className="font-medium">{LEAVE_TYPE_LABELS[selected.leave_type as LeaveType] ?? selected.leave_type}</span>

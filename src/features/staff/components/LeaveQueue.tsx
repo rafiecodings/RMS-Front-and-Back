@@ -111,10 +111,10 @@ export function LeaveQueue() {
         )}
 
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle className="text-lg font-semibold">Leave Request Details</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1.5">Review and take action on this request</DialogDescription>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Review and take action on this request</DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-5 text-sm">

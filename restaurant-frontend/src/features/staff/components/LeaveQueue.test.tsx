@@ -22,31 +22,44 @@ beforeEach(() => {
 });
 
 describe("LeaveQueue", () => {
-  it("renders pending request with approve/reject", () => {
+  it("renders pending request with View", () => {
     render(<LeaveQueue />);
     expect(screen.getByText("EMP-10 — Mona")).toBeInTheDocument();
     expect(screen.getByText("2026-12-10 to 2026-12-11")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "View" }).length).toBeGreaterThan(0);
+  });
+
+  it("View opens details modal with Approve/Reject for requested", async () => {
+    render(<LeaveQueue />);
+    await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
+    expect(screen.getByText("Leave Request Details")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
   });
 
-  it("calls approve with decision notes", async () => {
+  it("calls approve with decision notes via confirm", async () => {
     render(<LeaveQueue />);
+    await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(screen.getByText("Confirm approval?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Confirm Approve" }));
     expect(state.approve.mutate).toHaveBeenCalledWith(expect.objectContaining({ id: "l1" }), expect.any(Object));
   });
 
-  it("hides actions for terminal status", () => {
+  it("hides actions for terminal status", async () => {
     Object.assign(state.list, { data: { data: { data: [approved] } } });
     render(<LeaveQueue />);
+    await userEvent.click(screen.getByRole("button", { name: "View" }));
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
     expect(screen.getAllByText("approved").length).toBeGreaterThan(0);
   });
 
-  it("shows leave type and date range", () => {
+  it("shows leave type and date range", async () => {
     render(<LeaveQueue />);
     expect(screen.getByText("vacation")).toBeInTheDocument();
+    expect(screen.getByText("2026-12-10 to 2026-12-11")).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
     expect(screen.getByText("trip")).toBeInTheDocument();
   });
 

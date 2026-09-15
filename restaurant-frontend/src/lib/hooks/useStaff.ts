@@ -196,3 +196,15 @@ export function useClockOut() {
     },
   });
 }
+
+export function useCloseAttendance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, clock_out, reason }: { id: string; clock_out: string; reason: string }) =>
+      api.post<ApiResponse<AttendanceRecord>>(`/staff/attendance/${id}/close`, { clock_out, reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+  });
+}

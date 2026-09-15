@@ -772,6 +772,94 @@ class StaffController extends Controller
         ]);
     }
 
+    private function formatLeave(\App\Models\LeaveRequest $l): array
+    {
+        $l->loadMissing(['staff.user', 'decider']);
+        return [
+            'id' => $l->id,
+            'staff_id' => $l->staff_id,
+            'leave_type' => $l->leave_type,
+            'reason' => $l->reason,
+            'start_date' => $l->start_date?->toDateString(),
+            'end_date' => $l->end_date?->toDateString(),
+            'status' => $l->status,
+            'requested_at' => $l->requested_at?->toISOString(),
+            'decided_by' => $l->decided_by,
+            'decided_at' => $l->decided_at?->toISOString(),
+            'decision_notes' => $l->decision_notes,
+            'staff' => $l->staff ? [
+                'id' => $l->staff->id,
+                'employee_id' => $l->staff->employee_id,
+                'name' => $l->staff->user?->name,
+            ] : null,
+            'decider' => $l->decider ? [
+                'id' => $l->decider->id,
+                'name' => $l->decider->name,
+            ] : null,
+            'created_at' => $l->created_at?->toISOString(),
+            'updated_at' => $l->updated_at?->toISOString(),
+        ];
+    }
+
+    public function leaveIndex(Request $request): JsonResponse
+    {
+        $request->validate([
+            'status' => 'nullable|string|in:requested,approved,rejected,cancelled',
+            'staff_id' => 'nullable|uuid',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $isPrivileged = $request->user()->hasRole('admin') || $request->user()->hasRole('manager');
+
+        if (!$isPrivileged) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (!$ownProfile) {
+                return $this->success([
+                    'items' => [],
+                    'pagination' => ['current_page' => 1, 'last_page' => 1, 'per_page' => $request->integer('per_page', 15), 'total' => 0],
+                ]);
+            }
+            if ($request->filled('staff_id') && $request->input('staff_id') !== $ownProfile->id) {
+                return $this->error('You may only view your own leave requests.', 403);
+            }
+        }
+
+        $query = \App\Models\LeaveRequest::with(['staff.user', 'decider'])
+            ->orderByDesc('requested_at')->orderByDesc('created_at');
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        if (!$isPrivileged) {
+            $query->where('staff_id', $ownProfile->id);
+        } elseif ($staffId = $request->input('staff_id')) {
+            $query->where('staff_id', $staffId);
+        }
+
+        if ($from = $request->input('date_from')) {
+            $query->where('end_date', '>=', $from);
+        }
+        if ($to = $request->input('date_to')) {
+            $query->where('start_date', '<=', $to);
+        }
+
+        $leaves = $query->paginate($request->integer('per_page', 15));
+        $data = $leaves->getCollection()->map(fn (\App\Models\LeaveRequest $l) => $this->formatLeave($l));
+
+        return $this->success([
+            'items' => $data,
+            'pagination' => [
+                'current_page' => $leaves->currentPage(),
+                'last_page' => $leaves->lastPage(),
+                'per_page' => $leaves->perPage(),
+                'total' => $leaves->total(),
+            ],
+        ]);
+    }
+
     public function requestLeave(Request $request, string $id): JsonResponse
     {
         $staff = StaffProfile::with('user')->find($id);
@@ -780,9 +868,10 @@ class StaffController extends Controller
             return $this->notFound('Staff profile not found.');
         }
 
-        // Ownership gate: operational roles may request leave only for their
-        // own linked staff profile. Never trust the frontend-provided ID
-        // alone. Admin/manager keep override access for any staff.
+        if (!$staff->is_active) {
+            return $this->error('Cannot request leave for inactive staff.', 422);
+        }
+
         if (! $request->user()->hasRole('admin') && ! $request->user()->hasRole('manager')) {
             $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
             if (! $ownProfile || $ownProfile->id !== $id) {
@@ -791,42 +880,197 @@ class StaffController extends Controller
         }
 
         $validated = $request->validate([
-            'date' => 'required|date',
+            'leave_type' => 'required|string|in:sick,vacation,emergency,unpaid,other',
             'reason' => 'required|string|max:1000',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'date' => 'nullable|date',
         ]);
 
-        $existing = ShiftSchedule::where('staff_id', $id)
-            ->whereDate('date', $validated['date'])
-            ->first();
-
-        if ($existing) {
-            $existing->update(['status' => 'absent', 'notes' => $validated['reason']]);
-            $leaveSchedule = $existing;
-        } else {
-            // A leave without an existing assignment still needs a shift
-            // template row; fail cleanly instead of a NOT NULL crash when
-            // none exists.
-            $fallbackShiftId = StaffShift::first()?->id;
-            if (!$fallbackShiftId) {
-                return $this->error('No shift templates available for leave recording.', 422);
-            }
-            $leaveSchedule = ShiftSchedule::create([
-                'staff_id' => $id,
-                'shift_id' => $fallbackShiftId,
-                'date' => $validated['date'],
-                'status' => 'absent',
-                'notes' => $validated['reason'],
-            ]);
+        if ($request->filled('date') && !$request->filled('start_date')) {
+            $validated['start_date'] = $validated['date'];
+            $validated['end_date'] = $validated['date'];
         }
 
-        \App\Services\AuditLogger::record('leave_requested', $leaveSchedule, [
-            'description' => "Leave requested for {$staff->employee_id} on {$validated['date']}: {$validated['reason']}",
+        $start = $validated['start_date'];
+        $end = $validated['end_date'];
+
+        $overlap = \App\Models\LeaveRequest::where('staff_id', $id)
+            ->whereIn('status', ['requested', 'approved'])
+            ->where('start_date', '<=', $end)
+            ->where('end_date', '>=', $start)
+            ->exists();
+        if ($overlap) {
+            return $this->error('An active leave request already overlaps this date range.', 409);
+        }
+
+        $duplicate = \App\Models\LeaveRequest::where('staff_id', $id)
+            ->where('leave_type', $validated['leave_type'])
+            ->where('reason', $validated['reason'])
+            ->whereDate('start_date', $start)
+            ->whereDate('end_date', $end)
+            ->whereIn('status', ['requested', 'approved'])
+            ->exists();
+        if ($duplicate) {
+            return $this->error('Duplicate leave request.', 409);
+        }
+
+        $leave = \App\Models\LeaveRequest::create([
+            'staff_id' => $id,
+            'leave_type' => $validated['leave_type'],
+            'reason' => $validated['reason'],
+            'start_date' => $start,
+            'end_date' => $end,
+            'status' => 'requested',
+            'requested_at' => now(),
         ]);
 
-        return $this->success([
-            'staff_id' => $staff->id,
-            'date' => $validated['date'],
-            'status' => 'absent',
-        ], 'Leave request recorded successfully.');
+        $leave->load(['staff.user']);
+
+        \App\Services\AuditLogger::record('leave_requested', $leave, [
+            'description' => "Leave requested for {$staff->employee_id}"
+                .($staff->user?->name ? " — {$staff->user->name}" : '')
+                ." ({$validated['leave_type']}) {$start} to {$end}: {$validated['reason']}",
+        ]);
+
+        return $this->created($this->formatLeave($leave), 'Leave request submitted successfully.');
+    }
+
+    public function approveLeave(Request $request, string $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'decision_notes' => 'nullable|string|max:1000',
+        ]);
+
+        return DB::transaction(function () use ($id, $validated, $request) {
+            $leave = \App\Models\LeaveRequest::with(['staff.user'])->lockForUpdate()->find($id);
+            if (!$leave) {
+                return $this->notFound('Leave request not found.');
+            }
+            if ($leave->status !== 'requested') {
+                return $this->error('Only requested leave can be approved.', 422);
+            }
+
+            $start = $leave->start_date->toDateString();
+            $end = $leave->end_date->toDateString();
+
+            $hasCompleted = ShiftSchedule::where('staff_id', $leave->staff_id)
+                ->whereDate('date', '>=', $start)
+                ->whereDate('date', '<=', $end)
+                ->where('status', 'completed')
+                ->exists();
+            if ($hasCompleted) {
+                return $this->error('Cannot approve leave overlapping completed shifts.', 409);
+            }
+
+            $conflictingApproved = \App\Models\LeaveRequest::where('staff_id', $leave->staff_id)
+                ->where('id', '!=', $leave->id)
+                ->where('status', 'approved')
+                ->where('start_date', '<=', $end)
+                ->where('end_date', '>=', $start)
+                ->exists();
+            if ($conflictingApproved) {
+                return $this->error('Another approved leave already covers this period.', 409);
+            }
+
+            $periodStart = \Illuminate\Support\Carbon::parse($start);
+            $periodEnd = \Illuminate\Support\Carbon::parse($end);
+            for ($d = $periodStart->copy(); $d->lte($periodEnd); $d->addDay()) {
+                $dateStr = $d->toDateString();
+                $schedule = ShiftSchedule::where('staff_id', $leave->staff_id)
+                    ->whereDate('date', $dateStr)
+                    ->first();
+                if (!$schedule) {
+                    continue;
+                }
+                if ($schedule->status === 'cancelled') {
+                    continue;
+                }
+                if (in_array($schedule->status, ['scheduled', 'confirmed'], true)) {
+                    $schedule->update([
+                        'status' => 'absent',
+                        'notes' => trim(($schedule->notes ? $schedule->notes.' | ' : '')."On approved {$leave->leave_type} leave {$start} to {$end}: {$leave->reason}"),
+                    ]);
+                }
+            }
+
+            $leave->update([
+                'status' => 'approved',
+                'decided_by' => $request->user()->id,
+                'decided_at' => now(),
+                'decision_notes' => $validated['decision_notes'] ?? null,
+            ]);
+
+            \App\Services\AuditLogger::record('leave_approved', $leave, [
+                'description' => "Leave approved for {$leave->staff?->employee_id}"
+                    .($leave->staff?->user?->name ? " — {$leave->staff->user->name}" : '')
+                    ." ({$leave->leave_type}) {$start} to {$end}",
+            ]);
+
+            return $this->success($this->formatLeave($leave->fresh(['staff.user', 'decider'])), 'Leave approved successfully.');
+        });
+    }
+
+    public function rejectLeave(Request $request, string $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'decision_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $leave = \App\Models\LeaveRequest::with(['staff.user'])->find($id);
+        if (!$leave) {
+            return $this->notFound('Leave request not found.');
+        }
+        if ($leave->status !== 'requested') {
+            return $this->error('Only requested leave can be rejected.', 422);
+        }
+
+        $leave->update([
+            'status' => 'rejected',
+            'decided_by' => $request->user()->id,
+            'decided_at' => now(),
+            'decision_notes' => $validated['decision_notes'] ?? null,
+        ]);
+
+        \App\Services\AuditLogger::record('leave_rejected', $leave, [
+            'description' => "Leave rejected for {$leave->staff?->employee_id}"
+                .($leave->staff?->user?->name ? " — {$leave->staff->user->name}" : '')
+                ." ({$leave->leave_type}) {$leave->start_date->toDateString()} to {$leave->end_date->toDateString()}",
+        ]);
+
+        return $this->success($this->formatLeave($leave), 'Leave rejected successfully.');
+    }
+
+    public function cancelLeave(Request $request, string $id): JsonResponse
+    {
+        $leave = \App\Models\LeaveRequest::with(['staff.user'])->find($id);
+        if (!$leave) {
+            return $this->notFound('Leave request not found.');
+        }
+        if ($leave->status !== 'requested') {
+            return $this->error('Only requested leave can be cancelled.', 422);
+        }
+
+        $isPrivileged = $request->user()->hasRole('admin') || $request->user()->hasRole('manager');
+        if (!$isPrivileged) {
+            $ownProfile = StaffProfile::where('user_id', $request->user()->id)->first();
+            if (! $ownProfile || $ownProfile->id !== $leave->staff_id) {
+                return $this->error('You may only cancel your own leave request.', 403);
+            }
+        }
+
+        $leave->update([
+            'status' => 'cancelled',
+            'decided_by' => $request->user()->id,
+            'decided_at' => now(),
+        ]);
+
+        \App\Services\AuditLogger::record('leave_cancelled', $leave, [
+            'description' => "Leave cancelled for {$leave->staff?->employee_id}"
+                .($leave->staff?->user?->name ? " — {$leave->staff->user->name}" : '')
+                ." ({$leave->leave_type}) {$leave->start_date->toDateString()} to {$leave->end_date->toDateString()}",
+        ]);
+
+        return $this->success($this->formatLeave($leave), 'Leave cancelled successfully.');
     }
 }

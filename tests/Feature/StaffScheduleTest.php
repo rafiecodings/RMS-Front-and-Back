@@ -204,11 +204,13 @@ class StaffScheduleTest extends TestCase
 
         $this->actingAs($waiter)
             ->postJson("/api/v1/staff/{$own->id}/leave", [
-                'date' => '2026-10-15',
+                'leave_type' => 'sick',
                 'reason' => 'family matter',
+                'start_date' => '2026-10-15',
+                'end_date' => '2026-10-15',
             ])
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', 'absent');
+            ->assertStatus(201)
+            ->assertJsonPath('data.status', 'requested');
     }
 
     public function test_cross_staff_leave_forbidden_for_operational_role(): void
@@ -219,8 +221,10 @@ class StaffScheduleTest extends TestCase
 
         $this->actingAs($waiter)
             ->postJson("/api/v1/staff/{$other->id}/leave", [
-                'date' => '2026-10-16',
+                'leave_type' => 'vacation',
                 'reason' => 'not my leave',
+                'start_date' => '2026-10-16',
+                'end_date' => '2026-10-16',
             ])
             ->assertStatus(403);
     }
@@ -232,19 +236,23 @@ class StaffScheduleTest extends TestCase
 
         $this->actingAs($this->admin)
             ->postJson("/api/v1/staff/{$other->id}/leave", [
-                'date' => '2026-10-17',
+                'leave_type' => 'emergency',
                 'reason' => 'approved by admin',
+                'start_date' => '2026-10-17',
+                'end_date' => '2026-10-17',
             ])
-            ->assertStatus(200);
+            ->assertStatus(201);
 
         $another = $this->createStaffProfile();
 
         $this->actingAs($this->manager)
             ->postJson("/api/v1/staff/{$another->id}/leave", [
-                'date' => '2026-10-18',
+                'leave_type' => 'other',
                 'reason' => 'approved by manager',
+                'start_date' => '2026-10-18',
+                'end_date' => '2026-10-18',
             ])
-            ->assertStatus(200);
+            ->assertStatus(201);
     }
 
     public function test_schedule_payload_contract(): void

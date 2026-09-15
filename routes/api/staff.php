@@ -26,5 +26,9 @@ Route::middleware(['auth:sanctum'])->prefix('staff')->group(function () {
     Route::post('/clock-in', [StaffController::class, 'clockIn']);
     Route::post('/clock-out', [StaffController::class, 'clockOut']);
     Route::get('/{id}/commissions', [StaffController::class, 'commissions'])->whereUuid('id');
+    Route::get('/leave-requests', [StaffController::class, 'leaveIndex']);
     Route::post('/{id}/leave', [StaffController::class, 'requestLeave'])->whereUuid('id');
+    Route::post('/leave-requests/{id}/approve', [StaffController::class, 'approveLeave'])->middleware('role:admin,manager')->whereUuid('id');
+    Route::post('/leave-requests/{id}/reject', [StaffController::class, 'rejectLeave'])->middleware('role:admin,manager')->whereUuid('id');
+    Route::post('/leave-requests/{id}/cancel', [StaffController::class, 'cancelLeave'])->whereUuid('id');
 });

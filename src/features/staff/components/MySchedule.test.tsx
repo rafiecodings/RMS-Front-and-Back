@@ -47,9 +47,9 @@ beforeEach(() => {
 describe("MySchedule (operational self-service)", () => {
   it("shows only the authenticated user's own schedule", () => {
     render(<MySchedule />);
-    expect(screen.getByText("2026-10-06")).toBeInTheDocument();
+    expect(screen.getByText("Oct 6, 2026")).toBeInTheDocument();
     expect(screen.getByText(/Night Shift/)).toBeInTheDocument();
-    expect(screen.queryByText("2026-10-07")).not.toBeInTheDocument();
+    expect(screen.queryByText("Oct 7, 2026")).not.toBeInTheDocument();
     expect(screen.queryByText(/Day Shift/)).not.toBeInTheDocument();
   });
 

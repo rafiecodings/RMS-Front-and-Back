@@ -10,8 +10,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useCurrentStaff, useLeaveRequests } from "@/lib/hooks/useStaff";
 import { toast } from "sonner";
 import type { LeaveRequest, LeaveType } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+
+const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
+  sick: "Sick Leave",
+  vacation: "Vacation Leave",
+  emergency: "Emergency Leave",
+  unpaid: "Unpaid Leave",
+  other: "Other",
+};
 
 const LEAVE_TYPES: LeaveType[] = ["sick", "vacation", "emergency", "unpaid", "other"];
+
+function formatFriendlyDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDateRange(start: string, end: string): string {
+  if (start === end) return formatFriendlyDate(start);
+  return `${formatFriendlyDate(start)} – ${formatFriendlyDate(end)}`;
+}
+
+function formatStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 export function MyLeave() {
   const profile = useCurrentStaff();
@@ -55,8 +78,8 @@ export function MyLeave() {
       <Dialog open={showRequest} onOpenChange={setShowRequest}>
         <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-            <DialogTitle>Request Leave</DialogTitle>
-            <DialogDescription>Select type and dates for your leave request</DialogDescription>
+            <DialogTitle className="text-lg font-semibold">Request Leave</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5">Choose the leave type, date range, and provide a reason for your request.</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="flex flex-col flex-1 overflow-hidden" aria-label="Leave request form">
             <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-5">
@@ -68,7 +91,7 @@ export function MyLeave() {
                   </SelectTrigger>
                   <SelectContent>
                     {LEAVE_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}><span className="capitalize">{t}</span></SelectItem>
+                      <SelectItem key={t} value={t}>{LEAVE_TYPE_LABELS[t]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -85,7 +108,7 @@ export function MyLeave() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="leave-reason" className="text-sm font-medium">Reason *</Label>
-                <Textarea id="leave-reason" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Reason for leave" required rows={3} className="min-h-[80px] resize-y w-full" />
+                <Textarea id="leave-reason" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Briefly explain the reason for your leave" required rows={3} className="min-h-[80px] resize-y w-full" />
               </div>
             </div>
             <div className="shrink-0 border-t bg-muted/30 px-6 py-4 flex justify-end gap-2">
@@ -108,9 +131,9 @@ export function MyLeave() {
               {ownOnly.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-4 py-2">
                   <button type="button" onClick={() => setSelected(r)} className="flex flex-1 items-center justify-between gap-4 text-left hover:bg-muted/40 rounded px-2 py-1 -mx-2">
-                    <span className="capitalize">{r.leave_type}</span>
-                    <span>{r.start_date} to {r.end_date}</span>
-                    <span className="capitalize">{r.status}</span>
+                    <span className="font-medium">{LEAVE_TYPE_LABELS[r.leave_type as LeaveType] ?? r.leave_type}</span>
+                    <span className="text-muted-foreground">{formatDateRange(r.start_date, r.end_date)}</span>
+                    <Badge variant="outline" className="capitalize">{formatStatus(r.status)}</Badge>
                   </button>
                   {r.status === "requested" ? (
                     <Button variant="outline" size="sm" onClick={() => cancel.mutate(r.id, { onSuccess: () => toast.success("Leave cancelled"), onError: (e: Error) => toast.error(e.message || "Cancel failed") })} disabled={cancel.isPending}>Cancel</Button>
@@ -124,46 +147,46 @@ export function MyLeave() {
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent className="sm:max-w-[520px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-            <DialogTitle>Leave Details</DialogTitle>
-            <DialogDescription>View your leave request details</DialogDescription>
+            <DialogTitle className="text-lg font-semibold">Leave Details</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1.5">View your leave request details</DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-4 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Leave Type</span>
-                <span className="font-medium capitalize">{selected.leave_type}</span>
+                <span className="text-muted-foreground font-medium">Leave Type</span>
+                <span className="font-medium">{LEAVE_TYPE_LABELS[selected.leave_type as LeaveType] ?? selected.leave_type}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Date Range</span>
-                <span className="font-medium">{selected.start_date} to {selected.end_date}</span>
+                <span className="text-muted-foreground font-medium">Date Range</span>
+                <span className="font-medium">{formatDateRange(selected.start_date, selected.end_date)}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Status</span>
-                <span className="font-medium capitalize">{selected.status}</span>
+                <span className="text-muted-foreground font-medium">Status</span>
+                <Badge variant="outline" className="capitalize">{formatStatus(selected.status)}</Badge>
               </div>
               <div className="flex items-start justify-between gap-4">
-                <span className="text-muted-foreground shrink-0">Reason</span>
+                <span className="text-muted-foreground font-medium shrink-0">Reason</span>
                 <span className="font-medium text-right break-words max-w-[60%]">{selected.reason}</span>
               </div>
               {selected.decision_notes ? (
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-muted-foreground shrink-0">Decision Note</span>
+                  <span className="text-muted-foreground font-medium shrink-0">Decision Note</span>
                   <span className="font-medium text-right break-words max-w-[60%]">{selected.decision_notes}</span>
                 </div>
               ) : null}
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Requested At</span>
+                <span className="text-muted-foreground font-medium">Requested At</span>
                 <span className="font-medium">{selected.requested_at ? new Date(selected.requested_at).toLocaleString("en-PH") : "—"}</span>
               </div>
               {selected.decided_at && (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Decided At</span>
-                  <span className="font-medium">{new Date(selected.decided_at).toLocaleString("en-PH")}</span>
+                  <span className="text-muted-foreground font-medium">Decided At</span>
+                  <span className="font-medium">{new Date(selected.decided_at).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric" })}</span>
                 </div>
               )}
               {selected.decider?.name && (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Decided By</span>
+                  <span className="text-muted-foreground font-medium">Decided By</span>
                   <span className="font-medium">{selected.decider.name}</span>
                 </div>
               )}

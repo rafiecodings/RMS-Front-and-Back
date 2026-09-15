@@ -15,6 +15,8 @@ import type {
   ShiftScheduleFormData,
   StaffShiftOption,
   AttendanceRecord,
+  LeaveRequest,
+  LeaveRequestFormData,
 } from "@/lib/types";
 
 export function useStaff(params?: QueryParams & { role?: string }) {
@@ -136,6 +138,39 @@ export function useCurrentStaff() {
     },
     staleTime: 60_000,
   });
+}
+
+export function useLeaveRequests(params?: QueryParams & { status?: string; staff_id?: string; date_from?: string; date_to?: string }) {
+  const queryClient = useQueryClient();
+  const list = useQuery({
+    queryKey: ["leave-requests", params],
+    queryFn: () =>
+      api
+        .get<PaginatedResponse<LeaveRequest>>("/staff/leave-requests", { params })
+        .then((res) => normalizePaginated(res.data)),
+    staleTime: 30_000,
+  });
+  const create = useMutation({
+    mutationFn: ({ staffId, data }: { staffId: string; data: LeaveRequestFormData }) =>
+      api.post<ApiResponse<LeaveRequest>>(`/staff/${staffId}/leave`, data).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leave-requests"] }),
+  });
+  const approve = useMutation({
+    mutationFn: ({ id, decision_notes }: { id: string; decision_notes?: string }) =>
+      api.post<ApiResponse<LeaveRequest>>(`/staff/leave-requests/${id}/approve`, { decision_notes }).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leave-requests"] }),
+  });
+  const reject = useMutation({
+    mutationFn: ({ id, decision_notes }: { id: string; decision_notes?: string }) =>
+      api.post<ApiResponse<LeaveRequest>>(`/staff/leave-requests/${id}/reject`, { decision_notes }).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leave-requests"] }),
+  });
+  const cancel = useMutation({
+    mutationFn: (id: string) =>
+      api.post<ApiResponse<LeaveRequest>>(`/staff/leave-requests/${id}/cancel`).then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leave-requests"] }),
+  });
+  return { list, create, approve, reject, cancel };
 }
 
 export function useClockIn() {

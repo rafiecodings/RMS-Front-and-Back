@@ -1,0 +1,61 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MyLeave } from "./MyLeave";
+import type { LeaveRequest, Staff } from "@/lib/types";
+
+const state = vi.hoisted(() => ({
+  profile: { data: null as Staff | null, isLoading: false, isError: false },
+  list: { data: null as { data: { data: LeaveRequest[] } } | null, isLoading: false, isError: false },
+  create: { mutate: vi.fn(), isPending: false },
+  cancel: { mutate: vi.fn(), isPending: false },
+}));
+vi.mock("@/lib/hooks/useStaff", () => ({
+  useCurrentStaff: () => state.profile,
+  useLeaveRequests: () => ({ list: state.list, create: state.create, cancel: state.cancel }),
+}));
+
+const own: Staff = { id: "own-id", user_id: "u1", employee_id: "EMP-01", is_active: true, hire_date: "2026-01-01", created_at: "", updated_at: "" };
+
+const ownLeave: LeaveRequest = {
+  id: "leave-own", staff_id: "own-id", leave_type: "sick", reason: "flu", start_date: "2026-12-01", end_date: "2026-12-02", status: "requested", requested_at: "", decided_by: null, decided_at: null, decision_notes: null, staff: { id: "own-id", employee_id: "EMP-01", name: "Anna" }, created_at: "", updated_at: "",
+};
+const otherLeave: LeaveRequest = {
+  id: "leave-other", staff_id: "other-id", leave_type: "vacation", reason: "trip", start_date: "2026-12-03", end_date: "2026-12-03", status: "requested", requested_at: "", decided_by: null, decided_at: null, decision_notes: null, staff: { id: "other-id", employee_id: "EMP-99", name: "Bob" }, created_at: "", updated_at: "",
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  Object.assign(state.profile, { data: { ...own }, isLoading: false, isError: false });
+  Object.assign(state.list, { data: { data: { data: [ownLeave, otherLeave] } }, isLoading: false, isError: false });
+  state.create.isPending = false;
+  state.cancel.isPending = false;
+});
+
+describe("MyLeave", () => {
+  it("shows leave form and history for own requests only", () => {
+    render(<MyLeave />);
+    expect(screen.getByLabelText("Leave request form")).toBeInTheDocument();
+    expect(screen.getAllByText("sick").length).toBeGreaterThan(0);
+    expect(screen.getByText("2026-12-01 to 2026-12-02")).toBeInTheDocument();
+    expect(screen.queryByText("2026-12-03 to 2026-12-03")).not.toBeInTheDocument();
+  });
+
+  it("can cancel requested leave", async () => {
+    render(<MyLeave />);
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(state.cancel.mutate).toHaveBeenCalledWith("leave-own", expect.any(Object));
+  });
+
+  it("does not expose approve/reject", () => {
+    render(<MyLeave />);
+    expect(screen.queryByRole("button", { name: /Approve/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Reject/i })).not.toBeInTheDocument();
+  });
+
+  it("shows no UUIDs in labels", () => {
+    const { container } = render(<MyLeave />);
+    expect(container.textContent).not.toContain("own-id");
+    expect(container.textContent).not.toContain("leave-own");
+  });
+});

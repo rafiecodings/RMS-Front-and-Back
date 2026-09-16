@@ -141,7 +141,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-xs text-muted-foreground">Created By</p>
-          <p className="font-medium">{order.creator?.name ?? order.created_by ?? "—"}</p>
+          <p className="font-medium">{order.creator?.name ?? "Unknown user"}</p>
         </div>
       </div>
 

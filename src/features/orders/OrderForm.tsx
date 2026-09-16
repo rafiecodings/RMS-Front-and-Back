@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared";
 import { Trash2, Search } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatLabel } from "@/lib/utils";
 import type {
   OrderFormData,
   OrderItemFormData,
@@ -85,6 +85,8 @@ export function OrderForm({
       (t.status === "occupied" && !!t.seating) ||
       t.id === formData.table_id
   );
+  const selectedCustomer = customers.find((c) => c.id === formData.customer_id);
+  const selectedTable = tables.find((t) => t.id === formData.table_id);
 
   const filteredMenuItems = menuItems.filter(
     (item) =>
@@ -227,17 +229,22 @@ export function OrderForm({
             <SelectContent>
               <SelectItem value="">Walk-in Customer</SelectItem>
               {customers.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
+                <SelectItem key={c.id} value={c.id} className="truncate">
                   {c.name}
                 </SelectItem>
               ))}
+              {formData.customer_id && !selectedCustomer && (
+                <SelectItem value={formData.customer_id} disabled className="truncate">
+                  Unavailable customer
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
 
         {formData.order_type === "dine_in" && (
           <div className="space-y-2">
-            <Label>Table</Label>
+            <Label>Table (optional)</Label>
             <Select
               value={formData.table_id ?? ""}
               onValueChange={(v) =>
@@ -253,12 +260,17 @@ export function OrderForm({
               <SelectContent>
                 <SelectItem value="">No Table</SelectItem>
                 {availableTables.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
+                  <SelectItem key={t.id} value={t.id} className="truncate">
                     T{t.number} — {t.capacity} seats
                     {t.seating ? " · Seated Reservation" : ""}
                   </SelectItem>
                 ))}
-                {availableTables.length === 0 && (
+                {formData.table_id && !selectedTable && (
+                  <SelectItem value={formData.table_id} disabled className="truncate">
+                    Unavailable table
+                  </SelectItem>
+                )}
+                {availableTables.length === 0 && !formData.table_id && (
                   <SelectItem value="none" disabled>
                     No available tables
                   </SelectItem>

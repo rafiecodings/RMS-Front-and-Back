@@ -85,7 +85,7 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Expected Delivery</Label>
+            <Label className="text-sm font-medium">Expected Delivery (optional)</Label>
             <Input
               type="date"
               value={form.expected_date ?? ""}
@@ -93,8 +93,8 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Notes</Label>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Notes (optional)</Label>
           <Input
             value={form.notes ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value || undefined }))}
@@ -114,17 +114,17 @@ export function PurchaseOrderForm({ onSubmit, isLoading }: PurchaseOrderFormProp
 
         <div className="space-y-3">
           {form.items.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center">
               <Select
                 value={item.ingredient_id}
                 onValueChange={(v) => updateItem(idx, "ingredient_id", v ?? "")}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="w-full min-w-0">
                   <SelectValue placeholder="Select ingredient" />
                 </SelectTrigger>
                 <SelectContent>
                   {ingredients.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                    <SelectItem key={i.id} value={i.id} className="truncate">{i.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

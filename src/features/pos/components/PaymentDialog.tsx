@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatLabel } from "@/lib/utils";
 import type { PaymentLine } from "../types";
 import type { PaymentMethod } from "@/lib/types";
 import type { Customer } from "@/lib/types";
@@ -145,21 +145,18 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>Process Payment</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
           {/* Order Context Section */}
           {existingOrder ? (
             <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
               <h4 className="text-sm font-medium">Order Details</h4>
               <p className="text-xs text-muted-foreground">
-                {existingOrder.order_number} ·{" "}
-                <span className="capitalize">
-                  {existingOrder.order_type.replace(/_/g, " ")}
-                </span>
+                {existingOrder.order_number} · {formatLabel(existingOrder.order_type)}
               </p>
               <p className="text-xs text-muted-foreground">
                 {`Customer: ${customerDisplayName(existingOrder)}`}
@@ -171,50 +168,54 @@ export function PaymentDialog({
           ) : (
             <div className="rounded-lg bg-muted/50 p-3 space-y-3">
               <h4 className="text-sm font-medium">Order Details</h4>
-              <div className="flex gap-2">
-                <Label className="text-xs">Order Type</Label>
-                <Select value={orderType} onValueChange={(v) => v && setOrderType(v as OrderType)}>
-                  <SelectTrigger className="h-8 w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dine_in">Dine In</SelectItem>
-                    <SelectItem value="takeaway">Takeaway</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Label className="text-xs">Customer</Label>
-                <Select value={customerId} onValueChange={(v) => setCustomerId(v ?? "")}>
-                  <SelectTrigger className="h-8 w-[200px]">
-                    <SelectValue placeholder="Walk-in Customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((c: Customer) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {orderType === "dine_in" && (
-                <div className="flex gap-2">
-                  <Label className="text-xs">Table</Label>
-                  <Select value={tableId} onValueChange={(v) => setTableId(v ?? "")}>
-                    <SelectTrigger className="h-8 w-[140px]">
-                      <SelectValue placeholder="Select Table" />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs shrink-0">Order Type</Label>
+                  <Select value={orderType} onValueChange={(v) => v && setOrderType(v as OrderType)}>
+                    <SelectTrigger className="h-8 flex-1 min-w-0">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableTables.map((t: Table) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          T{t.number} ({t.capacity} seats)
+                      <SelectItem value="dine_in">Dine In</SelectItem>
+                      <SelectItem value="takeaway">Takeaway</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Label className="text-xs shrink-0">Customer</Label>
+                  <Select value={customerId} onValueChange={(v) => setCustomerId(v ?? "")}>
+                    <SelectTrigger className="h-8 flex-1 min-w-0">
+                      <SelectValue placeholder="Walk-in Customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Walk-in Customer</SelectItem>
+                      {customers.map((c: Customer) => (
+                        <SelectItem key={c.id} value={c.id} className="truncate">
+                          {c.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+                {orderType === "dine_in" && (
+                  <div className="flex items-center gap-2 sm:col-span-2">
+                    <Label className="text-xs shrink-0">Table (optional)</Label>
+                    <Select value={tableId} onValueChange={(v) => setTableId(v ?? "")}>
+                      <SelectTrigger className="h-8 flex-1 min-w-0">
+                        <SelectValue placeholder="Select Table" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No Table</SelectItem>
+                        {availableTables.map((t: Table) => (
+                          <SelectItem key={t.id} value={t.id} className="truncate">
+                            T{t.number} ({t.capacity} seats)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -343,8 +344,7 @@ export function PaymentDialog({
             )}
           </div>
         </div>
-
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

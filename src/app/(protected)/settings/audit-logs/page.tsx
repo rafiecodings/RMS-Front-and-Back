@@ -59,7 +59,7 @@ function friendlyModule(raw: string | null | undefined): string {
 }
 
 function friendlyAction(action: string): string {
-  return action.replace(/[_-]/g, " ");
+  return action.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function recordReference(row: AuditLogRow): string {
@@ -76,7 +76,7 @@ function recordReference(row: AuditLogRow): string {
     ].find((k) => nv[k] != null);
     if (key) return String(nv[key]);
   }
-  return row.model_id ? `#${row.model_id}` : "—";
+  return row.model_id ? `#${row.model_id.slice(0, 8)}…` : "—";
 }
 
 function descriptionFor(row: AuditLogRow): string {

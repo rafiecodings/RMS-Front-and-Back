@@ -80,6 +80,7 @@ export function MenuItemForm({
   }
 
   const activeCategories = categories.filter((c) => c.is_active);
+  const selectedCategory = categories.find((c) => c.id === formData.category_id);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,16 +117,20 @@ export function MenuItemForm({
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              {activeCategories.length === 0 ? (
+              {activeCategories.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="truncate">
+                  {c.name}
+                </SelectItem>
+              ))}
+              {formData.category_id && !selectedCategory && (
+                <SelectItem value={formData.category_id} disabled className="truncate">
+                  Unavailable category
+                </SelectItem>
+              )}
+              {activeCategories.length === 0 && !formData.category_id && (
                 <SelectItem value="none" disabled>
                   No categories
                 </SelectItem>
-              ) : (
-                activeCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))
               )}
             </SelectContent>
           </Select>
@@ -136,7 +141,7 @@ export function MenuItemForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="item-desc">Description</Label>
+        <Label htmlFor="item-desc">Description (optional)</Label>
         <Textarea
           id="item-desc"
           value={formData.description}
@@ -186,7 +191,7 @@ export function MenuItemForm({
 
       {/* MENU IMAGE — predefined static picker (UAT build; no file uploads) */}
       <div className="space-y-2">
-        <Label>Menu Image</Label>
+        <Label>Menu Image (optional)</Label>
         <div className="flex items-start gap-3">
           <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg border bg-muted">
             <MenuItemImage src={formData.image_url} alt={formData.name || "Menu item preview"} sizes="112px" />

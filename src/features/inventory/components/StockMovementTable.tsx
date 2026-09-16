@@ -48,7 +48,7 @@ export function StockMovementTable({ movements, isLoading }: StockMovementTableP
                   <td className="px-4 py-2 text-right tabular-nums">
                     {m.type === "outward" || m.type === "wastage" ? "-" : "+"}{m.quantity}
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">{m.notes ?? (m.reference_type ? `${m.reference_type}${m.reference_id ? ` #${m.reference_id}` : ""}` : "—")}</td>
+                  <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]" title={m.notes ?? undefined}>{m.notes ?? "—"}</td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {formatDate(m.created_at)}
                   </td>
@@ -86,7 +86,7 @@ export function StockMovementTable({ movements, isLoading }: StockMovementTableP
               </div>
               <div className="mt-2 min-w-0">
                 <p className="text-xs text-muted-foreground">Notes / Reference</p>
-                <p className="text-sm break-words line-clamp-2">{m.notes ?? (m.reference_type ? `${m.reference_type}${m.reference_id ? ` #${m.reference_id}` : ""}` : "—")}</p>
+                <p className="text-sm break-words line-clamp-2">{m.notes ?? "—"}</p>
               </div>
             </div>
           ))

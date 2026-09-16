@@ -31,7 +31,7 @@ const ROLE_GUARDS: Record<string, string[] | "any"> = {
   "/reports": ["admin", "manager"],
   "/analytics": ["admin", "manager"],
   "/staff": ["admin", "manager"],
-  "/my-attendance": ["admin", "manager", "cashier", "waiter", "kitchen_staff", "inventory_staff"],
+  "/my-attendance": ["manager", "cashier", "waiter", "kitchen_staff", "inventory_staff"],
   "/billing": ["admin", "manager"],
 
   // Menu is viewable by front-of-house/kitchen roles; edits remain
@@ -112,6 +112,10 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(
       new URL(dashboardAllowed ? "/dashboard" : "/unauthorized", request.url)
     );
+  }
+
+  if (role === "admin" && matchesPath(pathname, "/my-attendance")) {
+    return NextResponse.redirect(new URL("/staff/attendance", request.url));
   }
 
   // Match the longest guard prefix first.

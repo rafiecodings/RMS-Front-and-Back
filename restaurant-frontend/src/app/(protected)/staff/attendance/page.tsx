@@ -4,8 +4,6 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { AttendanceTable } from "@/features/staff";
 import { useAttendance, useCloseAttendance } from "@/lib/hooks";
-import { SelfAttendance } from "@/features/staff/components/SelfAttendance";
-import { MySchedule } from "@/features/staff";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,10 +71,6 @@ export default function AttendancePage() {
           Today: {todayDisplay}
         </p>
       </div>
-
-      <SelfAttendance />
-
-      <MySchedule />
 
       {canManage && staleRecords.length > 0 && (
         <section aria-label="Stale attendance" className="rounded-lg border bg-card p-4 space-y-3">

@@ -18,6 +18,7 @@ use App\Services\PricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -135,7 +136,7 @@ class OrderController extends Controller
             'order_type' => 'required|string|in:dine_in,takeaway',
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
-            'items.*.menu_item_id' => 'required|string|exists:menu_items,id',
+            'items.*.menu_item_id' => ['required', 'string', Rule::exists('menu_items', 'id')->whereNull('deleted_at')->where('is_available', true)],
             'items.*.quantity' => 'required|integer|min:1|max:9999',
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'items.*.notes' => 'nullable|string|max:500',
@@ -145,6 +146,8 @@ class OrderController extends Controller
             'discount_code' => 'nullable|string|max:50',
             'discount_verified' => 'nullable|boolean',
             'auto_apply_promotions' => 'nullable|boolean',
+        ], [
+            'items.*.menu_item_id.exists' => 'One or more selected menu items are unavailable.',
         ]);
 
         if (!empty($validated['customer_id'])) {
@@ -161,7 +164,7 @@ class OrderController extends Controller
         $pricing = app(PricingService::class);
 
         $menuItemIds = collect($validated['items'])->pluck('menu_item_id')->unique()->all();
-        $menuItems = MenuItem::with('modifiers')
+        $menuItems = MenuItem::with(['modifiers', 'category'])
             ->whereIn('id', $menuItemIds)
             ->get()
             ->keyBy('id');
@@ -173,6 +176,10 @@ class OrderController extends Controller
 
             if (!$menuItem) {
                 return $this->error('One or more menu items were not found.', 422);
+            }
+
+            if ($menuItem->category && !$menuItem->category->is_active) {
+                return $this->error('One or more selected menu items are unavailable.', 422);
             }
 
             $line = $pricing->buildLineItem(

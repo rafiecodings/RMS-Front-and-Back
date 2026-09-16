@@ -196,7 +196,7 @@ export const StaffForm = React.forwardRef<HTMLFormElement, StaffFormProps>(funct
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Hourly Rate (â‚±)</Label>
+            <Label className="text-sm font-medium">Hourly Rate (₱)</Label>
             <Input
               type="number"
               min={0}

@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useTables } from "@/lib/hooks";
 import type { Table as TableType, TableStatus, TableFormData } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -84,7 +84,7 @@ export default function TablesPage() {
     tables.update.mutate(
       { id: table.id, data: { status } as unknown as Partial<TableType> },
       {
-        onSuccess: () => toast.success(`Table T${table.number} updated to ${status.replace(/_/g, " ")}`),
+        onSuccess: () => toast.success(`Table T${table.number} updated to ${formatLabel(status)}`),
         onError: () => toast.error("Failed to update table status"),
       }
     );
@@ -215,7 +215,7 @@ export default function TablesPage() {
             <LayoutGrid className="h-12 w-12 mx-auto mb-2 opacity-30" />
             <p>
               {statusFilter !== "all"
-                ? `No tables with status "${statusFilter.replace(/_/g, " ")}"`
+                ? `No tables with status "${formatLabel(statusFilter)}"`
                 : "No tables yet. Add one to get started."}
             </p>
           </div>
@@ -225,7 +225,7 @@ export default function TablesPage() {
           open={!!statusActionTarget}
           onOpenChange={(open) => !open && setStatusActionTarget(null)}
           title="Change Table Status"
-          description={statusActionTarget ? `Change table T${statusActionTarget.table.number} to "${statusActionTarget.status.replace(/_/g, " ")}"?` : ""}
+          description={statusActionTarget ? `Change table T${statusActionTarget.table.number} to "${formatLabel(statusActionTarget.status)}"?` : ""}
           confirmText="Confirm"
           onConfirm={handleStatusConfirm}
           isLoading={tables.update.isPending}
@@ -303,7 +303,7 @@ export default function TablesPage() {
                         STATUS_BADGE[viewTarget.status]
                       )}
                     >
-                      {viewTarget.status.replace(/_/g, " ")}
+                      {formatLabel(viewTarget.status)}
                     </Badge>
                   )}
                 </div>

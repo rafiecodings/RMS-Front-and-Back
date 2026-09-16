@@ -108,7 +108,7 @@ export function IngredientForm({
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Category</Label>
+            <Label className="text-sm font-medium">Category (optional)</Label>
             <Select value={form.category ?? "none"} onValueChange={(v) => update("category", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
@@ -190,7 +190,7 @@ export function IngredientForm({
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Cost per Unit *</Label>
+            <Label className="text-sm font-medium">Cost per Unit (PHP) *</Label>
             <Input
               type="number"
               min={0}
@@ -203,16 +203,21 @@ export function IngredientForm({
             {errors.cost_per_unit && <p className="text-xs text-destructive">{errors.cost_per_unit}</p>}
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Supplier</Label>
-            <Select value={form.supplier_id && suppliers.some((s) => s.id === form.supplier_id) ? form.supplier_id : "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
+            <Label className="text-sm font-medium">Supplier (optional)</Label>
+            <Select value={form.supplier_id && suppliers.some((s) => s.id === form.supplier_id) ? form.supplier_id : form.supplier_id ? form.supplier_id : "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="No supplier" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
                 {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  <SelectItem key={s.id} value={s.id} className="truncate">{s.name}</SelectItem>
                 ))}
+                {form.supplier_id && !suppliers.some((s) => s.id === form.supplier_id) && (
+                  <SelectItem value={form.supplier_id} disabled className="truncate">
+                    Unavailable supplier
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

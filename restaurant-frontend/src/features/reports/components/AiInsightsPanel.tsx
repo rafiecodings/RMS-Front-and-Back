@@ -18,7 +18,7 @@ interface AiInsightsPanelProps {
 const CONFIDENCE_STYLES: Record<string, string> = {
   high: "bg-emerald-500/10 text-emerald-600",
   medium: "bg-amber-500/10 text-amber-600",
-  low: "bg-muted text-muted-foreground",
+  low: "bg-amber-500/10 text-amber-600 border border-amber-300",
 };
 
 function InsightList({
@@ -39,9 +39,9 @@ function InsightList({
       </h4>
       <ul className="space-y-1.5">
         {items.map((item, i) => (
-          <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+          <li key={i} className="flex gap-2 text-sm text-muted-foreground min-w-0">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-            <span>{item}</span>
+            <span className="break-words [overflow-wrap:anywhere] min-w-0">{item}</span>
           </li>
         ))}
       </ul>
@@ -106,11 +106,14 @@ export function AiInsightsPanel({ startDate, endDate, auto = true }: AiInsightsP
             <p className="mt-1 text-xs text-muted-foreground/70">
               All reports and analytics remain fully available.
             </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => insights.mutate({ start_date: startDate, end_date: endDate })}>
+              Retry
+            </Button>
           </div>
         ) : data ? (
           <div className="space-y-5">
             {data.summary && (
-              <p className="text-sm leading-relaxed">{data.summary}</p>
+              <p className="text-sm leading-relaxed break-words [overflow-wrap:anywhere]">{data.summary}</p>
             )}
             <div className="grid gap-5 md:grid-cols-2">
               <InsightList

@@ -134,10 +134,11 @@ export function LowStockAlerts({ data }: LowStockAlertsProps) {
         <CardTitle className="text-base font-semibold">Low Stock Alerts</CardTitle>
         <Badge variant="destructive">{data.length}</Badge>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-hidden">
           {data.length === 0 ? (
             <ChartEmptyState height={100} message="All ingredients are well stocked" />
         ) : (
+          <div className="overflow-x-auto -mx-6 px-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -167,6 +168,7 @@ export function LowStockAlerts({ data }: LowStockAlertsProps) {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>

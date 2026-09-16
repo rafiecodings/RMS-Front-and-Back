@@ -56,11 +56,16 @@ export function InventoryForecastCard() {
             </Button>
           </div>
         ) : !data?.available ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {data?.reason === "insufficient_history"
-              ? "Not enough sales history for inventory projections yet."
-              : "Inventory risk temporarily unavailable."}
-          </p>
+          <div className="py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              {data?.reason === "insufficient_history"
+                ? "Not enough historical activity yet — forecasts need at least 14 days of orders."
+                : "Inventory risk temporarily unavailable."}
+            </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
         ) : risks.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No projected shortages — stock covers the forecast period.

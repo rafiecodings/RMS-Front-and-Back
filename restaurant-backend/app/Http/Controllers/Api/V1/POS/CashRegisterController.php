@@ -104,6 +104,11 @@ class CashRegisterController extends Controller
             return $this->error('Session is not open.', 409);
         }
 
+        $isPrivileged = $request->user()->hasRole('admin') || $request->user()->hasRole('manager');
+        if (! $isPrivileged && $session->user_id !== $request->user()->id) {
+            return $this->error('You may only close your own cash register session.', 403);
+        }
+
         $difference = (float) $validated['actual_balance'] - (float) $session->opening_balance;
 
         $session->update([

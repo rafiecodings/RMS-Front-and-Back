@@ -992,12 +992,18 @@ class StaffController extends Controller
         ]);
 
         return DB::transaction(function () use ($id, $validated, $request) {
-            $leave = \App\Models\LeaveRequest::with(['staff.user'])->lockForUpdate()->find($id);
+            $leave = \App\Models\LeaveRequest::with(['staff.user', 'staff'])->lockForUpdate()->find($id);
             if (!$leave) {
                 return $this->notFound('Leave request not found.');
             }
             if ($leave->status !== 'requested') {
                 return $this->error('Only requested leave can be approved.', 422);
+            }
+            if (! $request->user()->hasRole('admin')) {
+                $ownProfile = \App\Models\StaffProfile::where('user_id', $request->user()->id)->first();
+                if ($ownProfile && $ownProfile->id === $leave->staff_id) {
+                    return $this->error('You cannot approve your own leave request.', 403);
+                }
             }
 
             $start = $leave->start_date->toDateString();
@@ -1066,12 +1072,18 @@ class StaffController extends Controller
             'decision_notes' => 'nullable|string|max:1000',
         ]);
 
-        $leave = \App\Models\LeaveRequest::with(['staff.user'])->find($id);
+        $leave = \App\Models\LeaveRequest::with(['staff.user', 'staff'])->find($id);
         if (!$leave) {
             return $this->notFound('Leave request not found.');
         }
         if ($leave->status !== 'requested') {
             return $this->error('Only requested leave can be rejected.', 422);
+        }
+        if (! $request->user()->hasRole('admin')) {
+            $ownProfile = \App\Models\StaffProfile::where('user_id', $request->user()->id)->first();
+            if ($ownProfile && $ownProfile->id === $leave->staff_id) {
+                return $this->error('You cannot reject your own leave request.', 403);
+            }
         }
 
         $leave->update([

@@ -14,10 +14,15 @@ describe("attendance route access", () => {
     expect(proxy(request("/staff/attendance", role)).headers.get("location")).toContain("/unauthorized");
     expect(canView(role, "staff")).toBe(false);
   });
-  it.each(["admin", "manager"])("preserves %s access to both attendance pages", (role) => {
+  it("preserves manager access to both attendance pages", () => {
     for (const path of ["/my-attendance", "/staff/attendance"]) {
-      expect(proxy(request(path, role)).headers.get("location")).toBeNull();
+      expect(proxy(request(path, "manager")).headers.get("location")).toBeNull();
     }
+  });
+  it("redirects admin from my-attendance to attendance management", () => {
+    expect(SIDEBAR_ROLES.attendance).not.toContain("admin");
+    expect(proxy(request("/my-attendance", "admin")).headers.get("location")).toContain("/staff/attendance");
+    expect(proxy(request("/staff/attendance", "admin")).headers.get("location")).toBeNull();
   });
   it("requires login and rejects unknown roles", () => {
     expect(proxy(request("/my-attendance")).headers.get("location")).toContain("/login");

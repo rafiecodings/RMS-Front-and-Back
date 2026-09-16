@@ -28,7 +28,7 @@ export default function EditOrderPage({
   const { data: order, isLoading: orderLoading } = useOrder(id);
   const { update } = useOrders();
   const { list: miList } = useMenuItems({ per_page: 200 });
-  const { list: custList } = useCustomers({ per_page: 200 });
+  const { list: custList } = useCustomers({ per_page: 200, is_active: true } as unknown as Record<string, unknown>);
   const { list: tableList } = useTables();
 
   const menuItems = miList.data?.data?.data ?? [];

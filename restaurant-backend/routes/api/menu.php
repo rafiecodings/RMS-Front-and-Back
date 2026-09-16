@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\V1\Menu\ItemController;
 use App\Http\Controllers\Api\V1\Menu\ModifierController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('menu')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('menu')->group(function () {
     Route::prefix('categories')->group(function () {
         Route::get('/', [CategoryController::class, 'index']);
         Route::post('/', [CategoryController::class, 'store'])->middleware('role:admin,manager');

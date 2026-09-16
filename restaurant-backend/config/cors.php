@@ -16,9 +16,14 @@ return [
         'OPTIONS',
     ],
 
-    'allowed_origins' => array_values(array_filter(
-        array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))),
-    )),
+    'allowed_origins' => (function () {
+        $origins = array_values(array_filter(array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS', '')))));
+        $supportsCredentials = filter_var(env('CORS_SUPPORTS_CREDENTIALS', true), FILTER_VALIDATE_BOOLEAN);
+        if ($supportsCredentials && in_array('*', $origins, true)) {
+            return [];
+        }
+        return $origins;
+    })(),
 
     'allowed_origins_patterns' => array_values(array_filter(
         array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS_PATTERNS', ''))),

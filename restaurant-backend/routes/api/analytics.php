@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\V1\Analytics\DemandForecastController;
 use App\Http\Controllers\Api\V1\Analytics\ForecastController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('analytics')->group(function () {
+Route::middleware(['auth:sanctum','active', 'role:admin,manager'])->prefix('analytics')->group(function () {
     Route::get('/revenue', [AnalyticsController::class, 'revenue']);
     Route::get('/sales', [AnalyticsController::class, 'sales']);
     Route::get('/peak-hours', [AnalyticsController::class, 'peakHours']);

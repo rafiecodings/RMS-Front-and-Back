@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('customers')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('customers')->group(function () {
     Route::middleware('role:admin,manager,waiter,cashier')->group(function () {
         Route::get('/', [CustomerController::class, 'index']);
         Route::get('/{id}', [CustomerController::class, 'show'])->whereUuid('id');

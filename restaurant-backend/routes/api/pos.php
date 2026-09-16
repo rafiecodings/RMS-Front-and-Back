@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\V1\POS\PaymentController;
 use App\Http\Controllers\Api\V1\POS\CashRegisterController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'role:admin,manager,cashier'])->group(function () {
+Route::middleware(['auth:sanctum','active', 'role:admin,manager,cashier'])->group(function () {
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
         Route::post('/generate', [InvoiceController::class, 'generate']);

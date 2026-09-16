@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\SettingController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'role:admin,manager'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum','active', 'role:admin,manager'])->prefix('admin')->group(function () {
     Route::prefix('outlets')->group(function () {
         Route::get('/', [OutletController::class, 'index']);
         Route::post('/', [OutletController::class, 'store']);

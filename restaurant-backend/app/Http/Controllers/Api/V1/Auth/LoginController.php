@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AuthCookie;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -21,12 +22,8 @@ class LoginController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password) || ! $user->is_active) {
             return $this->error('Invalid credentials.', 401);
-        }
-
-        if (! $user->is_active) {
-            return $this->error('Account is deactivated.', 403);
         }
 
         $user->update(['last_login_at' => now()]);
@@ -49,17 +46,7 @@ class LoginController extends Controller
         ], 'Login successful.');
 
         return $response->withCookie(
-            cookie(
-                'auth_token',
-                $token,
-                (int) config('sanctum.expiration'),
-                '/',
-                null,
-                env('APP_ENV') === 'production',
-                true,
-                false,
-                'Lax',
-            )
+            AuthCookie::make($token, (int) config('sanctum.expiration'))
         );
     }
 }

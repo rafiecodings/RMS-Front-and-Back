@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\V1\Table\FloorPlanController;
 use App\Http\Controllers\Api\V1\Table\TableController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum','active'])->group(function () {
     Route::prefix('floor-plans')->group(function () {
         Route::get('/', [FloorPlanController::class, 'index']);
         Route::post('/', [FloorPlanController::class, 'store'])->middleware('role:admin,manager');

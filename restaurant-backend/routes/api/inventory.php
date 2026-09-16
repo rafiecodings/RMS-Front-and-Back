@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\V1\Inventory\SupplierController;
 use App\Http\Controllers\Api\V1\Inventory\WastageController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('inventory')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('inventory')->group(function () {
     Route::prefix('ingredients')->group(function () {
         Route::get('/', [IngredientController::class, 'index']);
         Route::post('/', [IngredientController::class, 'store'])->middleware('role:admin,manager');

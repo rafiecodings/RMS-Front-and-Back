@@ -120,9 +120,13 @@ class SecurityHardeningTest extends TestCase
         $kitchen = $this->userWithRole('kitchen_staff');
         $inventory = $this->userWithRole('inventory_staff');
         $waiter = $this->userWithRole('waiter');
+        $cashier = $this->userWithRole('cashier');
+        $manager = $this->userWithRole('manager');
         $this->actingAs($kitchen)->postJson('/api/v1/customers', ['name'=>'Hacker','phone'=>'09170000001'])->assertStatus(403);
         $this->actingAs($inventory)->postJson('/api/v1/customers', ['name'=>'Hacker2','phone'=>'09170000002'])->assertStatus(403);
-        $this->actingAs($waiter)->postJson('/api/v1/customers', ['name'=>'Ok Customer','phone'=>'09170000003'])->assertStatus(201);
+        $this->actingAs($waiter)->postJson('/api/v1/customers', ['name'=>'Ok Customer','phone'=>'09170000003'])->assertStatus(403);
+        $this->actingAs($cashier)->postJson('/api/v1/customers', ['name'=>'Ok Cashier','phone'=>'09170000004'])->assertStatus(403);
+        $this->actingAs($manager)->postJson('/api/v1/customers', ['name'=>'Manager Ok','phone'=>'09170000005'])->assertStatus(201);
     }
 
     public function test_reservation_mutation_restricted(): void

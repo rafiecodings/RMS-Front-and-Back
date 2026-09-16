@@ -58,7 +58,7 @@ interface PosOrderScreenProps {
 export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   const { list: catList } = useMenuCategories();
   const { list: miList } = useMenuItems({ is_available: true, per_page: 300 });
-  const { list: custList } = useCustomers({ per_page: 300 });
+  const { list: custList } = useCustomers({ per_page: 300, is_active: true } as unknown as Record<string, unknown>);
   const { list: tableList } = useTables();
   // Order-eligible tables: available ones plus occupied tables held by an
   // active seated reservation with no active order yet. Backend stays

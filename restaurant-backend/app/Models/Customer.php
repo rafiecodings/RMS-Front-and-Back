@@ -61,7 +61,19 @@ class Customer extends BaseModel
      */
     public function recordCompletedVisit(float $orderTotal): void
     {
+        $previousTier = $this->loyaltyTier();
+
         $this->increment('visit_count');
         $this->increment('total_spent', $orderTotal);
+
+        $newTier = $this->loyaltyTier();
+
+        if ($previousTier !== $newTier) {
+            \App\Services\AuditLogger::record('customer_loyalty_tier_changed', $this, [
+                'description' => "Customer {$this->name} loyalty tier changed from {$previousTier} to {$newTier}.",
+                'from' => $previousTier,
+                'to' => $newTier,
+            ]);
+        }
     }
 }

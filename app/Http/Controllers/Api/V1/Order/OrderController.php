@@ -147,6 +147,13 @@ class OrderController extends Controller
             'auto_apply_promotions' => 'nullable|boolean',
         ]);
 
+        if (!empty($validated['customer_id'])) {
+            $orderCustomer = \App\Models\Customer::find($validated['customer_id']);
+            if ($orderCustomer && !$orderCustomer->is_active) {
+                return $this->error('Archived customers cannot be assigned to new orders.', 422);
+            }
+        }
+
         if (($validated['order_type'] ?? null) === 'dine_in' && empty($validated['table_id'])) {
             throw ValidationException::withMessages(['table_id' => ['A table is required for dine-in orders.']]);
         }

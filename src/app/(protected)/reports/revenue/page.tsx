@@ -19,7 +19,7 @@ export default function RevenueReportsPage() {
       <div className="flex items-center justify-between">
         <PageHeader
           title="Revenue Reports"
-          description="Sales, revenue, and profit analysis"
+          description="Completed, paid orders and approved refunds against those orders"
         />
         <ExportButton
           reportType="revenue"
@@ -43,27 +43,32 @@ export default function RevenueReportsPage() {
         </div>
       ) : report ? (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <ReportSummaryCard
-              title="Total Revenue"
-              value={report.total_revenue}
+              title="Gross Revenue"
+              value={report.gross_revenue}
               format="currency"
-              change={report.revenue_growth}
             />
             <ReportSummaryCard
-              title="Total Orders"
-              value={report.total_orders}
-              format="number"
+              title="Refunds"
+              value={report.refunds}
+              format="currency"
+            />
+            <ReportSummaryCard
+              title="Net Revenue"
+              value={report.net_revenue}
+              format="currency"
             />
             <ReportSummaryCard
               title="Average Order Value"
               value={report.average_order_value}
               format="currency"
             />
+            <ReportSummaryCard title="Paid Completed Orders" value={report.total_orders} format="number" />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <RevenueChart data={report.daily_revenue} />
+            <RevenueChart data={report.daily_revenue} title="Net Revenue Trend" />
             <OrdersChart data={report.daily_revenue} />
           </div>
         </>

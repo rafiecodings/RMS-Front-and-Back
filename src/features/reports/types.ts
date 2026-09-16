@@ -28,9 +28,17 @@ export interface ReportFilters {
 }
 
 export interface RevenueReport {
+  /** Gross revenue before refunds (sum of completed+paid orders). */
+  gross_revenue: number;
+  /** Approved refunds against qualifying orders created in the period. */
+  refunds: number;
+  /** Net revenue after refunds (gross - refunds). This is the primary revenue figure. */
+  net_revenue: number;
+  /** Alias for net_revenue, kept for backward compatibility. */
   total_revenue: number;
-  total_orders: number;
+  /** Net revenue divided by total orders. */
   average_order_value: number;
+  total_orders: number;
   /** Null when no comparable previous period exists. */
   revenue_growth: number | null;
   daily_revenue: DailyRevenueData[];
@@ -167,6 +175,7 @@ export interface StaffPerformanceRanking {
 
 export interface TaxReport {
   total_tax_collected: number;
+  note: string;
   monthly_tax: MonthlyTax[];
 }
 
@@ -184,9 +193,24 @@ export interface ExportPayload {
 
 export interface CustomerAnalyticsReport {
   total_customers: number;
-  new_customers: number;
-  returning_customers: number;
-  average_visit_frequency: number;
-  average_lifetime_value: number;
-  top_customers: { id: string; name: string; total_orders: number; total_spent: number }[];
+  new_in_period: number;
+  new_this_month: number;
+  loyal_customers: number;
+  loyalty_tiers: {
+    Member: number;
+    Bronze: number;
+    Silver: number;
+    Gold: number;
+    Platinum: number;
+  };
+  avg_total_spent: number;
+  avg_visit_count: number;
+  top_customers: {
+    id: string;
+    name: string;
+    total_spent: number;
+    visit_count: number;
+    loyalty_tier: string;
+    loyalty_points: number;
+  }[];
 }

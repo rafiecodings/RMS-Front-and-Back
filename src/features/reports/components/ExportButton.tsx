@@ -21,10 +21,8 @@ export function ExportButton({ reportType, period, dateRange }: ExportButtonProp
   const exportMutation = useExportReport();
 
   const handleExport = async () => {
-    // Same explicit range contract as every other report call.
-    const { start_date, end_date } = resolveReportRange(period, dateRange);
-
     try {
+      const { start_date, end_date } = resolveReportRange(period, dateRange);
       const blob = await exportMutation.mutateAsync({
         type: reportType,
         format: "csv",
@@ -36,9 +34,13 @@ export function ExportButton({ reportType, period, dateRange }: ExportButtonProp
       a.href = url;
       a.download = `${reportType}_report_${start_date}_to_${end_date}.csv`;
       document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      try {
+        a.click();
+      } finally {
+        a.remove();
+        // Allow the browser to consume the URL before releasing the attachment.
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      }
       toast.success("Report exported as CSV");
     } catch (error) {
       const message =

@@ -39,7 +39,7 @@ export default function TaxReportsPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const filters = useMemo(() => ({ period, date_range: dateRange }), [period, dateRange]);
 
-  const { data: report, isLoading } = useTaxReport(filters);
+  const { data: report, isLoading, isError } = useTaxReport(filters);
 
   return (
     <div className="space-y-6">
@@ -64,8 +64,11 @@ export default function TaxReportsPage() {
 
       {isLoading ? (
         <LoadingSpinner />
+      ) : isError ? (
+        <p role="alert">Failed to load the tax report. Please try again.</p>
       ) : report ? (
         <>
+          {report.note && <p className="text-sm text-muted-foreground">{report.note}</p>}
           <div className="grid gap-4 md:grid-cols-1">
             <ReportSummaryCard
               title="Total Tax Collected"

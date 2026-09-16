@@ -5,12 +5,12 @@ import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
 import {
   ReportFilters,
   ReportSummaryCard,
+  ExportButton,
 } from "@/features/reports";
 import { useCustomerReport } from "@/features/reports/hooks/useReports";
 import {
   LOYALTY_TIERS,
   LOYALTY_TIER_STYLES,
-  tierForVisits,
 } from "@/features/reports/utils/loyaltyTiers";
 import type { ReportPeriod, DateRange } from "@/features/reports/types";
 
@@ -28,6 +28,7 @@ export default function CustomerReportsPage() {
           title="Customer & Loyalty Reports"
           description="Visit frequency, loyalty tiers and top customers — real dining activity only."
         />
+        <ExportButton reportType="customers" period={period} dateRange={dateRange} />
       </div>
 
       <ReportFilters
@@ -45,13 +46,13 @@ export default function CustomerReportsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <ReportSummaryCard title="Total Customers" value={report.total_customers} format="number" />
-            <ReportSummaryCard title="New (period)" value={report.new_customers} format="number" />
-            <ReportSummaryCard title="Returning" value={report.returning_customers} format="number" />
-            <ReportSummaryCard title="Avg Visits / Customer" value={report.average_visit_frequency} format="number" />
-            <ReportSummaryCard title="Avg Lifetime Value" value={report.average_lifetime_value} format="currency" />
+            <ReportSummaryCard title="New (period)" value={report.new_in_period} format="number" />
+            <ReportSummaryCard title="Loyal Customers" value={report.loyal_customers} format="number" />
+            <ReportSummaryCard title="Avg Lifetime Visits" value={report.avg_visit_count} format="number" />
+            <ReportSummaryCard title="Avg Lifetime Spend (visited)" value={report.avg_total_spent} format="currency" />
           </div>
 
-          {/* Loyalty tiers derived automatically from completed visits */}
+          <p className="text-sm text-muted-foreground">Active customers only. The date range filters new registrations; visits, spending and loyalty tiers are lifetime totals.</p>
           <div className="rounded-lg border p-4">
             <h3 className="mb-3 text-sm font-semibold">Loyalty Tiers (auto-derived from visits)</h3>
             <div className="grid gap-3 sm:grid-cols-5 text-sm">
@@ -61,6 +62,7 @@ export default function CustomerReportsPage() {
                   className={`rounded-md border p-3 ${LOYALTY_TIER_STYLES[t.tier]}`}
                 >
                   <p className="font-semibold">{t.tier}</p>
+                  <p>{report.loyalty_tiers[t.tier]} customers</p>
                   <p className="text-xs opacity-80">{t.range}</p>
                 </div>
               ))}
@@ -86,11 +88,11 @@ export default function CustomerReportsPage() {
                   </tr>
                 ) : (
                   (report.top_customers ?? []).map((c) => {
-                    const tier = tierForVisits(c.total_orders);
+                    const tier = c.loyalty_tier;
                     return (
                       <tr key={c.id} className="border-t">
                         <td className="px-4 py-3">{c.name}</td>
-                        <td className="px-4 py-3">{c.total_orders}</td>
+                        <td className="px-4 py-3">{c.visit_count}</td>
                         <td className="px-4 py-3">₱{Number(c.total_spent).toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${LOYALTY_TIER_STYLES[tier]}`}>

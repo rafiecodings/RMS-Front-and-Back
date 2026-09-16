@@ -11,6 +11,7 @@ import type {
   StaffReport,
   TaxReport,
   MonthlyTax,
+  CustomerAnalyticsReport,
 } from "./types";
 
 interface RawRevenueReport extends Record<string, unknown> {
@@ -23,9 +24,11 @@ export function normalizeRevenueReport(raw: unknown): RevenueReport {
   const r = safeObject<RawRevenueReport>(raw);
   const summary = safeObject(r.summary);
   const daily = safeArray<{ date?: unknown; revenue?: unknown; orders?: unknown }>(r.daily);
-  const totalRevenue = safeNumber(summary.total_revenue);
+  const grossRevenue = safeNumber(summary.gross_revenue ?? summary.total_revenue);
+  const refunds = safeNumber(summary.refunds);
+  const netRevenue = safeNumber(summary.net_revenue ?? summary.total_revenue);
   const totalOrders = safeNumber(summary.total_orders);
-  const aov = safeNumber(summary.avg_order_value);
+  const avgOrderValue = summary.avg_order_value;
 
   // Backend returns null when there is no comparable previous period.
   const growthRaw = summary.revenue_growth;
@@ -35,9 +38,12 @@ export function normalizeRevenueReport(raw: unknown): RevenueReport {
       : safeNumber(growthRaw);
 
   return {
-    total_revenue: totalRevenue,
+    gross_revenue: grossRevenue,
+    refunds,
+    net_revenue: netRevenue,
+    total_revenue: netRevenue,
     total_orders: totalOrders,
-    average_order_value: aov > 0 ? aov : totalOrders > 0 ? totalRevenue / totalOrders : 0,
+    average_order_value: avgOrderValue != null ? safeNumber(avgOrderValue) : totalOrders > 0 ? netRevenue / totalOrders : 0,
     revenue_growth: growth,
     daily_revenue: daily.map(
       (d): DailyRevenueData => ({
@@ -46,6 +52,29 @@ export function normalizeRevenueReport(raw: unknown): RevenueReport {
         orders: safeNumber(d.orders),
       }),
     ),
+  };
+}
+
+export function normalizeCustomerReport(raw: unknown): CustomerAnalyticsReport {
+  const report = safeObject(raw);
+  const summary = safeObject(report.summary);
+  const tiers = safeObject(summary.loyalty_tiers);
+  return {
+    total_customers: safeNumber(summary.total_customers),
+    new_in_period: safeNumber(summary.new_in_period),
+    new_this_month: safeNumber(summary.new_this_month),
+    loyal_customers: safeNumber(summary.loyal_customers),
+    loyalty_tiers: {
+      Member: safeNumber(tiers.Member), Bronze: safeNumber(tiers.Bronze),
+      Silver: safeNumber(tiers.Silver), Gold: safeNumber(tiers.Gold), Platinum: safeNumber(tiers.Platinum),
+    },
+    avg_total_spent: safeNumber(summary.avg_total_spent),
+    avg_visit_count: safeNumber(summary.avg_visit_count),
+    top_customers: safeArray<Record<string, unknown>>(report.top_customers).map((c) => ({
+      id: safeString(c.id), name: safeString(c.name), total_spent: safeNumber(c.total_spent),
+      visit_count: safeNumber(c.visit_count), loyalty_tier: safeString(c.loyalty_tier) || "Member",
+      loyalty_points: safeNumber(c.loyalty_points),
+    })),
   };
 }
 
@@ -317,6 +346,7 @@ export function normalizeTaxReport(raw: unknown): TaxReport {
 
   return {
     total_tax_collected: safeNumber(summary.total_tax_collected),
+    note: safeString(summary.note),
     monthly_tax: Array.from(monthlyMap.entries()).map(
       ([month, tax_collected]): MonthlyTax => ({
         month,

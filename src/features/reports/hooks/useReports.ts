@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import api from "@/lib/api/client";
 import type { ApiResponse } from "@/lib/types";
 import type { ReportFilters, ExportPayload } from "../types";
@@ -12,6 +13,7 @@ import {
   normalizeInventoryReport,
   normalizeStaffReport,
   normalizeTaxReport,
+  normalizeCustomerReport,
 } from "../normalizers";
 
 /**
@@ -91,7 +93,7 @@ export function useCustomerReport(filters?: ReportFilters) {
     queryFn: () =>
       api
         .get<ApiResponse<unknown>>('/reports/customer-analytics', { params: buildReportParams(filters) })
-        .then((res) => res.data.data as import('../types').CustomerAnalyticsReport),
+        .then((res) => normalizeCustomerReport(res.data.data)),
     staleTime: 60000,
   });
 }
@@ -107,36 +109,32 @@ export function useTaxReport(filters?: ReportFilters) {
   });
 }
 
-/**
- * CSV/JSON export. The backend streams a real file (CSV with UTF-8 BOM) or a
- * JSON payload — never a "pending" stub.
- */
+/** Download the attachment body exactly as returned by the report endpoint. */
+export async function fetchReportExport(payload: ExportPayload): Promise<Blob> {
+  try {
+    const res = await api.post("/reports/export", payload, { responseType: "blob" });
+    const blob = res.data as Blob;
+    if (!(blob instanceof Blob)) throw new Error("Invalid export response");
+    if (blob.type.includes("json")) {
+      const body = JSON.parse(await blob.text());
+      if (body?.success === false || payload.format !== "json") {
+        throw new Error(body?.message || "Export failed");
+      }
+    }
+    return blob;
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.data instanceof Blob) {
+      try {
+        const body = JSON.parse(await error.response.data.text());
+        throw new Error(body?.message || "Export failed");
+      } catch (parsed) {
+        if (parsed instanceof Error && !(parsed instanceof SyntaxError)) throw parsed;
+      }
+    }
+    throw error;
+  }
+}
+
 export function useExportReport() {
-  return useMutation({
-    mutationFn: async (payload: ExportPayload) => {
-      const res = await api.post("/reports/export", payload, {
-        responseType: payload.format === "json" ? "json" : "blob",
-      });
-
-      if (payload.format === "json") {
-        return new Blob([JSON.stringify(res.data?.data ?? {}, null, 2)], {
-          type: "application/json",
-        });
-      }
-
-      // Guard against an error JSON body being saved as a .csv.
-      if (res.data instanceof Blob && res.data.type.includes("json")) {
-        const text = await res.data.text();
-        let message = "Export failed";
-        try {
-          message = JSON.parse(text)?.message ?? message;
-        } catch {
-          /* keep default */
-        }
-        throw new Error(message);
-      }
-
-      return res.data as Blob;
-    },
-  });
+  return useMutation({ mutationFn: fetchReportExport });
 }

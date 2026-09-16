@@ -79,7 +79,7 @@ export default function InventoryReportsPage() {
       <div className="flex items-center justify-between">
         <PageHeader
           title="Inventory Reports"
-          description="Stock value, wastage, and low-stock alerts"
+          description="Current stock and low-stock alerts; period wastage valued at current ingredient costs"
         />
         <ExportButton
           reportType="inventory"

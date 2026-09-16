@@ -70,7 +70,7 @@ export default function MenuItemsPage() {
     }),
   }), [page, debouncedSearch, categoryFilter, availabilityFilter]);
 
-  const { list, create, update, remove } = useMenuItems(params);
+  const { list, create, update, remove, toggleAvailability } = useMenuItems(params);
 
   const items = list.data?.data?.data ?? [];
   const meta = list.data?.data?.meta;
@@ -120,16 +120,13 @@ export default function MenuItemsPage() {
   }
 
   function handleToggleAvailability(item: MenuItem) {
-    update.mutate(
-      { id: item.id, data: { is_available: !item.is_available } },
-      {
-        onSuccess: () =>
-          toast.success(
-            item.is_available ? "Item marked unavailable" : "Item marked available"
-          ),
-        onError: (e) => toast.error(apiError(e, "Failed to update item")),
-      }
-    );
+    toggleAvailability.mutate(item.id, {
+      onSuccess: () =>
+        toast.success(
+          item.is_available ? "Item marked unavailable" : "Item marked available"
+        ),
+      onError: (e) => toast.error(apiError(e, "Failed to update item")),
+    });
   }
 
   const categoryList = categories.list.data ?? [];

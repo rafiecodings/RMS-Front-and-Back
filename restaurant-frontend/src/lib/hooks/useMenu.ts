@@ -92,5 +92,10 @@ export function useMenuItems(
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
   });
 
-  return { list, create, update, remove };
+  const toggleAvailability = useMutation({
+    mutationFn: (id: string) => api.patch(`/menu/items/${id}/availability`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
+  });
+
+  return { list, create, update, remove, toggleAvailability };
 }

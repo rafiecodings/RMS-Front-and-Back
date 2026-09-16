@@ -8,9 +8,17 @@ use App\Http\Controllers\Controller;
 use App\Models\RestaurantSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SettingController extends Controller
 {
+    private function actorIsAdmin(): bool
+    {
+        $actor = Auth::user();
+        if (! $actor) return false;
+        $actor->loadMissing('roles');
+        return $actor->roles->pluck('name')->contains('admin');
+    }
     public function index(Request $request): JsonResponse
     {
         $settings = RestaurantSetting::first();
@@ -64,6 +72,10 @@ class SettingController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        if (! $this->actorIsAdmin()) {
+            return $this->error('Forbidden: Insufficient permissions', 403);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:1000',

@@ -26,14 +26,12 @@ Route::middleware(['auth:sanctum','active', 'role:admin,manager,cashier'])->grou
         Route::post('/payments/{invoiceId}/refund', [PaymentController::class, 'refund']);
     });
 
-    Route::middleware('role:admin,manager,cashier')->group(function () {
-        Route::prefix('discounts')->group(function () {
-            Route::get('/', [DiscountController::class, 'index']);
-            Route::post('/', [DiscountController::class, 'store']);
-            Route::get('/{id}', [DiscountController::class, 'show']);
-            Route::put('/{id}', [DiscountController::class, 'update']);
-            Route::delete('/{id}', [DiscountController::class, 'destroy']);
-        });
+    Route::prefix('discounts')->group(function () {
+        Route::get('/', [DiscountController::class, 'index'])->middleware('role:admin,manager,cashier');
+        Route::get('/{id}', [DiscountController::class, 'show'])->middleware('role:admin,manager,cashier');
+        Route::post('/', [DiscountController::class, 'store'])->middleware('role:admin,manager');
+        Route::put('/{id}', [DiscountController::class, 'update'])->middleware('role:admin,manager');
+        Route::delete('/{id}', [DiscountController::class, 'destroy'])->middleware('role:admin,manager');
     });
 
     Route::prefix('cash-register')->group(function () {

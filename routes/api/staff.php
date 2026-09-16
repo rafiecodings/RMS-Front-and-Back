@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\V1\Staff\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum','active'])->prefix('staff')->group(function () {
-    Route::get('/', [StaffController::class, 'index']);
+    Route::get('/', [StaffController::class, 'index'])->middleware('role:admin,manager');
     Route::get('/me', [StaffController::class, 'me']);
     Route::post('/', [StaffController::class, 'store'])->middleware('role:admin,manager');
     Route::get('/schedule', [StaffController::class, 'schedule']);
@@ -15,12 +15,12 @@ Route::middleware(['auth:sanctum','active'])->prefix('staff')->group(function ()
     Route::get('/attendance', [StaffController::class, 'attendance'])->middleware('role:admin,manager');
     Route::post('/attendance/{id}/close', [StaffController::class, 'closeAttendance'])->middleware('role:admin,manager')->whereUuid('id');
     // Employees aliases: same data layer / controller as /staff (no second table).
-    Route::get('/employees', [StaffController::class, 'index']);
+    Route::get('/employees', [StaffController::class, 'index'])->middleware('role:admin,manager');
     Route::post('/employees', [StaffController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('/employees/{id}', [StaffController::class, 'show']);
+    Route::get('/employees/{id}', [StaffController::class, 'show'])->middleware('role:admin,manager');
     Route::put('/employees/{id}', [StaffController::class, 'update'])->middleware('role:admin,manager');
     Route::delete('/employees/{id}', [StaffController::class, 'destroy'])->middleware('role:admin,manager');
-    Route::get('/{id}', [StaffController::class, 'show'])->whereUuid('id');
+    Route::get('/{id}', [StaffController::class, 'show'])->middleware('role:admin,manager')->whereUuid('id');
     Route::put('/{id}', [StaffController::class, 'update'])->middleware('role:admin,manager')->whereUuid('id');
     Route::get('/{id}/performance', [StaffController::class, 'performance'])->whereUuid('id');
     Route::post('/clock-in', [StaffController::class, 'clockIn']);

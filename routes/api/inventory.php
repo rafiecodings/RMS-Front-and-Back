@@ -56,8 +56,8 @@ Route::middleware(['auth:sanctum','active'])->prefix('inventory')->group(functio
         Route::post('/', [WastageController::class, 'store'])->middleware('role:admin,manager');
     });
 
-    Route::get('/expiry', [StockController::class, 'expiringItems']);
-    Route::get('/reconciliation', [StockController::class, 'reconciliation']);
+    Route::get('/expiry', [StockController::class, 'expiringItems'])->middleware('role:admin,manager,inventory_staff');
+    Route::get('/reconciliation', [StockController::class, 'reconciliation'])->middleware('role:admin,manager,inventory_staff');
     Route::get('/demand-forecast', [DemandForecastController::class, 'ingredients'])->middleware('role:admin,manager,inventory_staff');
 
     // Replenishment requests (lightweight restock asks — NOT procurement).

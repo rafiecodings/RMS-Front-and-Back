@@ -16,7 +16,7 @@ Route::middleware(['auth:sanctum','active'])->group(function () {
         Route::delete('/{id}/archive', [ReservationController::class, 'unarchive'])->middleware('role:admin,manager');
     });
 
-    Route::prefix('waitlist')->group(function () {
+    Route::prefix('waitlist')->middleware('role:admin,manager,waiter')->group(function () {
         Route::get('/', [WaitlistController::class, 'index']);
         Route::post('/', [WaitlistController::class, 'store']);
         Route::patch('/{id}/status', [WaitlistController::class, 'updateStatus']);

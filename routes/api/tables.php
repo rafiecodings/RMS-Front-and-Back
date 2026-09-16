@@ -26,8 +26,8 @@ Route::middleware(['auth:sanctum','active'])->group(function () {
         // orders/reservations keep their table reference.
         Route::delete('/{id}/archive', [TableController::class, 'archive'])->middleware('role:admin,manager')->whereUuid('id');
         Route::patch('/{id}/restore', [TableController::class, 'unarchive'])->middleware('role:admin,manager')->whereUuid('id');
-        Route::post('/merge', [TableController::class, 'merge']);
-        Route::post('/split', [TableController::class, 'split']);
-        Route::post('/transfer', [TableController::class, 'transfer']);
+        Route::post('/merge', [TableController::class, 'merge'])->middleware('role:admin,manager');
+        Route::post('/split', [TableController::class, 'split'])->middleware('role:admin,manager');
+        Route::post('/transfer', [TableController::class, 'transfer'])->middleware('role:admin,manager,waiter');
     });
 });

@@ -184,13 +184,31 @@ class UserController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
+        if (!empty($validated['password']) && $user->id === Auth::id()) {
+            return $this->error('Use POST /api/v1/auth/change-password to change your own password.', 422);
+        }
+
         $data = collect($validated)->only(['name', 'email', 'avatar', 'is_active'])->toArray();
 
         if (!empty($validated['password'])) {
             $data['password'] = $validated['password'];
         }
 
+        $passwordChanged = !empty($validated['password']);
+
         $user->update($data);
+
+        if ($passwordChanged) {
+            $user->tokens()->delete();
+            \App\Services\AuditLogger::record('password_changed', $user, [
+                'description' => "Password reset for user {$user->name} by admin",
+            ]);
+        }
+
+        $isDeactivation = array_key_exists('is_active', $validated) && $wasActive && ! (bool) $user->is_active;
+        if ($isDeactivation) {
+            $user->tokens()->delete();
+        }
 
         $newRole = null;
         if (!empty($validated['role'])) {

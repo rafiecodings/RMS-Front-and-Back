@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\AuthCookie;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -32,17 +33,7 @@ class RefreshTokenController extends Controller
             'expires_in' => (int) config('sanctum.expiration') * 60,
         ], 'Token refreshed successfully.')
             ->withCookie(
-                cookie(
-                    'auth_token',
-                    $token,
-                    (int) config('sanctum.expiration'),
-                    '/',
-                    null,
-                    env('APP_ENV') === 'production',
-                    true,
-                    false,
-                    'Lax',
-                )
+                AuthCookie::make($token, (int) config('sanctum.expiration'))
             );
     }
 }

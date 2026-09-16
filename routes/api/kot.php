@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\KOT\KOTController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('kot')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('kot')->group(function () {
     Route::get('/', [KOTController::class, 'index']);
     Route::get('/{id}', [KOTController::class, 'show']);
     Route::patch('/{id}/status', [KOTController::class, 'updateStatus'])->middleware('role:admin,manager,kitchen_staff');

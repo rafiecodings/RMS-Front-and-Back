@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Integration\IntegrationController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('integration')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('integration')->group(function () {
     Route::get('/status', [IntegrationController::class, 'status']);
     Route::post('/webhooks', [IntegrationController::class, 'storeWebhook'])->middleware('role:admin,manager');
     Route::get('/webhooks', [IntegrationController::class, 'listWebhooks']);

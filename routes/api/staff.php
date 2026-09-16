@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\Staff\StaffController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('staff')->group(function () {
+Route::middleware(['auth:sanctum','active'])->prefix('staff')->group(function () {
     Route::get('/', [StaffController::class, 'index']);
     Route::get('/me', [StaffController::class, 'me']);
     Route::post('/', [StaffController::class, 'store'])->middleware('role:admin,manager');

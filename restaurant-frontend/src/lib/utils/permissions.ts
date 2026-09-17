@@ -207,6 +207,33 @@ export function canArchiveOrders(role?: string): boolean {
   return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
+// Mirrors backend routes/api/tables.php:
+// POST /tables + PATCH status = admin,manager,waiter
+// PUT /{id} + archive/restore + merge/split = admin,manager
+export function canCreateTable(role?: string): boolean {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.MANAGER ||
+    role === ROLES.WAITER
+  );
+}
+
+export function canEditTable(role?: string): boolean {
+  return role === ROLES.ADMIN || role === ROLES.MANAGER;
+}
+
+export function canArchiveTable(role?: string): boolean {
+  return role === ROLES.ADMIN || role === ROLES.MANAGER;
+}
+
+export function canChangeTableStatus(role?: string): boolean {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.MANAGER ||
+    role === ROLES.WAITER
+  );
+}
+
 // Mirrors the backend serve gate (OrderController::updateStatus):
 // only admin/manager/waiter may mark a ready order as served.
 export function canServeOrder(role?: string): boolean {

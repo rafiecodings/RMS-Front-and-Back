@@ -40,7 +40,7 @@ class RecipeController extends Controller
                     'category' => $i->category,
                 ],
                 'quantity' => (float) $i->pivot->quantity,
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'cost' => (float) $i->pivot->quantity * (float) $i->cost_per_unit,
             ])->values()->toArray(),
             'ingredients_count' => $r->ingredients->count(),
@@ -64,10 +64,10 @@ class RecipeController extends Controller
         $validated = $request->validate([
             'menu_item_id' => 'required|string|exists:menu_items,id|unique:recipes,menu_item_id',
             'instructions' => 'nullable|string|max:5000',
-            'yield_quantity' => 'required|numeric|min:0',
+            'yield_quantity' => 'required|numeric|gt:0',
             'yield_unit' => 'required|string|max:50',
             'ingredients' => 'required|array|min:1',
-            'ingredients.*.ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredients.*.ingredient_id' => 'required|string|distinct|exists:ingredients,id',
             'ingredients.*.quantity' => 'required|numeric|min:0.001',
         ]);
 
@@ -77,8 +77,10 @@ class RecipeController extends Controller
         $recipe = Recipe::create($validated);
 
         foreach ($ingredientData as $ing) {
+            $ingredient = \App\Models\Ingredient::findOrFail($ing['ingredient_id']);
             $recipe->ingredients()->attach($ing['ingredient_id'], [
                 'quantity' => $ing['quantity'],
+                'unit' => $ingredient->unit,
             ]);
         }
 
@@ -134,7 +136,7 @@ class RecipeController extends Controller
                     'unit' => $i->unit,
                     'category' => $i->category,
                 ],
-                'unit' => $i->unit,
+                'unit' => $i->pivot->unit ?? $i->unit,
                 'quantity' => (float) $i->pivot->quantity,
                 'cost_per_unit' => (float) $i->cost_per_unit,
                 'cost' => (float) $i->pivot->quantity * (float) $i->cost_per_unit,
@@ -155,10 +157,10 @@ class RecipeController extends Controller
 
         $validated = $request->validate([
             'instructions' => 'nullable|string|max:5000',
-            'yield_quantity' => 'sometimes|numeric|min:0',
+            'yield_quantity' => 'sometimes|numeric|gt:0',
             'yield_unit' => 'sometimes|string|max:50',
             'ingredients' => 'sometimes|array|min:1',
-            'ingredients.*.ingredient_id' => 'required|string|exists:ingredients,id',
+            'ingredients.*.ingredient_id' => 'required|string|distinct|exists:ingredients,id',
             'ingredients.*.quantity' => 'required|numeric|min:0.001',
         ]);
 
@@ -170,8 +172,10 @@ class RecipeController extends Controller
         if ($ingredientData !== null) {
             $recipe->ingredients()->detach();
             foreach ($ingredientData as $ing) {
+                $ingredient = \App\Models\Ingredient::findOrFail($ing['ingredient_id']);
                 $recipe->ingredients()->attach($ing['ingredient_id'], [
                     'quantity' => $ing['quantity'],
+                    'unit' => $ingredient->unit,
                 ]);
             }
         }

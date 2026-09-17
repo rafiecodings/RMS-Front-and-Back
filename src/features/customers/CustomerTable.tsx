@@ -59,7 +59,6 @@ export function CustomerTable({
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Loyalty Tier</TableHead>
               <TableHead className="text-right">Orders</TableHead>
               <TableHead className="text-right">Visits</TableHead>
               <TableHead className="text-right">Reservations</TableHead>
@@ -74,11 +73,6 @@ export function CustomerTable({
                   <button onClick={() => onView?.(customer)} className="font-medium hover:underline text-left">
                     {customer.name}
                   </button>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0">
-                    {customer.loyalty_tier ?? "Member"}
-                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">{customer.total_orders}</TableCell>
                 <TableCell className="text-right">{customer.visit_count ?? 0}</TableCell>
@@ -110,9 +104,6 @@ export function CustomerTable({
                 <EntityActionDropdown onView={onView ? () => onView(customer) : undefined} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
               </div>
             </div>
-            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] px-1.5 py-0">
-              {customer.loyalty_tier ?? "Member"}
-            </Badge>
             <div className="grid grid-cols-3 gap-2 text-sm">
               <div><p className="text-xs text-muted-foreground">Orders</p><p className="font-medium">{customer.total_orders}</p></div>
               <div><p className="text-xs text-muted-foreground">Visits</p><p className="font-medium">{customer.visit_count ?? 0}</p></div>

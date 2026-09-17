@@ -4,12 +4,12 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StockAdjustDialog, StockMovementTable } from "@/features/inventory";
-import { useIngredients, useStockAdjust, useStockMovements } from "@/lib/hooks";
+import { StockAdjustDialog, RecordDeliveryDialog, StockMovementTable } from "@/features/inventory";
+import { useIngredients, useStockAdjust, useRecordDelivery, useStockMovements } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
-import { canManageIngredients } from "@/lib/utils/permissions";
+import { canManageIngredients, canRecordDelivery } from "@/lib/utils/permissions";
 import { formatCurrency } from "@/lib/utils";
-import { Pencil, PackagePlus } from "lucide-react";
+import { Pencil, PackagePlus, Truck } from "lucide-react";
 import { toast } from "sonner";
 import type { Ingredient, StockAdjustFormData } from "@/lib/types";
 
@@ -32,6 +32,7 @@ export function IngredientDetail({
 }: IngredientDetailProps) {
   const { user } = useAuth();
   const canModify = canEdit ?? canManageIngredients(user?.role);
+  const canDeliver = canRecordDelivery(user?.role);
 
   const { data: movementsData, isLoading: movementsLoading } = useStockMovements({
     ingredient_id: ingredient.id,
@@ -41,7 +42,9 @@ export function IngredientDetail({
 
   const { update } = useIngredients({ per_page: 200 });
   const adjustStock = useStockAdjust();
+  const recordDelivery = useRecordDelivery();
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [activeConfirm, setActiveConfirm] = useState(false);
 
   const stockStatus =
@@ -55,6 +58,20 @@ export function IngredientDetail({
     adjustStock.mutate(data, {
       onSuccess: () => toast.success("Stock adjusted successfully"),
       onError: (e: Error) => toast.error(e.message || "Failed to adjust stock"),
+    });
+  }
+
+  function handleDelivery(data: { ingredient_id: string; quantity: number; notes?: string }) {
+    recordDelivery.mutate(data, {
+      onSuccess: () => {
+        toast.success("Stock delivery recorded successfully.");
+        setDeliveryOpen(false);
+      },
+      onError: (e: unknown) => {
+        const message = (e as { response?: { data?: { message?: string } } })
+          .response?.data?.message;
+        toast.error(message || "Failed to record delivery");
+      },
     });
   }
 
@@ -75,6 +92,12 @@ export function IngredientDetail({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
+        {canDeliver && (
+          <Button variant="default" size="sm" onClick={() => setDeliveryOpen(true)}>
+            <Truck className="h-4 w-4 mr-1" />
+            Record Delivery
+          </Button>
+        )}
         {canModify && (
           <>
             <Button variant="outline" size="sm" onClick={() => setAdjustOpen(true)}>
@@ -160,6 +183,16 @@ export function IngredientDetail({
         onOpenChange={setAdjustOpen}
         onSubmit={handleAdjust}
         isLoading={adjustStock.isPending}
+      />
+
+      <RecordDeliveryDialog
+        ingredientId={ingredient.id}
+        ingredientName={ingredient.name}
+        ingredientUnit={ingredient.unit}
+        open={deliveryOpen}
+        onOpenChange={setDeliveryOpen}
+        onSubmit={handleDelivery}
+        isLoading={recordDelivery.isPending}
       />
 
       <ConfirmDialog

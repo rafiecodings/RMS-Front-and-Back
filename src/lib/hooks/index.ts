@@ -19,6 +19,7 @@ export {
   useRecipe,
   useStockMovements,
   useStockAdjust,
+  useRecordDelivery,
   useStockTransfer,
   useLogWastage,
 } from "./useInventory";

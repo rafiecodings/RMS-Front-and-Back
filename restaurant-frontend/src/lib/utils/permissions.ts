@@ -261,6 +261,14 @@ export function canManageRecipes(role: string | undefined): boolean {
   return role === ROLES.ADMIN || role === ROLES.MANAGER;
 }
 
+// Ingredient catalog + direct stock adjustment are Admin / Manager only.
+// Inventory staff may VIEW ingredients and use replenishment, but direct
+// POST/PUT/DELETE /inventory/ingredients and POST /inventory/stock/*
+// return 403 for inventory_staff (backend routes/api/inventory.php).
+export function canManageIngredients(role: string | undefined): boolean {
+  return role === ROLES.ADMIN || role === ROLES.MANAGER;
+}
+
 // Purchase-order action gating. Frontend is UX-only; the backend remains the
 // authoritative enforcer. These mirror the backend authorization rules.
 export function canConfirmPurchaseOrder(role: string | undefined): boolean {

@@ -20,6 +20,7 @@ import type { Ingredient } from "@/lib/types";
 interface IngredientTableProps {
   ingredients: Ingredient[];
   isLoading: boolean;
+  isError?: boolean;
   search: string;
   onSearchChange: (v: string) => void;
   categoryFilter: string;
@@ -57,6 +58,7 @@ const STATUS_RING: Record<StockStatus, string> = {
 export function IngredientTable({
   ingredients,
   isLoading,
+  isError,
   search,
   onSearchChange,
   categoryFilter,
@@ -181,7 +183,7 @@ export function IngredientTable({
         </div>
       )}
 
-      {!isLoading && (
+      {!isLoading && !isError && (
         <TablePagination
           currentPage={currentPage}
           totalPages={totalPages}

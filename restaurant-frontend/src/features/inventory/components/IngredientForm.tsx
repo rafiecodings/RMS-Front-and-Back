@@ -35,9 +35,9 @@ export function IngredientForm({
   const { list: suppliersList } = useSuppliers({ per_page: 100 });
   const suppliers = suppliersList.data?.data?.data ?? [];
 
+  const isEdit = !!initialData;
   const [form, setForm] = useState<IngredientFormData>({
     name: initialData?.name ?? "",
-    description: initialData?.description ?? "",
     unit: initialData?.unit ?? "kg",
     current_stock: initialData?.current_stock ?? 0,
     minimum_stock: initialData?.minimum_stock ?? 0,
@@ -82,7 +82,6 @@ export function IngredientForm({
     onSubmit({
       ...form,
       name: name(form.name),
-      description: form.description?.trim() || undefined,
       supplier_id: form.supplier_id || undefined,
     });
   }
@@ -126,14 +125,6 @@ export function IngredientForm({
             </Select>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Description</Label>
-          <Input
-            value={form.description ?? ""}
-            onChange={(e) => update("description", e.target.value || undefined)}
-            placeholder="Optional description"
-          />
-        </div>
       </div>
 
       <div className="rounded-lg border bg-card p-6 space-y-4">
@@ -153,17 +144,28 @@ export function IngredientForm({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Current Stock *</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.current_stock}
-              onChange={(e) => update("current_stock", parseFloat(e.target.value) || 0)}
-              required
-              aria-invalid={!!errors.current_stock}
-            />
-            {errors.current_stock && <p className="text-xs text-destructive">{errors.current_stock}</p>}
+            <Label className="text-sm font-medium">Current Stock {isEdit ? "" : "*"}</Label>
+            {isEdit ? (
+              <div>
+                <p className="text-sm font-semibold tabular-nums">
+                  {form.current_stock} {form.unit}
+                </p>
+                <p className="text-xs text-muted-foreground">Use Adjust Stock to change inventory quantity.</p>
+              </div>
+            ) : (
+              <>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.current_stock}
+                  onChange={(e) => update("current_stock", parseFloat(e.target.value) || 0)}
+                  required
+                  aria-invalid={!!errors.current_stock}
+                />
+                {errors.current_stock && <p className="text-xs text-destructive">{errors.current_stock}</p>}
+              </>
+            )}
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium">Minimum Stock *</Label>

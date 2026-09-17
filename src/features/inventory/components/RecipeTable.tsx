@@ -10,6 +10,7 @@ import type { Recipe } from "@/lib/types";
 interface RecipeTableProps {
   recipes: Recipe[];
   isLoading: boolean;
+  isError?: boolean;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -21,6 +22,7 @@ interface RecipeTableProps {
 export function RecipeTable({
   recipes,
   isLoading,
+  isError,
   currentPage,
   totalPages,
   onPageChange,
@@ -108,7 +110,7 @@ export function RecipeTable({
         </div>
       )}
 
-      {totalPages > 1 && (
+      {!isError && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}

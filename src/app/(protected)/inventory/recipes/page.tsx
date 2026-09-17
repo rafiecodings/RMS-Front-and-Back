@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, ErrorState } from "@/components/shared";
 import {
   Dialog,
   DialogContent,
@@ -48,13 +48,20 @@ export default function RecipesPage() {
   const recipes = list.data?.data?.data ?? [];
   const totalPages = list.data?.data?.meta?.last_page ?? 1;
 
+  function serverMessage(error: unknown, fallback: string): string {
+    const data = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+      ?.response?.data;
+    const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+    return firstError ?? data?.message ?? fallback;
+  }
+
   function handleCreate(data: RecipeFormData) {
     create.mutate(data, {
       onSuccess: () => {
         toast.success("Recipe created");
         setActiveModal(null);
       },
-      onError: () => toast.error("Failed to create recipe"),
+      onError: (error) => toast.error(serverMessage(error, "Failed to create recipe")),
     });
   }
 
@@ -67,7 +74,7 @@ export default function RecipesPage() {
           toast.success("Recipe updated");
           setActiveModal(null);
         },
-        onError: () => toast.error("Failed to update recipe"),
+        onError: (error) => toast.error(serverMessage(error, "Failed to update recipe")),
       }
     );
   }
@@ -87,16 +94,21 @@ export default function RecipesPage() {
         }
       />
 
-      <RecipeTable
-        recipes={recipes}
-        isLoading={list.isLoading}
-        currentPage={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        canEdit={canManage}
-        onView={(item) => setActiveModal({ mode: "view", item })}
-        onEdit={canManage ? (item) => setActiveModal({ mode: "edit", item }) : undefined}
-      />
+      {list.isError ? (
+        <ErrorState message="Failed to load recipes. Please try again." onRetry={() => list.refetch()} />
+      ) : (
+        <RecipeTable
+          recipes={recipes}
+          isLoading={list.isLoading}
+          isError={list.isError}
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          canEdit={canManage}
+          onView={(item) => setActiveModal({ mode: "view", item })}
+          onEdit={canManage ? (item) => setActiveModal({ mode: "edit", item }) : undefined}
+        />
+      )}
 
       <Dialog
         open={activeModal?.mode === "add" || activeModal?.mode === "edit"}

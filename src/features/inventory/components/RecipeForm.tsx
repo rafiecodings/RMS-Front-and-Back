@@ -94,14 +94,14 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
     }));
   }
 
-  function updateIngredient(index: number, field: "ingredient_id" | "quantity" | "unit", value: string | number) {
+  function updateIngredient(index: number, field: "ingredient_id" | "quantity", value: string | number) {
     setForm((prev) => ({
       ...prev,
       ingredients: prev.ingredients.map((ing, i) => {
         if (i !== index) return ing;
         const updated = { ...ing, [field]: value };
-        // When an ingredient is selected, default the row unit to that
-        // ingredient's base unit (the recipe may still override it).
+        // Ingredient base unit is authoritative — always sync row unit
+        // from the selected ingredient. No manual override.
         if (field === "ingredient_id" && value) {
           const selected = ingredients.find((ing2) => ing2.id === value);
           if (selected) updated.unit = selected.unit;
@@ -110,8 +110,6 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
       }),
     }));
   }
-
-  const UNITS = ["kg", "g", "mg", "L", "mL", "oz", "lb", "pcs", "bunch", "pack"];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -168,7 +166,7 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Instructions</Label>
+          <Label className="text-sm font-medium">Instructions (optional)</Label>
           <Textarea
             value={form.instructions ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, instructions: e.target.value }))}
@@ -194,7 +192,10 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
         ) : (
           <div className="space-y-3">
             {form.ingredients.map((ing, idx) => {
-              const ingName = ingredients.find((i) => i.id === ing.ingredient_id)?.name;
+              const selected = ingredients.find((i) => i.id === ing.ingredient_id);
+              const ingName = selected?.name;
+              const rowUnit = selected?.unit ?? ing.unit ?? "—";
+              const isStale = ing.ingredient_id && !selected;
               return (
                 <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Select
@@ -204,19 +205,28 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
                     <SelectTrigger className="w-full sm:flex-1">
                       {ingName ? (
                         <span className="truncate">{ingName}</span>
+                      ) : isStale ? (
+                        <span className="truncate">Unavailable ingredient</span>
                       ) : (
                         <SelectValue placeholder="Select ingredient" />
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      {ingredients.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.name}
+                      {ingredients
+                        .filter((i) => i.is_active !== false)
+                        .map((i) => (
+                          <SelectItem key={i.id} value={i.id} className="truncate">
+                            {i.name}
+                          </SelectItem>
+                        ))}
+                      {isStale && (
+                        <SelectItem value={ing.ingredient_id} disabled className="truncate">
+                          Unavailable ingredient
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <Input
                       type="number"
                       min={0}
@@ -226,16 +236,9 @@ export function RecipeForm({ initialData, onSubmit, isLoading, onCancel }: Recip
                       className="flex-1 sm:w-24"
                       placeholder="Qty"
                     />
-                    <Select value={ing.unit} onValueChange={(v) => updateIngredient(idx, "unit", v ?? ing.unit)}>
-                      <SelectTrigger className="flex-1 sm:w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {UNITS.map((u) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <span className="flex-1 sm:w-24 text-sm text-muted-foreground tabular-nums truncate" title={rowUnit}>
+                      {rowUnit}
+                    </span>
                   </div>
                   <Button type="button" variant="ghost" size="icon-sm" onClick={() => removeIngredient(idx)} className="w-full sm:w-auto justify-center">
                     <Trash2 className="h-4 w-4 text-destructive" />

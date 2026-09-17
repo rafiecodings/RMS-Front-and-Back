@@ -34,7 +34,6 @@ export {
   useCloseAttendance,
   useLeaveRequests,
   useCurrentStaff,
-  useStaffCommissions,
 } from "./useStaff";
 export { useDashboard } from "./useDashboard";
 export { useUsers, useUser } from "./useUsers";

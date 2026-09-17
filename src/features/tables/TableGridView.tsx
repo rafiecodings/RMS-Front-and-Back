@@ -20,7 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Table as TableType, TableStatus } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatLabel } from "@/lib/utils";
 
 const STATUS_BADGE: Record<TableStatus, string> = {
   available:
@@ -63,6 +63,9 @@ export function TableGridView({
   onEdit,
   onArchive,
   onRestore,
+  canEdit = true,
+  canArchive = true,
+  canChangeStatus = true,
 }: {
   tables: TableType[];
   onStatusChange?: (table: TableType, status: TableStatus) => void;
@@ -70,6 +73,9 @@ export function TableGridView({
   onEdit?: (table: TableType) => void;
   onArchive?: (table: TableType) => void;
   onRestore?: (table: TableType) => void;
+  canEdit?: boolean;
+  canArchive?: boolean;
+  canChangeStatus?: boolean;
 }) {
   if (tables.length === 0) {
     return null;
@@ -117,13 +123,13 @@ export function TableGridView({
                   <Eye className="h-3.5 w-3.5 mr-2" />
                   View
                 </DropdownMenuItem>
-                {!isArchived && (
+                {!isArchived && canEdit && (
                   <DropdownMenuItem onClick={() => onEdit?.(table)}>
                     <Pencil className="h-3.5 w-3.5 mr-2" />
                     Edit
                   </DropdownMenuItem>
                 )}
-                {!isArchived && onStatusChange && table.status !== "available" && (
+                {!isArchived && canChangeStatus && onStatusChange && table.status !== "available" && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "available")}
                   >
@@ -131,7 +137,7 @@ export function TableGridView({
                     Mark Available
                   </DropdownMenuItem>
                 )}
-                {!isArchived && onStatusChange && table.status !== "needs_cleaning" && (
+                {!isArchived && canChangeStatus && onStatusChange && table.status !== "needs_cleaning" && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "needs_cleaning")}
                   >
@@ -139,7 +145,7 @@ export function TableGridView({
                     Mark Needs Cleaning
                   </DropdownMenuItem>
                 )}
-                {!isArchived && onStatusChange && table.status !== "maintenance" && (
+                {!isArchived && canChangeStatus && onStatusChange && table.status !== "maintenance" && (
                   <DropdownMenuItem
                     onClick={() => onStatusChange(table, "maintenance")}
                   >
@@ -148,19 +154,23 @@ export function TableGridView({
                   </DropdownMenuItem>
                 )}
                 {table.is_active !== false ? (
-                  <DropdownMenuItem
-                    onClick={() => onArchive?.(table)}
-                  >
-                    <Archive className="h-3.5 w-3.5 mr-2" />
-                    Archive
-                  </DropdownMenuItem>
+                  canArchive ? (
+                    <DropdownMenuItem
+                      onClick={() => onArchive?.(table)}
+                    >
+                      <Archive className="h-3.5 w-3.5 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                  ) : null
                 ) : (
-                  <DropdownMenuItem
-                    onClick={() => onRestore?.(table)}
-                  >
-                    <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
-                    Restore
-                  </DropdownMenuItem>
+                  canArchive ? (
+                    <DropdownMenuItem
+                      onClick={() => onRestore?.(table)}
+                    >
+                      <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
+                      Restore
+                    </DropdownMenuItem>
+                  ) : null
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -184,7 +194,7 @@ export function TableGridView({
               <Badge
                 variant="secondary"
                 className="text-[9px] px-1 py-0 h-4 bg-muted text-muted-foreground"
-                title={`Underlying status: ${table.status.replace(/_/g, " ")}`}
+                title={`Underlying status: ${formatLabel(table.status)}`}
               >
                 Archived
               </Badge>
@@ -196,7 +206,7 @@ export function TableGridView({
                   STATUS_BADGE[table.status]
                 )}
               >
-                {table.status.replace(/_/g, " ")}
+                {formatLabel(table.status)}
               </Badge>
             )}
           </div>

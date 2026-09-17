@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ConfirmDialog } from "@/components/shared";
+import { PageHeader, ConfirmDialog, LoadingSpinner, ErrorState } from "@/components/shared";
+import { useAuth } from "@/providers/AuthProvider";
+import { canCreateTable, canEditTable, canArchiveTable, canChangeTableStatus } from "@/lib/utils/permissions";
 import {
   TableStats,
   TableForm,
@@ -59,6 +61,11 @@ export default function TablesPage() {
 
   const tables = useTables();
   const allTables = tables.list.data ?? [];
+  const { user } = useAuth();
+  const canCreate = canCreateTable(user?.role);
+  const canEdit = canEditTable(user?.role);
+  const canArchive = canArchiveTable(user?.role);
+  const canChangeStatus = canChangeTableStatus(user?.role);
 
   const visibleTables = showArchived
     ? allTables
@@ -153,16 +160,18 @@ export default function TablesPage() {
         title="Tables"
         description="Manage restaurant tables"
         action={
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingTable(null);
-              setShowTableDialog(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Table
-          </Button>
+          canCreate ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingTable(null);
+                setShowTableDialog(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Table
+            </Button>
+          ) : undefined
         }
       />
 
@@ -198,19 +207,30 @@ export default function TablesPage() {
           Show archived
         </label>
 
-        <TableGridView
-          tables={filteredTables}
-          onStatusChange={handleStatusChange}
-          onView={(t) => setViewTarget(t)}
-          onEdit={(t) => {
-            setEditingTable(t);
-            setShowTableDialog(true);
-          }}
-          onArchive={(t) => setArchiveTarget(t)}
-          onRestore={(t) => setRestoreTarget(t)}
-        />
+        {tables.list.isLoading ? (
+          <div className="flex justify-center py-12" role="status" aria-label="Loading tables">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : tables.list.isError ? (
+          <ErrorState message="Failed to load tables. Please try again." onRetry={() => tables.list.refetch()} />
+        ) : (
+          <TableGridView
+            tables={filteredTables}
+            onStatusChange={canChangeStatus ? handleStatusChange : undefined}
+            onView={(t) => setViewTarget(t)}
+            onEdit={canEdit ? (t) => {
+              setEditingTable(t);
+              setShowTableDialog(true);
+            } : undefined}
+            onArchive={canArchive ? (t) => setArchiveTarget(t) : undefined}
+            onRestore={canArchive ? (t) => setRestoreTarget(t) : undefined}
+            canEdit={canEdit}
+            canArchive={canArchive}
+            canChangeStatus={canChangeStatus}
+          />
+        )}
 
-        {filteredTables.length === 0 && !tables.list.isLoading && (
+        {filteredTables.length === 0 && !tables.list.isLoading && !tables.list.isError && (
           <div className="text-center py-12 text-muted-foreground">
             <LayoutGrid className="h-12 w-12 mx-auto mb-2 opacity-30" />
             <p>
@@ -259,18 +279,20 @@ export default function TablesPage() {
             if (!open) setEditingTable(null);
           }}
         >
-          <DialogContent className="sm:max-w-md max-h-[calc(100dvh-24px)] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-md w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
               <DialogTitle>
                 {editingTable ? "Edit Table" : "New Table"}
               </DialogTitle>
             </DialogHeader>
-            <TableForm
-              initialData={editingTable ?? undefined}
-              onSubmit={handleTableSubmit}
-              isLoading={tables.create.isPending || tables.update.isPending}
-              submitLabel={editingTable ? "Update" : "Create"}
-            />
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4">
+              <TableForm
+                initialData={editingTable ?? undefined}
+                onSubmit={handleTableSubmit}
+                isLoading={tables.create.isPending || tables.update.isPending}
+                submitLabel={editingTable ? "Update" : "Create"}
+              />
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -278,15 +300,15 @@ export default function TablesPage() {
           open={!!viewTarget}
           onOpenChange={(open) => !open && setViewTarget(null)}
         >
-          <DialogContent className="sm:max-w-md max-h-[calc(100dvh-24px)] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-md w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
               <DialogTitle>
                 Table T{viewTarget?.number}
                 {viewTarget?.name ? ` · ${viewTarget.name}` : ""}
               </DialogTitle>
             </DialogHeader>
             {viewTarget && (
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4">
                 <div className="flex items-center gap-2">
                   {viewTarget.is_active === false ? (
                     <Badge

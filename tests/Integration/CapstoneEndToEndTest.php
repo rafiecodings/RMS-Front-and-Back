@@ -167,15 +167,15 @@ class CapstoneEndToEndTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
             ->assertStatus(409);
 
-        // Inventory is consumed exactly once, at confirmation (not at payment).
+        // No deduction before payment (deducted atomically at completion).
         $this->assertEquals(
-            1,
+            0,
             StockMovement::where('reference_type', 'order')
                 ->where('reference_id', $orderId)
                 ->where('type', 'outward')
                 ->count()
         );
-        $this->assertEquals(300.0, (float) $this->ingredient->refresh()->current_stock);
+        $this->assertEquals(500.0, (float) $this->ingredient->refresh()->current_stock);
 
         // --- POS Payment (cash, full) → auto-completes the order ---
         $total = (float) Order::find($orderId)->total;

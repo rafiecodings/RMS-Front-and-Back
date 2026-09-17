@@ -56,17 +56,72 @@ class OrderWorkflowService
         return $kot->load('items');
     }
 
+    /**
+     * Confirm / Send to Kitchen (manuscript-aligned).
+     *
+     * 1. Non-mutating availability pre-check (throws InsufficientStockException).
+     * 2. Create KOT.
+     * 3. NO current_stock decrement, NO outward StockMovement here.
+     *
+     * Actual deduction happens atomically at payment/completion.
+     */
     public function confirmOrder(Order $order, User $user): array
     {
         return DB::transaction(function () use ($order, $user) {
-            $deducted = $this->deductInventoryForCompletedOrder($order, $user, true);
+            $checked = $this->checkAvailability($order);
 
-            if (($deducted['skipped'] ?? false) || ($deducted['deducted'] ?? false)) {
-                $this->createKotBody($order);
+            $this->createKotForOrder($order);
+
+            return array_merge($checked, ['kot_created' => true]);
+        });
+    }
+
+    /**
+     * Non-mutating availability validation for confirm-time.
+     * Reuses requirement calculation; respects allow_negative_inventory;
+     * throws InsufficientStockException without changing stock or movements.
+     */
+    public function checkAvailability(Order $order): array
+    {
+        if (in_array($order->status, ['cancelled', 'voided'], true)) {
+            return ['skipped' => true, 'reason' => 'Order is cancelled or voided.'];
+        }
+
+        $settings = RestaurantSetting::first();
+        $allowNegative = (bool) ($settings?->allow_negative_inventory ?? false);
+
+        $orderItems = $order->items()->get();
+        $requirements = $this->calculateRequirements($orderItems);
+
+        if (empty($requirements)) {
+            return ['skipped' => true, 'reason' => 'No recipes found for order items.'];
+        }
+
+        $insufficient = [];
+
+        foreach ($requirements as $ingredientId => $qty) {
+            $ingredient = Ingredient::find($ingredientId);
+            if (! $ingredient) {
+                continue;
             }
 
-            return $deducted;
-        });
+            $currentStock = (float) $ingredient->current_stock;
+
+            if (! $allowNegative && $currentStock < $qty) {
+                $insufficient[] = [
+                    'ingredient_id' => $ingredientId,
+                    'name' => $ingredient->name,
+                    'current_stock' => $currentStock,
+                    'required' => round($qty, 3),
+                ];
+            }
+        }
+
+        if (! empty($insufficient) && ! $allowNegative) {
+            throw new InsufficientStockException($insufficient);
+        }
+
+        return ['checked' => true, 'insufficient' => $insufficient];
     }
 
     public function deductInventoryForCompletedOrder(Order $order, User $user, bool $skipTransaction = false): array

@@ -36,14 +36,14 @@ class OrderWorkflowIntegrationTest extends TestCase
 
         $orderId = $this->createOrderViaApi($menuItem);
 
-        // Confirm → KOT generated AND inventory consumed exactly once.
+        // Confirm → KOT generated, NO inventory movement (deducted at completion).
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
             ->assertStatus(200);
 
         $this->assertEquals(1, KotTicket::where('order_id', $orderId)->count());
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
-        $this->assertEquals(300, $ingredient->refresh()->current_stock);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
+        $this->assertEquals(500, $ingredient->refresh()->current_stock);
 
         // Completing while unpaid must be refused; settlement happens via payment.
         $this->actingAs($this->user)
@@ -52,11 +52,11 @@ class OrderWorkflowIntegrationTest extends TestCase
 
         Order::where('id', $orderId)->update(['status' => 'served']);
 
-        // Inventory already deducted at confirm (exactly once).
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
-        $this->assertEquals(300, $ingredient->refresh()->current_stock);
+        // Still no deduction before payment.
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
+        $this->assertEquals(500, $ingredient->refresh()->current_stock);
 
-        // Pay the order — must NOT deduct recipe inventory again.
+        // Pay the order — deducts recipe inventory exactly once.
         $this->actingAs($this->user)
             ->postJson("/api/v1/orders/{$orderId}/payments", [
                 'payment_method' => 'cash',
@@ -81,7 +81,7 @@ class OrderWorkflowIntegrationTest extends TestCase
 
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
 
-        // Re-complete → idempotent no-op (already deducted at confirm).
+        // Re-complete → idempotent no-op (already deducted at payment).
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
             ->assertStatus(200);
@@ -103,7 +103,7 @@ class OrderWorkflowIntegrationTest extends TestCase
         $this->assertEquals(1, $order->items()->count());
     }
 
-    public function test_void_reverses_inventory_correctly(): void
+    public function test_void_before_completion_creates_no_reversal(): void
     {
         [$menuItem, $ingredient] = $this->createMenuItemWithRecipe(500);
 
@@ -113,31 +113,14 @@ class OrderWorkflowIntegrationTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
             ->assertStatus(200);
 
-        Order::where('id', $orderId)->update(['status' => 'served']);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
 
         $this->actingAs($this->user)
-            ->postJson("/api/v1/orders/{$orderId}/payments", [
-                'payment_method' => 'cash',
-                'amount' => 100,
-            ])
-            ->assertStatus(201);
-
-        $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'])
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'cancelled', 'reason' => 'Integration test no-op reversal'])
             ->assertStatus(200);
 
-        $this->assertEquals(300.0, (float) $ingredient->refresh()->current_stock);
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
-
-        // Reset to a cancellable state (completed orders cannot be cancelled)
-        $order = Order::find($orderId);
-        $order->update(['status' => 'confirmed', 'payment_status' => 'unpaid']);
-
-        $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'cancelled', 'reason' => 'Integration test reversal'])
-            ->assertStatus(200);
-
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order_reversal')->where('reference_id', $orderId)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order_reversal')->where('reference_id', $orderId)->count());
         $this->assertEquals(500.0, (float) $ingredient->refresh()->current_stock);
         $this->assertEquals('cancelled', Order::find($orderId)->status);
     }
@@ -167,21 +150,21 @@ class OrderWorkflowIntegrationTest extends TestCase
         $this->assertEquals('paid', $order->invoice->status);
     }
 
-    public function test_confirm_consumes_inventory_once_and_serve_does_not_rededuct(): void
+    public function test_confirm_creates_kot_and_serve_does_not_deduct_before_payment(): void
     {
         [$menuItem, $ingredient] = $this->createMenuItemWithRecipe(500);
 
         $orderId = $this->createOrderViaApi($menuItem);
 
-        // Confirm consumes exactly once.
+        // Confirm creates KOT with zero deduction.
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
             ->assertStatus(200);
 
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
-        $this->assertEquals(300, $ingredient->refresh()->current_stock);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
+        $this->assertEquals(500, $ingredient->refresh()->current_stock);
 
-        // Walk the kitchen machine: preparing → ready → served. No rededuction.
+        // Walk the kitchen machine: preparing → ready → served. Still no deduction.
         $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'preparing'])
             ->assertStatus(200);
@@ -192,8 +175,8 @@ class OrderWorkflowIntegrationTest extends TestCase
             ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
             ->assertStatus(200);
 
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
-        $this->assertEquals(300, $ingredient->refresh()->current_stock);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $orderId)->where('type', 'outward')->count());
+        $this->assertEquals(500, $ingredient->refresh()->current_stock);
     }
 
     public function test_insufficient_stock_blocks_confirmation_gracefully(): void

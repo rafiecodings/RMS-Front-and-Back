@@ -64,9 +64,10 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals('confirmed', $order->refresh()->status);
     }
 
-    public function test_confirm_triggers_inventory_deduction(): void
+    public function test_confirm_creates_kot_without_deduction(): void
     {
         $order = $this->createOrderWithInventory('pending', 'unpaid');
+        $stockBefore = (float) Ingredient::first()->current_stock;
 
         $response = $this->actingAs($this->user)
             ->patchJson("/api/v1/orders/{$order->id}/status", [
@@ -74,7 +75,9 @@ class OrderWorkflowTest extends TestCase
             ]);
 
         $response->assertStatus(200);
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals($stockBefore, (float) Ingredient::first()->fresh()->current_stock);
     }
 
     public function test_completed_without_settled_payment_does_not_deduct(): void
@@ -90,7 +93,7 @@ class OrderWorkflowTest extends TestCase
         $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
     }
 
-    public function test_void_after_deduction_creates_reversal_movement(): void
+    public function test_void_before_completion_creates_no_reversal(): void
     {
         $order = $this->createOrderWithInventory('pending', 'unpaid');
 
@@ -100,7 +103,7 @@ class OrderWorkflowTest extends TestCase
             ])
             ->assertStatus(200);
 
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
 
         $order->update(['status' => 'confirmed', 'payment_status' => 'unpaid']);
 
@@ -110,33 +113,78 @@ class OrderWorkflowTest extends TestCase
             ]);
 
         $response->assertStatus(200);
-        $this->assertEquals(1, StockMovement::where('reference_type', 'order_reversal')->where('reference_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order_reversal')->where('reference_id', $order->id)->count());
     }
 
-    public function test_repeated_completion_does_not_double_deduct(): void
+    public function test_payment_deducts_exactly_once(): void
     {
-        $order = $this->createOrderWithInventory('pending', 'unpaid');
+        $order = $this->createOrderWithInventory('served', 'unpaid');
+        $stockBefore = (float) Ingredient::first()->current_stock;
 
         $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'confirmed',
+            ->postJson("/api/v1/orders/{$order->id}/payments", [
+                'payment_method' => 'cash',
+                'amount' => 100,
             ])
-            ->assertStatus(200);
+            ->assertStatus(201);
 
-        // Subsequent completion attempts are refused and never rededuct.
-        $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
-            ])
-            ->assertStatus(409);
+        $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertLessThan($stockBefore, (float) Ingredient::first()->fresh()->current_stock);
+        $this->assertEquals('completed', Order::find($order->id)->status);
 
+        // Retry is refused (already paid) and never rededucts.
         $this->actingAs($this->user)
-            ->patchJson("/api/v1/orders/{$order->id}/status", [
-                'status' => 'completed',
+            ->postJson("/api/v1/orders/{$order->id}/payments", [
+                'payment_method' => 'cash',
+                'amount' => 100,
             ])
             ->assertStatus(409);
 
         $this->assertEquals(1, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+    }
+
+    public function test_insufficient_stock_at_payment_rolls_back(): void
+    {
+        $order = $this->createOrderWithInventory('served', 'unpaid', 10);
+        $stockBefore = (float) Ingredient::first()->current_stock;
+
+        // Recipe needs 200g but only 10g on hand (negatives disabled by default
+        // in this path since no setting row exists... ensure explicit).
+        \App\Models\RestaurantSetting::create([
+            'name' => 'Test Restaurant',
+            'allow_negative_inventory' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$order->id}/payments", [
+                'payment_method' => 'cash',
+                'amount' => 100,
+            ]);
+
+        $response->assertStatus(422);
+        $fresh = Order::find($order->id);
+        $this->assertEquals('served', $fresh->status);
+        $this->assertEquals('unpaid', $fresh->payment_status);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals($stockBefore, (float) Ingredient::first()->fresh()->current_stock);
+    }
+
+    public function test_full_lifecycle_has_no_deduction_before_payment(): void
+    {
+        $order = $this->createOrderWithInventory('pending', 'unpaid');
+
+        foreach (['confirmed', 'preparing', 'ready', 'served'] as $state) {
+            if ($state === 'confirmed') {
+                $this->actingAs($this->user)
+                    ->patchJson("/api/v1/orders/{$order->id}/status", ['status' => $state])
+                    ->assertStatus(200);
+            } else {
+                // preparing/ready require KOT progression; drive via KOT controller
+                // is covered elsewhere — here assert no movement exists yet.
+            }
+            $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count(), "Deduction found at {$state}");
+        }
     }
 
     public function test_insufficient_stock_returns_correct_api_error(): void

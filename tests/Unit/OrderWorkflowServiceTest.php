@@ -206,21 +206,24 @@ class OrderWorkflowServiceTest extends TestCase
         $this->assertGreaterThan($stockBefore, (float) $ingredient->current_stock);
     }
 
-    public function test_confirm_order_creates_both_deduction_and_kot(): void
+    public function test_confirm_order_creates_kot_without_deduction(): void
     {
         $order = $this->createOrderWithRecipeAndStock('pending', 500);
         $order->status = 'pending';
         $order->save();
         $user = User::factory()->create();
+
+        $ingredientBefore = (float) Ingredient::first()->current_stock;
 
         $result = $this->service->confirmOrder($order, $user);
 
-        $this->assertTrue($result['deducted']);
-        $this->assertEquals(2, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertTrue($result['kot_created']);
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
         $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
+        $this->assertEquals($ingredientBefore, (float) Ingredient::first()->fresh()->current_stock);
     }
 
-    public function test_confirm_order_does_not_double_deduct(): void
+    public function test_confirm_order_does_not_change_stock_on_repeat(): void
     {
         $order = $this->createOrderWithRecipeAndStock('pending', 500);
         $order->status = 'pending';
@@ -230,26 +233,26 @@ class OrderWorkflowServiceTest extends TestCase
         $this->service->confirmOrder($order, $user);
         $this->service->confirmOrder($order, $user);
 
-        $this->assertEquals(2, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
         $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
     }
 
-    public function test_confirm_order_skips_when_already_deducted(): void
+    public function test_confirm_order_rejects_insufficient_stock_without_mutation(): void
     {
-        $order = $this->createOrderWithRecipeAndStock('pending', 500);
+        $order = $this->createOrderWithRecipeAndStock('pending', 1);
         $order->status = 'pending';
         $order->save();
         $user = User::factory()->create();
 
-        $this->service->confirmOrder($order, $user);
-        $this->assertEquals(2, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
-        $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
+        try {
+            $this->service->confirmOrder($order, $user);
+            $this->fail('Expected InsufficientStockException was not thrown.');
+        } catch (InsufficientStockException $e) {
+            $this->assertNotEmpty($e->getInsufficient());
+        }
 
-        $result = $this->service->confirmOrder($order, $user);
-
-        $this->assertTrue($result['already_deducted']);
-        $this->assertEquals(2, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
-        $this->assertEquals(1, KotTicket::where('order_id', $order->id)->count());
+        $this->assertEquals(0, StockMovement::where('reference_type', 'order')->where('reference_id', $order->id)->count());
+        $this->assertEquals(0, KotTicket::where('order_id', $order->id)->count());
     }
 
     public function test_reversal_is_idempotent(): void

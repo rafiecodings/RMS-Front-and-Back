@@ -63,12 +63,21 @@ class StockController extends Controller
         $validated = $request->validate([
             'ingredient_id' => 'required|string|exists:ingredients,id',
             'quantity' => 'required|numeric|min:0.001',
-            'unit_cost' => 'required|numeric|min:0',
+            'unit_cost' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         $result = DB::transaction(function () use ($validated, $request) {
             $ingredient = Ingredient::lockForUpdate()->find($validated['ingredient_id']);
+
+            if (! $ingredient || ! $ingredient->is_active) {
+                abort(response()->json([
+                    'success' => false,
+                    'message' => 'Cannot record delivery for an inactive ingredient.',
+                ], 422));
+            }
+
+            $movementUnitCost = $validated['unit_cost'] ?? $ingredient->cost_per_unit ?? 0;
 
             $ingredient->increment('current_stock', $validated['quantity']);
 
@@ -76,7 +85,7 @@ class StockController extends Controller
                 'ingredient_id' => $validated['ingredient_id'],
                 'type' => 'inward',
                 'quantity' => $validated['quantity'],
-                'unit_cost' => $validated['unit_cost'],
+                'unit_cost' => $movementUnitCost,
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => $request->user()->id,
             ]);

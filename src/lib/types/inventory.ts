@@ -162,7 +162,6 @@ export interface WastageFormData {
 
 export interface IngredientFormData {
   name: string;
-  description?: string;
   unit: string;
   current_stock: number;
   minimum_stock: number;

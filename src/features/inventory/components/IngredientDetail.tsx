@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { StockAdjustDialog, StockMovementTable } from "@/features/inventory";
 import { useIngredients, useStockAdjust, useStockMovements } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
-import { canEdit as canEditRole } from "@/lib/utils/permissions";
+import { canManageIngredients } from "@/lib/utils/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { Pencil, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ export function IngredientDetail({
   onEdit,
 }: IngredientDetailProps) {
   const { user } = useAuth();
-  const canModify = canEdit ?? canEditRole(user?.role, "inventory");
+  const canModify = canEdit ?? canManageIngredients(user?.role);
 
   const { data: movementsData, isLoading: movementsLoading } = useStockMovements({
     ingredient_id: ingredient.id,

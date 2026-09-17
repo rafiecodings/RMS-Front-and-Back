@@ -9,7 +9,7 @@ import { StockAdjustDialog } from "@/features/inventory";
 import { useIngredients, useStockAdjust, useStockMovements } from "@/lib/hooks";
 import { StockMovementTable } from "@/features/inventory";
 import { useAuth } from "@/providers/AuthProvider";
-import { canEdit } from "@/lib/utils/permissions";
+import { canManageIngredients } from "@/lib/utils/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { Pencil, PackagePlus } from "lucide-react";
 import { useState } from "react";
@@ -28,7 +28,7 @@ export default function IngredientDetailPage() {
   const id = params.id as string;
 
   const { user } = useAuth();
-  const canModify = canEdit(user?.role, "inventory");
+  const canModify = canManageIngredients(user?.role);
 
   const { list, update } = useIngredients({ per_page: 200 });
   const ingredients = list.data?.data?.data ?? [];

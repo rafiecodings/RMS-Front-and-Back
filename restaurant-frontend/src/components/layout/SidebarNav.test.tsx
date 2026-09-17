@@ -6,59 +6,59 @@ const state = vi.hoisted(() => ({ role: "waiter" as string }));
 vi.mock("@/providers/AuthProvider", () => ({ useAuth: () => ({ user: { id: "u", role: state.role } }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 
-function getOperationsItems() {
-  const operationsHeader = screen.getByText("Operations");
-  const group = operationsHeader.closest("div");
+function getGroupItems(header: string) {
+  const el = screen.queryByText(header);
+  const group = el?.closest("div");
   return group ? Array.from(group.querySelectorAll("a")).map((a) => a.textContent) : [];
 }
 
-describe("Sidebar My Attendance grouping", () => {
+describe("Sidebar manuscript scope", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it.each([["waiter"], ["cashier"], ["kitchen_staff"], ["inventory_staff"]])("%s sees My Attendance under Operations", (role) => {
-    state.role = role;
+  it.each([["waiter"], ["cashier"], ["kitchen_staff"], ["inventory_staff"], ["admin"], ["manager"]])(
+    "%s never sees My Attendance (hidden from defense UI)",
+    (role) => {
+      state.role = role;
+      render(<NavLinks />);
+      expect(screen.queryByText("My Attendance")).not.toBeInTheDocument();
+    }
+  );
+
+  it("admin Reports shows Revenue/Sales/Menu/Inventory only", () => {
+    state.role = "admin";
     render(<NavLinks />);
-    expect(screen.getByText("My Attendance")).toBeInTheDocument();
-    const ops = getOperationsItems();
-    expect(ops.some((t) => t?.includes("My Attendance"))).toBe(true);
+    const reports = getGroupItems("Reports");
+    expect(reports.some((t) => t?.includes("Revenue"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Sales"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Menu"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Inventory"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Customers"))).toBe(false);
+    expect(reports.some((t) => t?.includes("Staff"))).toBe(false);
+    expect(reports.some((t) => t?.includes("Tax"))).toBe(false);
   });
 
-  it("inventory_staff Operations contains only My Attendance", () => {
+  it("manager Reports matches admin scope", () => {
+    state.role = "manager";
+    render(<NavLinks />);
+    const reports = getGroupItems("Reports");
+    expect(reports.some((t) => t?.includes("Revenue"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Inventory"))).toBe(true);
+    expect(reports.some((t) => t?.includes("Tax"))).toBe(false);
+  });
+
+  it("inventory_staff Operations has no attendance link", () => {
     state.role = "inventory_staff";
     render(<NavLinks />);
-    const ops = getOperationsItems();
-    expect(ops).toEqual(expect.arrayContaining([expect.stringContaining("My Attendance")]));
-    // Should not contain Customers/Tables etc for inventory_staff
-    expect(ops.some((t) => t?.includes("Customers"))).toBe(false);
-    // Inventory group should still exist with 4 items
+    const ops = getGroupItems("Operations");
+    expect(ops.some((t) => t?.includes("My Attendance"))).toBe(false);
     expect(screen.getByText("Inventory")).toBeInTheDocument();
-    expect(screen.getByText("Ingredients")).toBeInTheDocument();
-    expect(screen.getByText("Replenishment Requests")).toBeInTheDocument();
-  });
-
-  it("waiter Operations includes My Attendance + Customers/Tables/Reservations/Orders", () => {
-    state.role = "waiter";
-    render(<NavLinks />);
-    const ops = getOperationsItems();
-    expect(ops.some((t) => t?.includes("My Attendance"))).toBe(true);
-    expect(ops.some((t) => t?.includes("Customers"))).toBe(true);
-    expect(ops.some((t) => t?.includes("Tables"))).toBe(true);
-    expect(ops.some((t) => t?.includes("Reservations"))).toBe(true);
-    expect(ops.some((t) => t?.includes("Orders"))).toBe(true);
-  });
-
-  it("no duplicate My Attendance", () => {
-    state.role = "waiter";
-    render(<NavLinks />);
-    expect(screen.getAllByText("My Attendance").length).toBe(1);
   });
 
   it("does not duplicate or move inventory pages", () => {
     state.role = "inventory_staff";
     render(<NavLinks />);
     expect(screen.getByText("Inventory")).toBeInTheDocument();
-    // Inventory items should not appear under Operations
-    const ops = getOperationsItems();
+    const ops = getGroupItems("Operations");
     expect(ops.some((t) => t?.includes("Ingredients"))).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ import {
   UserCog,
   Store,
   ShoppingBag,
+  ShoppingCart,
   Truck,
   ClipboardCheck,
   FileBarChart,
@@ -81,11 +82,10 @@ const navGroups: NavGroup[] = [
   {
     label: "Reports",
     items: [
-      { label: "Sales", href: "/reports/sales", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
+      { label: "Revenue", href: "/reports/revenue", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
+      { label: "Sales", href: "/reports/sales", icon: ShoppingCart, roles: SIDEBAR_ROLES.reports },
       { label: "Menu", href: "/reports/menu", icon: ShoppingBag, roles: SIDEBAR_ROLES.reports },
-      { label: "Customers", href: "/reports/customers", icon: Users, roles: SIDEBAR_ROLES.reports },
       { label: "Inventory", href: "/reports/inventory", icon: Package, roles: SIDEBAR_ROLES.reports },
-      { label: "Tax Reports", href: "/reports/tax", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
       { label: "Forecasting / Analytics", href: "/analytics", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
     ],
   },

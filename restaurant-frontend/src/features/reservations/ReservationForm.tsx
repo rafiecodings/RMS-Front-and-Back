@@ -92,6 +92,13 @@ export function ReservationForm({
   );
   const { list: customersList } = useCustomers({ per_page: 300, is_active: true });
   const customers = customersList.data?.data?.data ?? [];
+  const customersLoading = customersList.isLoading;
+  const selectedCustomer = customers.find((c) => c.id === formData.customer_id) ?? (initialData?.customer as unknown as { id: string; name: string } | undefined);
+  const customerDisplayLabel = formData.customer_id
+    ? selectedCustomer
+      ? (selectedCustomer as { name: string; phone?: string }).name + ((selectedCustomer as { phone?: string }).phone ? ` — ${(selectedCustomer as { phone?: string }).phone}` : "")
+      : customersLoading ? "Loading..." : "Unavailable customer"
+    : null;
 
   const { availableTables: fetchAvailableTables } = useReservations({
     reservation_date: formData.reservation_date,
@@ -122,9 +129,11 @@ export function ReservationForm({
   ]);
 
   function tableDisplayLabel(id: string): string | null {
-    const found = availableTables.find((t) => t.id === id);
-    return found ? `T${found.number}` : null;
+    const found = availableTables.find((t) => t.id === id) ?? assignableTables.find((t) => t.id === id) ?? (initialData?.table as unknown as Table | undefined);
+    if (!found) return null;
+    return `T${(found as Table).number} — ${(found as Table).name ?? "Table"} (cap: ${(found as Table).capacity})`;
   }
+  const selectedTableLabel = formData.table_id ? tableDisplayLabel(formData.table_id) ?? (customersLoading ? "Loading..." : "Unavailable table") : null;
 
   function handleTableChange(val: string | null) {
     const id = val ?? "";
@@ -264,20 +273,25 @@ export function ReservationForm({
         <div className="space-y-2">
           <Label>Customer *</Label>
           <Select
-            value={formData.customer_id && customers.some((c) => c.id === formData.customer_id) ? formData.customer_id : ""}
+            value={formData.customer_id || ""}
             onValueChange={(value) =>
               setFormData((previous) => ({ ...previous, customer_id: value ?? "" }))
             }
           >
             <SelectTrigger className="w-full" aria-invalid={touched.customer_id && !!errors.customer_id}>
-              <SelectValue placeholder="Select a registered customer" />
+              {customerDisplayLabel ? <span className="truncate">{customerDisplayLabel}</span> : <SelectValue placeholder="Select a registered customer" />}
             </SelectTrigger>
             <SelectContent className="max-h-72">
               {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
+                <SelectItem key={customer.id} value={customer.id} className="truncate">
                   {customer.name}{customer.phone ? ` — ${customer.phone}` : ""}
                 </SelectItem>
               ))}
+              {formData.customer_id && !customers.some((c) => c.id === formData.customer_id) && (
+                <SelectItem value={formData.customer_id} disabled className="truncate">
+                  {customerDisplayLabel}
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
           {touched.customer_id && errors.customer_id && (
@@ -419,11 +433,11 @@ export function ReservationForm({
         <div className="space-y-2">
           <Label>Table (optional)</Label>
           <Select
-            value={formData.table_id && assignableTables.some((t) => t.id === formData.table_id) ? formData.table_id : ""}
+            value={formData.table_id || ""}
             onValueChange={handleTableChange}
           >
             <SelectTrigger className="w-full" aria-invalid={!!errors.table_id}>
-              <SelectValue placeholder="Select a table (optional)" />
+              {selectedTableLabel ? <span className="truncate">{selectedTableLabel}</span> : <SelectValue placeholder="Select a table (optional)" />}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">No table</SelectItem>
@@ -432,16 +446,21 @@ export function ReservationForm({
                   Checking availability...
                 </SelectItem>
               )}
-              {!isCheckingAvailability && assignableTables.length === 0 && (
+              {!isCheckingAvailability && assignableTables.length === 0 && !formData.table_id && (
                 <SelectItem disabled value="__none">
                   No tables available for this time/party size
                 </SelectItem>
               )}
               {assignableTables.map((t: Table) => (
-                <SelectItem key={t.id} value={t.id}>
+                <SelectItem key={t.id} value={t.id} className="truncate">
                   T{t.number} — {t.name ?? "Table"} (cap: {t.capacity})
                 </SelectItem>
               ))}
+              {formData.table_id && !assignableTables.some((t) => t.id === formData.table_id) && (
+                <SelectItem value={formData.table_id} disabled className="truncate">
+                  {selectedTableLabel}
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
           {(tableConflict || errors.table_id) && (

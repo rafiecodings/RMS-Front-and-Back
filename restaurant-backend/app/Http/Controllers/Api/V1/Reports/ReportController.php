@@ -275,7 +275,7 @@ class ReportController extends Controller
                 ->whereBetween('created_at', [$startDt, $endDt]);
             $totalOrders = (int) $ordersQ->count();
             $totalSales = (float) $ordersQ->sum('total');
-            if ($totalOrders === 0 && $totalSales === 0) {
+            if ($totalOrders === 0) {
                 return null;
             }
             return [
@@ -286,7 +286,7 @@ class ReportController extends Controller
                 'total_sales' => $totalSales,
                 'orders_handled' => $totalOrders,
                 'revenue_generated' => $totalSales,
-                'avg_ticket' => round($totalSales / $totalOrders, 2),
+                'avg_ticket' => $totalOrders > 0 ? round($totalSales / $totalOrders, 2) : 0,
                 'role' => $staff->user?->roles->first()?->name,
                 'attendance_rate' => $attendanceSummary($attendance->where('staff_id', $staff->id))['attendance_rate'],
                 'shifts_scheduled' => $shifts->where('staff_id', $staff->id)->count(),

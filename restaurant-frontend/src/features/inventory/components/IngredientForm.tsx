@@ -34,6 +34,7 @@ export function IngredientForm({
   const router = useRouter();
   const { list: suppliersList } = useSuppliers({ per_page: 100 });
   const suppliers = suppliersList.data?.data?.data ?? [];
+  const supplierDisplay = form.supplier_id ? (suppliers.find((s) => s.id === form.supplier_id)?.name ?? "Unavailable supplier") : null;
 
   const [form, setForm] = useState<IngredientFormData>({
     name: initialData?.name ?? "",
@@ -204,9 +205,9 @@ export function IngredientForm({
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium">Supplier (optional)</Label>
-            <Select value={form.supplier_id && suppliers.some((s) => s.id === form.supplier_id) ? form.supplier_id : form.supplier_id ? form.supplier_id : "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
+            <Select value={form.supplier_id || "none"} onValueChange={(v) => update("supplier_id", v === "none" || v === null ? undefined : v)}>
               <SelectTrigger>
-                <SelectValue placeholder="No supplier" />
+                {supplierDisplay ? <span className="truncate">{supplierDisplay}</span> : <SelectValue placeholder="No supplier" />}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>

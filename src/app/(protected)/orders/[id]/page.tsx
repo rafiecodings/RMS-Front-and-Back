@@ -92,7 +92,8 @@ export default function OrderDetailPage({
   const hasPayments = order.payments.length > 0;
   const canVoid =
     canIssueRefund && !isTerminal && !isPaid && order.payment_status !== "refunded";
-  const canRefund = canIssueRefund && hasPayments && order.payment_status !== "refunded";
+  // Manuscript scope: refund UI hidden from defense flow (backend retained).
+  const canRefund = false && canIssueRefund && hasPayments && order.payment_status !== "refunded";
 
   function handleStatusChange(status: OrderStatus) {
     if (status === "cancelled") {

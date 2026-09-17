@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { InvoiceStats } from "@/features/billing";
 import { useBillingStats, useInvoices } from "@/features/billing";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Receipt, CreditCard, RotateCcw, ArrowRight } from "lucide-react";
+import { Receipt, CreditCard, ArrowRight } from "lucide-react";
 
 export default function BillingPage() {
   const { data: stats, isLoading: statsLoading } = useBillingStats();
@@ -17,12 +17,12 @@ export default function BillingPage() {
     <div className="space-y-6">
       <PageHeader
         title="Billing"
-        description="Manage invoices, payments, and refunds"
+        description="Manage invoices and payments"
       />
 
       <InvoiceStats stats={stats} isLoading={statsLoading} />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Link href="/billing/invoices" className="group">
           <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
@@ -49,18 +49,6 @@ export default function BillingPage() {
           </div>
         </Link>
 
-        <Link href="/billing/refunds" className="group">
-          <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-              <RotateCcw className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Refunds</h3>
-              <p className="text-xs text-muted-foreground">Process and manage refunds</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
       </div>
 
       {invoices.length > 0 && (

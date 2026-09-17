@@ -160,17 +160,3 @@ export interface StaffStatsData {
   onShiftToday: number;
   averageRating: number;
 }
-
-export interface StaffCommissionEntry {
-  id: string;
-  amount: number;
-  type?: string | null;
-  order?: { id: string; order_number: string; total: number } | null;
-  created_at?: string;
-}
-
-export interface StaffCommissions {
-  items: StaffCommissionEntry[];
-  total_commission: number;
-  pagination: { current_page: number; last_page: number; per_page: number; total: number };
-}

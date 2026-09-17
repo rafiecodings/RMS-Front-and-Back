@@ -11,6 +11,7 @@ import type {
   Staff,
   StaffFormData,
   StaffPerformance,
+  StaffCommissions,
   ShiftSchedule,
   ShiftScheduleFormData,
   StaffShiftOption,
@@ -206,5 +207,16 @@ export function useCloseAttendance() {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       queryClient.invalidateQueries({ queryKey: ["staff"] });
     },
+  });
+}
+
+export function useStaffCommissions(id: string, params?: QueryParams) {
+  return useQuery({
+    queryKey: ["staff-commissions", id, params],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<StaffCommissions>>(`/staff/${id}/commissions`, { params });
+      return data.data as StaffCommissions;
+    },
+    enabled: !!id,
   });
 }

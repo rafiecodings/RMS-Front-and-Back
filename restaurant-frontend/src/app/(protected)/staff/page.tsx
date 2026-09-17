@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { useStaff, useShiftSchedule } from "@/lib/hooks";
 import { AddStaffDialog, StaffStats } from "@/features/staff";
-import { Users, CalendarCheck, ClipboardList, BarChart3, ArrowRight, Plus, FileText } from "lucide-react";
+import { Users, CalendarCheck, ClipboardList, BarChart3, ArrowRight, Plus, FileText, BadgeDollarSign } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -115,6 +115,19 @@ export default function StaffPage() {
             <div className="flex-1">
               <h3 className="font-semibold">Performance</h3>
               <p className="text-xs text-muted-foreground">Staff performance metrics and analytics</p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </Link>
+
+        <Link href="/staff/commissions" className="group">
+          <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <BadgeDollarSign className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">Commissions</h3>
+              <p className="text-xs text-muted-foreground">View recorded commission entries</p>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
           </div>

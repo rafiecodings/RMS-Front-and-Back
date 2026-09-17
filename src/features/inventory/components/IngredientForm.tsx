@@ -34,7 +34,6 @@ export function IngredientForm({
   const router = useRouter();
   const { list: suppliersList } = useSuppliers({ per_page: 100 });
   const suppliers = suppliersList.data?.data?.data ?? [];
-  const supplierDisplay = form.supplier_id ? (suppliers.find((s) => s.id === form.supplier_id)?.name ?? "Unavailable supplier") : null;
 
   const [form, setForm] = useState<IngredientFormData>({
     name: initialData?.name ?? "",
@@ -48,6 +47,10 @@ export function IngredientForm({
     supplier_id: initialData?.supplier_id ?? initialData?.supplier?.id ?? "",
     storage_location: initialData?.storage_location ?? "",
   });
+
+  const supplierDisplay = form.supplier_id
+    ? (suppliers.find((s) => s.id === form.supplier_id)?.name ?? "Unavailable supplier")
+    : null;
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

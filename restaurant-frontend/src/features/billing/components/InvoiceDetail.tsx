@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Printer, RotateCcw } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import type { Invoice } from "../types";
@@ -13,13 +13,12 @@ import { useTaxRate } from "@/features/settings/hooks/useSettings";
 interface InvoiceDetailProps {
   invoice: Invoice;
   onPrint: () => void;
-  onRefund: () => void;
+  onRefund?: () => void;
 }
 
 export function InvoiceDetail({
   invoice,
   onPrint,
-  onRefund,
 }: InvoiceDetailProps) {
   const taxRate = useTaxRate();
   return (
@@ -46,12 +45,6 @@ export function InvoiceDetail({
           <Button variant="outline" size="sm" onClick={onPrint}>
             <Printer className="h-4 w-4 mr-1" /> Print
           </Button>
-          {invoice.payment_status !== "refunded" &&
-            invoice.balance <= 0 && (
-              <Button variant="outline" size="sm" onClick={onRefund}>
-                <RotateCcw className="h-4 w-4 mr-1" /> Refund
-              </Button>
-            )}
         </div>
       </div>
 

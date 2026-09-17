@@ -70,6 +70,8 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   const menuItems = useMemo(() => miList.data?.data?.data ?? [], [miList.data]);
   const customers = useMemo(() => custList.data?.data?.data ?? [], [custList.data]);
   const tables = useMemo(() => tableList.data ?? [], [tableList.data]);
+  const customerDisplay = customerId ? (customers.find((c) => c.id === customerId)?.name ?? "Unavailable customer") : null;
+  const tableDisplay = tableId ? (tables.find((t) => t.id === tableId) ? `T${tables.find((t) => t.id === tableId)!.number} — ${tables.find((t) => t.id === tableId)!.capacity} seats` : "Unavailable table") : null;
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -345,15 +347,20 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
                   onValueChange={(v) => setCustomerId(v ? (v === "walk-in" ? "" : v) : "")}
                 >
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Walk-in customer" />
+                    {customerDisplay ? <span className="truncate">{customerDisplay}</span> : <SelectValue placeholder="Walk-in customer" />}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="walk-in">Walk-in customer</SelectItem>
                     {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={c.id} className="truncate">
                         {c.name}
                       </SelectItem>
                     ))}
+                    {customerId && !customers.some((c) => c.id === customerId) && (
+                      <SelectItem value={customerId} disabled className="truncate">
+                        {customerDisplay}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -366,17 +373,22 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
                   onValueChange={(v) => setTableId(v ? (v === "none" ? "" : v) : "")}
                 >
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select table" />
+                      {tableDisplay ? <span className="truncate">{tableDisplay}</span> : <SelectValue placeholder="Select table" />}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No table</SelectItem>
                       {availableTables.map((t: Table) => (
-                        <SelectItem key={t.id} value={t.id}>
+                        <SelectItem key={t.id} value={t.id} className="truncate">
                           T{t.number}
                           {t.section ? ` · ${t.section}` : ""} — {t.capacity} seats
                           {t.seating ? " · Seated Reservation" : ""}
                         </SelectItem>
                       ))}
+                      {tableId && !availableTables.some((t) => t.id === tableId) && !tables.some((t) => t.id === tableId) && (
+                        <SelectItem value={tableId} disabled className="truncate">
+                          {tableDisplay}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

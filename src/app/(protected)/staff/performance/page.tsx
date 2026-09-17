@@ -20,6 +20,15 @@ export default function PerformancePage() {
 
   const { list: staffList } = useStaff({ per_page: 200 });
   const staff = staffList.data?.data?.data ?? [];
+  const staffLoading = staffList.isLoading;
+  const selectedStaff = staff.find((s) => s.id === selectedStaffId);
+  const staffDisplay = selectedStaffId
+    ? selectedStaff
+      ? selectedStaff.user?.name ?? selectedStaff.employee_id
+      : staffLoading
+        ? "Loading..."
+        : "Unavailable staff"
+    : null;
 
   const { data: performance, isLoading: perfLoading } = useStaffPerformance(selectedStaffId, {
     start_date: startDate || undefined,
@@ -37,14 +46,19 @@ export default function PerformancePage() {
         <div className="w-full sm:w-[280px]">
           <Select value={selectedStaffId} onValueChange={(v) => setSelectedStaffId(v ?? "")}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a staff member" />
+              {staffDisplay ? <span className="truncate">{staffDisplay}</span> : <SelectValue placeholder="Select a staff member" />}
             </SelectTrigger>
             <SelectContent>
               {staff.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
+                <SelectItem key={s.id} value={s.id} className="truncate">
                   {s.user?.name ?? s.employee_id}
                 </SelectItem>
               ))}
+              {selectedStaffId && !selectedStaff && (
+                <SelectItem value={selectedStaffId} disabled className="truncate">
+                  {staffDisplay}
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>

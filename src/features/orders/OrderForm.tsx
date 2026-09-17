@@ -85,8 +85,10 @@ export function OrderForm({
       (t.status === "occupied" && !!t.seating) ||
       t.id === formData.table_id
   );
-  const selectedCustomer = customers.find((c) => c.id === formData.customer_id);
-  const selectedTable = tables.find((t) => t.id === formData.table_id);
+  const selectedCustomer = customers.find((c) => c.id === formData.customer_id) as Customer | undefined;
+  const selectedTable = tables.find((t) => t.id === formData.table_id) as Table | undefined;
+  const customerDisplay = formData.customer_id ? (selectedCustomer ? selectedCustomer.name : "Unavailable customer") : null;
+  const tableDisplay = formData.table_id ? (selectedTable ? `T${selectedTable.number} — ${selectedTable.capacity} seats` : "Unavailable table") : null;
 
   const filteredMenuItems = menuItems.filter(
     (item) =>
@@ -224,7 +226,7 @@ export function OrderForm({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Walk-in customer" />
+              {customerDisplay ? <span className="truncate">{customerDisplay}</span> : <SelectValue placeholder="Walk-in customer" />}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">Walk-in Customer</SelectItem>
@@ -255,7 +257,7 @@ export function OrderForm({
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select table" />
+                {tableDisplay ? <span className="truncate">{tableDisplay}</span> : <SelectValue placeholder="Select table" />}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">No Table</SelectItem>

@@ -10,7 +10,6 @@ import {
   Package,
   BarChart3,
   Receipt,
-  ClipboardList,
   ArrowRight,
   RefreshCw,
 } from "lucide-react";
@@ -65,14 +64,6 @@ const REPORT_LINKS = [
     href: "/reports/inventory",
     color: "text-rose-600 dark:text-rose-400",
     bgColor: "bg-rose-500/10",
-  },
-  {
-    title: "Tax",
-    description: "Tax collected by day and month",
-    icon: ClipboardList,
-    href: "/reports/tax",
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-500/10",
   },
 ];
 

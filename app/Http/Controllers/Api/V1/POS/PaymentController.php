@@ -28,7 +28,7 @@ class PaymentController extends Controller
 
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'required|string|in:cash,card,bank_transfer,gift_card,loyalty_points',
+            'payment_method' => 'required|string|in:cash,card,e_wallet',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -90,7 +90,7 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'payments' => 'required|array|min:2',
             'payments.*.amount' => 'required|numeric|min:0.01',
-            'payments.*.payment_method' => 'required|string|in:cash,card,bank_transfer,gift_card,loyalty_points',
+            'payments.*.payment_method' => 'required|string|in:cash,card,e_wallet',
             'payments.*.reference_number' => 'nullable|string|max:255',
         ]);
 

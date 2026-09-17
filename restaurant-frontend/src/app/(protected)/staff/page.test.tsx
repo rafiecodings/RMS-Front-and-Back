@@ -19,36 +19,39 @@ vi.mock("@/lib/hooks", async () => {
   };
 });
 
-describe("Staff hub", () => {
+describe("Staff hub (manuscript scope: Employees only)", () => {
   beforeEach(() => { vi.clearAllMocks(); state.role = "admin"; });
 
-  it("shows Leave Management for admin", () => {
+  it("shows Employees for admin", () => {
     render(<StaffPage />);
-    expect(screen.getByText("Leave Management")).toBeInTheDocument();
-    expect(screen.getByText("Review and manage staff leave requests")).toBeInTheDocument();
-    const link = screen.getByText("Leave Management").closest("a");
-    expect(link?.getAttribute("href")).toBe("/staff/leave");
+    expect(screen.getByText("Employees")).toBeInTheDocument();
+    const link = screen.getByText("Employees").closest("a");
+    expect(link?.getAttribute("href")).toBe("/staff/employees");
   });
 
-  it("shows Leave Management for manager", () => {
+  it("shows Employees for manager", () => {
     state.role = "manager";
     render(<StaffPage />);
-    expect(screen.getByText("Leave Management")).toBeInTheDocument();
+    expect(screen.getByText("Employees")).toBeInTheDocument();
   });
 
-  it("hides Leave Management from operational roles", () => {
-    state.role = "waiter";
-    render(<StaffPage />);
-    expect(screen.queryByText("Leave Management")).not.toBeInTheDocument();
-    state.role = "cashier";
-    const { container } = render(<StaffPage />);
-    expect(container.textContent).not.toContain("/staff/leave");
-  });
+  it.each(["Shift Schedule", "Attendance", "Leave Management", "Performance"])(
+    "does NOT show %s (undocumented, hidden from defense UI)",
+    (label) => {
+      state.role = "admin";
+      const { unmount } = render(<StaffPage />);
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+      unmount();
+      state.role = "manager";
+      render(<StaffPage />);
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+  );
 
-  it("keeps hub order Employees, Shift Schedule, Attendance, Leave Management, Performance", () => {
+  it("hub contains only the Employees card", () => {
     state.role = "admin";
     const { container } = render(<StaffPage />);
     const headings = Array.from(container.querySelectorAll("h3")).map((h) => h.textContent);
-    expect(headings).toEqual(["Employees", "Shift Schedule", "Attendance", "Leave Management", "Performance"]);
+    expect(headings).toEqual(["Employees"]);
   });
 });

@@ -47,7 +47,6 @@ const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      { label: "My Attendance", href: "/my-attendance", icon: ClipboardCheck, roles: SIDEBAR_ROLES.attendance },
       { label: "Customers", href: "/customers", icon: Users, roles: SIDEBAR_ROLES.customers },
       { label: "Tables", href: "/tables", icon: Grid3X3, roles: SIDEBAR_ROLES.tables },
       { label: "Reservations", href: "/reservations", icon: Calendar, roles: SIDEBAR_ROLES.reservations },
@@ -86,7 +85,6 @@ const navGroups: NavGroup[] = [
       { label: "Menu", href: "/reports/menu", icon: ShoppingBag, roles: SIDEBAR_ROLES.reports },
       { label: "Customers", href: "/reports/customers", icon: Users, roles: SIDEBAR_ROLES.reports },
       { label: "Inventory", href: "/reports/inventory", icon: Package, roles: SIDEBAR_ROLES.reports },
-      { label: "Staff", href: "/reports/staff", icon: UserCog, roles: SIDEBAR_ROLES.reports },
       { label: "Tax Reports", href: "/reports/tax", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
       { label: "Forecasting / Analytics", href: "/analytics", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
     ],

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { useStaff, useShiftSchedule } from "@/lib/hooks";
 import { AddStaffDialog, StaffStats } from "@/features/staff";
-import { Users, CalendarCheck, ClipboardList, BarChart3, ArrowRight, Plus, FileText } from "lucide-react";
+import { Users, ArrowRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -14,7 +14,6 @@ export default function StaffPage() {
   const [addOpen, setAddOpen] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const canManageLeave = user?.role === "admin" || user?.role === "manager";
 
   const { list: staffList } = useStaff({ per_page: 200 });
   const staff = staffList.data?.data?.data ?? [];
@@ -39,7 +38,7 @@ export default function StaffPage() {
     <div className="space-y-6">
       <PageHeader
         title="Staff Management"
-        description="Manage employees, shifts, attendance, and performance"
+        description="Manage employee records, accounts, and roles"
         action={
           isAdmin && (
             <Button onClick={() => setAddOpen(true)}>
@@ -66,59 +65,6 @@ export default function StaffPage() {
           </div>
         </Link>
 
-        <Link href="/staff/schedule" className="group">
-          <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-              <CalendarCheck className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Shift Schedule</h3>
-              <p className="text-xs text-muted-foreground">View and manage weekly shifts</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
-
-        <Link href="/staff/attendance" className="group">
-          <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-              <ClipboardList className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Attendance</h3>
-              <p className="text-xs text-muted-foreground">Clock in/out and attendance records</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
-
-        {canManageLeave && (
-          <Link href="/staff/leave" className="group">
-            <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                <FileText className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">Leave Management</h3>
-                <p className="text-xs text-muted-foreground">Review and manage staff leave requests</p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </Link>
-        )}
-
-        <Link href="/staff/performance" className="group">
-          <div className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
-              <BarChart3 className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Performance</h3>
-              <p className="text-xs text-muted-foreground">Staff performance metrics and analytics</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
       </div>
       {isAdmin && <AddStaffDialog open={addOpen} onOpenChange={setAddOpen} />}
     </div>

@@ -618,8 +618,9 @@ class OrderController extends Controller
         }
 
         if ($target === 'completed') {
-            // Inventory is already consumed at confirmation; settlement must
-            // not deduct again. Loyalty visit is recorded once on completion.
+            // Inventory is deducted atomically when a fully paid order is
+            // completed (via POS payment). Loyalty visit is recorded once
+            // on completion.
             if (
                 $previousStatus !== 'completed'
                 && $order->customer_id
@@ -1204,7 +1205,8 @@ class OrderController extends Controller
         $previousStatus = $order->status;
         $change = 0.0;
 
-        $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $order, $request, $tendered, $balanceDue, $previousStatus, &$change) {
+        try {
+            $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $order, $request, $tendered, $balanceDue, $previousStatus, &$change) {
             // Cash records the amount RECEIVED; change is returned to guest.
             $recordedAmount = $validated['payment_method'] === 'cash'
                 ? $tendered
@@ -1249,6 +1251,10 @@ class OrderController extends Controller
                 ]);
             }
 
+            // Manuscript-aligned: inventory is deducted atomically when a
+            // fully paid order is completed (not at confirmation).
+            app(OrderWorkflowService::class)->deductInventoryForCompletedOrder($order, $request->user(), true);
+
             // Dine-in settlement: the cover leaves dirty (needs_cleaning),
             // never straight back to available. Takeaway carries no table.
             if ($order->order_type === 'dine_in' && $order->table_id) {
@@ -1259,11 +1265,17 @@ class OrderController extends Controller
             }
 
             return $payment;
-        });
+            });
+        } catch (\App\Exceptions\InsufficientStockException $e) {
+            return $this->error(
+                'Cannot complete payment: insufficient stock for one or more ingredients.',
+                422,
+                ['insufficient' => $e->getInsufficient()]
+            );
+        }
 
         // Post-commit side effects (each internally idempotent).
-        // Inventory was already consumed at confirmation; payment must never
-        // deduct recipe ingredients again.
+        // Loyalty visit is recorded once on completion.
         if ($order->customer_id && $previousStatus !== 'completed') {
             $freshCustomer = $order->customer()->first();
             $freshCustomer?->recordCompletedVisit((float) $order->total);

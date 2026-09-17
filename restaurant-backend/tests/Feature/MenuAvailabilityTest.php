@@ -105,7 +105,7 @@ class MenuAvailabilityTest extends TestCase
         ])->assertStatus(422);
     }
 
-    public function test_g_confirm_succeeds_with_stock(): void
+    public function test_g_confirm_succeeds_without_deduction(): void
     {
         $admin = $this->userWithRole('admin');
         $ing = Ingredient::create(['name' => 'Ing'.uniqid(), 'unit' => 'g', 'current_stock' => 100, 'minimum_stock' => 10, 'cost_per_unit' => 1]);
@@ -116,8 +116,9 @@ class MenuAvailabilityTest extends TestCase
             'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
         ])->assertStatus(201)->json('data.id');
 
+        // Manuscript-aligned: confirm validates + creates KOT, deduction at completion.
         $this->actingAs($admin)->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])->assertStatus(200);
-        $this->assertEquals(99, (float) $ing->fresh()->current_stock);
+        $this->assertEquals(100, (float) $ing->fresh()->current_stock);
     }
 
     public function test_h_insufficient_before_confirm_rejects(): void

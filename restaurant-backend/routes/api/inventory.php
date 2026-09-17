@@ -21,7 +21,7 @@ Route::middleware(['auth:sanctum','active'])->prefix('inventory')->group(functio
 
     Route::prefix('stock')->group(function () {
         Route::get('/', [StockController::class, 'index']);
-        Route::post('/inward', [StockController::class, 'inward'])->middleware('role:admin,manager');
+        Route::post('/inward', [StockController::class, 'inward'])->middleware('role:admin,manager,inventory_staff');
         Route::post('/outward', [StockController::class, 'outward'])->middleware('role:admin,manager');
         Route::post('/adjust', [StockController::class, 'adjust'])->middleware('role:admin,manager');
         Route::post('/transfer', [StockController::class, 'transfer'])->middleware('role:admin,manager');

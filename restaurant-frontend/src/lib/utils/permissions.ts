@@ -263,10 +263,20 @@ export function canManageRecipes(role: string | undefined): boolean {
 
 // Ingredient catalog + direct stock adjustment are Admin / Manager only.
 // Inventory staff may VIEW ingredients and use replenishment, but direct
-// POST/PUT/DELETE /inventory/ingredients and POST /inventory/stock/*
-// return 403 for inventory_staff (backend routes/api/inventory.php).
+// POST/PUT/DELETE /inventory/ingredients and POST /inventory/stock/outward|
+// adjust|transfer return 403 for inventory_staff (backend routes/api/inventory.php).
 export function canManageIngredients(role: string | undefined): boolean {
   return role === ROLES.ADMIN || role === ROLES.MANAGER;
+}
+
+// Recording a new stock delivery (POST /inventory/stock/inward) is allowed
+// for Admin / Manager / Inventory Staff (manuscript US-11).
+export function canRecordDelivery(role: string | undefined): boolean {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.MANAGER ||
+    role === ROLES.INVENTORY_STAFF
+  );
 }
 
 // Purchase-order action gating. Frontend is UX-only; the backend remains the

@@ -13,4 +13,5 @@ export { PurchaseOrderForm } from "./components/PurchaseOrderForm";
 export { PurchaseOrderDetail } from "./components/PurchaseOrderDetail";
 export { PurchaseOrderStats } from "./components/PurchaseOrderStats";
 export { StockAdjustDialog } from "./components/StockAdjustDialog";
+export { RecordDeliveryDialog } from "./components/RecordDeliveryDialog";
 export { StockMovementTable } from "./components/StockMovementTable";

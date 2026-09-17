@@ -244,6 +244,23 @@ export function useStockAdjust() {
   });
 }
 
+export function useRecordDelivery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { ingredient_id: string; quantity: number; notes?: string }) =>
+      api.post<ApiResponse<StockMovement>>("/inventory/stock/inward", {
+        ingredient_id: data.ingredient_id,
+        quantity: data.quantity,
+        notes: data.notes,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useStockTransfer() {
   const queryClient = useQueryClient();
   return useMutation({

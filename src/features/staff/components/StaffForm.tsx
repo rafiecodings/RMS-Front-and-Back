@@ -195,29 +195,6 @@ export const StaffForm = React.forwardRef<HTMLFormElement, StaffFormProps>(funct
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Hourly Rate (₱)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.hourly_rate ?? ""}
-              onChange={(e) => update("hourly_rate", e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder="0.00"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Commission Rate (%)</Label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step={0.1}
-              value={form.commission_rate ?? ""}
-              onChange={(e) => update("commission_rate", e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder="0"
-            />
-          </div>
         </div>
       </div>
 

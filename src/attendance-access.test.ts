@@ -7,25 +7,18 @@ function request(path: string, role?: string) {
   return new NextRequest(`http://localhost${path}`, { headers: role ? { cookie: `rms_role=${role}` } : {} });
 }
 
-describe("attendance route access", () => {
-  it.each(["cashier", "waiter", "kitchen_staff", "inventory_staff"])("gives %s self-service access without staff management", (role) => {
-    expect(SIDEBAR_ROLES.attendance).toContain(role);
-    expect(proxy(request("/my-attendance", role)).headers.get("location")).toBeNull();
-    expect(proxy(request("/staff/attendance", role)).headers.get("location")).toContain("/unauthorized");
-    expect(canView(role, "staff")).toBe(false);
-  });
-  it("preserves manager access to both attendance pages", () => {
-    for (const path of ["/my-attendance", "/staff/attendance"]) {
-      expect(proxy(request(path, "manager")).headers.get("location")).toBeNull();
+describe("attendance route access (manuscript scope: hidden from defense UI)", () => {
+  it.each(["cashier", "waiter", "kitchen_staff", "inventory_staff", "manager", "admin"])(
+    "redirects %s from my-attendance to dashboard",
+    (role) => {
+      expect(proxy(request("/my-attendance", role)).headers.get("location")).toContain("/dashboard");
+      expect(canView(role, "staff")).toBe(role === "admin" || role === "manager");
     }
-  });
-  it("redirects admin from my-attendance to attendance management", () => {
+  );
+  it("sidebar has no My Attendance entry", () => {
     expect(SIDEBAR_ROLES.attendance).not.toContain("admin");
-    expect(proxy(request("/my-attendance", "admin")).headers.get("location")).toContain("/staff/attendance");
-    expect(proxy(request("/staff/attendance", "admin")).headers.get("location")).toBeNull();
   });
-  it("requires login and rejects unknown roles", () => {
+  it("requires login", () => {
     expect(proxy(request("/my-attendance")).headers.get("location")).toContain("/login");
-    expect(proxy(request("/my-attendance", "unknown")).headers.get("location")).toContain("/unauthorized");
   });
 });

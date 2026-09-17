@@ -104,12 +104,6 @@ export function StaffDetail({ staff, onEdit, canEdit = true }: StaffDetailProps)
               : "Not provided"}
           </Field>
           <Field label="Hire Date">{formatDate(staff.hire_date)}</Field>
-          <Field label="Hourly Rate">
-            {staff.hourly_rate != null ? formatCurrency(staff.hourly_rate) : "Not provided"}
-          </Field>
-          <Field label="Commission Rate">
-            {staff.commission_rate != null ? `${staff.commission_rate}%` : "Not provided"}
-          </Field>
         </div>
       </div>
 

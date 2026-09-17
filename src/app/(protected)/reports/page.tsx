@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   Package,
   BarChart3,
-  Users,
   Receipt,
   ClipboardList,
   ArrowRight,
@@ -66,14 +65,6 @@ const REPORT_LINKS = [
     href: "/reports/inventory",
     color: "text-rose-600 dark:text-rose-400",
     bgColor: "bg-rose-500/10",
-  },
-  {
-    title: "Staff",
-    description: "Orders handled, attendance, shifts",
-    icon: Users,
-    href: "/reports/staff",
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-purple-500/10",
   },
   {
     title: "Tax",

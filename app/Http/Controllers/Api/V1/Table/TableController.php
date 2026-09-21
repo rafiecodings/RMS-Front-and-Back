@@ -230,8 +230,10 @@ class TableController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:available,occupied,reserved,maintenance',
+            'status' => 'required|string|in:available,occupied,reserved,maintenance,needs_cleaning',
         ]);
+
+        $previousStatus = $table->status;
 
         $previousStatus = $table->status;
         $table->update(['status' => $validated['status']]);

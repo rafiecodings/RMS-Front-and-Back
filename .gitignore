@@ -27,6 +27,11 @@ build/
 .DS_Store
 *.pem
 Thumbs.db
+nul
+*.tmp
+*.sqlite
+check_*_status.php
+restaurant-frontend/scripts/dev-dbg.mjs
 
 # debug
 npm-debug.log*

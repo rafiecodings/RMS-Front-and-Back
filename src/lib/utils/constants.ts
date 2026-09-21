@@ -4,6 +4,14 @@ export const API_URL =
 export const ITEMS_PER_PAGE = 20;
 export const DEBOUNCE_DELAY = 300;
 
+// Dev-only per-tab auth: enables sessionStorage-based auth for multi-tab testing
+// Only active when NODE_ENV === "development" AND NEXT_PUBLIC_DEV_PER_TAB_AUTH === "true"
+export const DEV_PER_TAB_AUTH =
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_DEV_PER_TAB_AUTH === "true";
+
+export const DEV_AUTH_TOKEN_KEY = "rms_dev_auth_token";
+
 export const CHART_TOOLTIP_STYLE = {
   backgroundColor: "var(--card)",
   border: "1px solid var(--border)",

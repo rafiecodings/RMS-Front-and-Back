@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api/client";
 import type { User } from "@/lib/types";
+import { DEV_PER_TAB_AUTH, DEV_AUTH_TOKEN_KEY } from "@/lib/utils/constants";
 
 const LOGIN_EVENT = "rms:force-logout";
 const TOKEN_REFRESH_THRESHOLD_MS = 60_000;
@@ -37,16 +38,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const scheduleRefreshRef = useRef<(expiresInSeconds: number) => void>(() => {});
 
   const setRoleCookie = useCallback((role: string) => {
+    if (DEV_PER_TAB_AUTH) return;
     document.cookie = `rms_role=${role}; path=/; max-age=${ROLE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
   }, []);
 
   const clearRoleCookie = useCallback(() => {
+    if (DEV_PER_TAB_AUTH) return;
     document.cookie = "rms_role=; path=/; max-age=0; SameSite=Lax";
   }, []);
 
   const clearAuth = useCallback(() => {
     setUser(null);
     clearRoleCookie();
+    if (DEV_PER_TAB_AUTH && typeof window !== "undefined") {
+      sessionStorage.removeItem(DEV_AUTH_TOKEN_KEY);
+    }
   }, [clearRoleCookie]);
 
   const scheduleRefreshImpl = useCallback(
@@ -65,23 +71,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mountedRef.current && !refreshingRef.current) {
             refreshingRef.current = true;
              api
-               .post("/auth/refresh")
-               .then((res) => {
-                 refreshingRef.current = false;
-                 const data = res.data.data;
-                 if (data?.user?.role) {
-                   setUser(data.user);
-                   setRoleCookie(data.user.role);
-                 }
-                 if (data?.expires_in) {
-                   scheduleRefreshRef.current(data.expires_in);
-                 }
-               })
-              .catch(() => {
+              .post("/auth/refresh")
+              .then((res) => {
                 refreshingRef.current = false;
-                clearAuth();
-                router.push("/login");
-              });
+                const data = res.data.data;
+                if (data?.user?.role) {
+                  setUser(data.user);
+                  setRoleCookie(data.user.role);
+                }
+                if (data?.expires_in) {
+                  scheduleRefreshRef.current(data.expires_in);
+                }
+                // Dev per-tab: update token in sessionStorage
+                if (DEV_PER_TAB_AUTH && data?.token) {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.setItem(DEV_AUTH_TOKEN_KEY, data.token);
+                  }
+                }
+              })
+             .catch(() => {
+               refreshingRef.current = false;
+               clearAuth();
+               router.push("/login");
+             });
           }
         }, delay);
       }
@@ -116,6 +128,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mountedRef.current = true;
 
     async function load() {
+      // Dev per-tab: check sessionStorage first
+      if (DEV_PER_TAB_AUTH && typeof window !== "undefined") {
+        const token = sessionStorage.getItem(DEV_AUTH_TOKEN_KEY);
+        if (!token) {
+          setIsLoaded(true);
+          return;
+        }
+      }
       await refreshUser();
       if (mountedRef.current) {
         setIsLoaded(true);
@@ -133,6 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   useEffect(() => {
+    if (DEV_PER_TAB_AUTH) return; // 401 handling is in api/client.ts for dev per-tab
+
     function handleForceLogout() {
       clearAuth();
       router.push("/login");
@@ -148,9 +170,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       remember: rememberMe,
     });
-    const { user: userData, expires_in } = response.data.data;
+    const { user: userData, expires_in, token } = response.data.data;
     setUser(userData);
     setRoleCookie(userData.role);
+
+    // Dev per-tab: store token in sessionStorage
+    if (DEV_PER_TAB_AUTH && token && typeof window !== "undefined") {
+      sessionStorage.setItem(DEV_AUTH_TOKEN_KEY, token);
+    }
 
     if (expires_in) {
       scheduleRefresh(expires_in);
@@ -194,6 +221,11 @@ export function useAuth() {
 
 export function forceLogout() {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
+    if (DEV_PER_TAB_AUTH) {
+      sessionStorage.removeItem(DEV_AUTH_TOKEN_KEY);
+      window.location.href = "/login";
+    } else {
+      window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
+    }
   }
 }

@@ -17,9 +17,19 @@ import type { NextRequest } from "next/server";
  *
  * Mirror any route additions in src/providers/AuthProvider role cookie + backend
  * routes/api/*.php role middleware.
+ *
+ * Dev per-tab auth mode (NEXT_PUBLIC_DEV_PER_TAB_AUTH=true + NODE_ENV=development):
+ * - Bypasses frontend role-based redirects because middleware cannot read sessionStorage.
+ * - Backend RBAC remains authoritative.
+ * - Still protects unauthenticated routes via rms_role cookie presence check.
  */
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+
+// Dev per-tab auth mode flag (evaluated at build/startup time)
+const DEV_PER_TAB_AUTH =
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_DEV_PER_TAB_AUTH === "true";
 
 // Protected route → allowed roles. "any" = any authenticated user.
 // Aligned with permissions.ts PERMISSION_MATRIX/SIDEBAR_ROLES and the
@@ -82,6 +92,23 @@ export default function proxy(request: NextRequest) {
   }
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+
+  // Dev per-tab auth mode: bypass ALL cookie-based auth checks.
+  // The client-side AuthProvider becomes the single source of auth truth.
+  // It reads sessionStorage token and redirects to /login if not authenticated.
+  if (DEV_PER_TAB_AUTH) {
+    // In dev mode, we only handle the case where an already-authenticated user
+    // (determined by rms_role cookie, if present) hits a public auth route.
+    // This is a best-effort UX improvement; the client will also redirect.
+    const role = getRoleFromCookie(request);
+    if (role && isPublic) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    // Allow all other requests through; client handles auth state.
+    return NextResponse.next();
+  }
+
+  // Production / non-dev per-tab mode: standard cookie-based auth
   const role = getRoleFromCookie(request);
   const isAuthenticated = !!role;
 

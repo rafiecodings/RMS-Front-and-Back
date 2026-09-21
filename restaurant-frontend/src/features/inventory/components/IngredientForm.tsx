@@ -144,7 +144,7 @@ export function IngredientForm({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Current Stock {isEdit ? "" : "*"}</Label>
+            <Label htmlFor="current-stock" className="text-sm font-medium">Current Stock {isEdit ? "" : "*"}</Label>
             {isEdit ? (
               <div>
                 <p className="text-sm font-semibold tabular-nums">
@@ -155,6 +155,7 @@ export function IngredientForm({
             ) : (
               <>
                 <Input
+                  id="current-stock"
                   type="number"
                   min={0}
                   step={0.01}

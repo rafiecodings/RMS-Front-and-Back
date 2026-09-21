@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'cashier', 'display_name' => 'Cashier', 'description' => 'POS and billing operations', 'is_system' => true],
             ['name' => 'waiter', 'display_name' => 'Waiter', 'description' => 'Order taking and table management', 'is_system' => true],
             ['name' => 'kitchen_staff', 'display_name' => 'Kitchen Staff', 'description' => 'Kitchen operations and KOT management', 'is_system' => true],
+            ['name' => 'inventory_staff', 'display_name' => 'Inventory Staff', 'description' => 'Inventory and stock management', 'is_system' => true],
         ];
 
         foreach ($roles as $role) {
@@ -139,6 +140,7 @@ class DatabaseSeeder extends Seeder
         $cashier = Role::where('name', 'cashier')->first();
         $waiter = Role::where('name', 'waiter')->first();
         $kitchenStaff = Role::where('name', 'kitchen_staff')->first();
+        $inventoryStaff = Role::where('name', 'inventory_staff')->first();
 
         // Admin gets everything
         $admin->permissions()->syncWithoutDetaching(Permission::pluck('id'));
@@ -183,6 +185,18 @@ class DatabaseSeeder extends Seeder
                 'view_menu',
                 'view_kot', 'update_kot_status', 'print_kot',
                 'view_orders',
+            ])->pluck('id')
+        );
+
+        // Inventory staff: inventory, stock movements, purchase orders, suppliers, recipes
+        $inventoryStaff->permissions()->syncWithoutDetaching(
+            Permission::whereIn('name', [
+                'view_dashboard',
+                'view_inventory', 'create_inventory', 'edit_inventory',
+                'manage_stock_movements',
+                'manage_purchase_orders',
+                'manage_suppliers',
+                'manage_recipes',
             ])->pluck('id')
         );
     }
@@ -239,6 +253,8 @@ class DatabaseSeeder extends Seeder
             'currency_symbol' => '₱',
             'tax_id' => '123-456-789-000',
             'default_tax_rate' => 12.00,
+            'vat_enabled' => true,
+            'vat_inclusive' => true,
             'default_service_charge' => 0.00,
             'service_charge_enabled' => false,
             'receipt_header' => 'DEMO RESTAURANT',

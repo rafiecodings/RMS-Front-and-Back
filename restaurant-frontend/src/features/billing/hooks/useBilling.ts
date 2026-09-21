@@ -14,6 +14,7 @@ import type {
   Invoice,
   Refund,
   BillingStats,
+  InvoiceStatus,
 } from "../types";
 
 function orderToInvoice(order: Order): Invoice {
@@ -29,11 +30,26 @@ function orderToInvoice(order: Order): Invoice {
     payment_status = "partial";
   }
 
+  let status: InvoiceStatus = "unpaid";
+  if (order.status === "cancelled") {
+    status = "refunded";
+  } else if (order.status === "pending") {
+    status = "pending";
+  } else if (order.status === "completed" || order.status === "served") {
+    status = "paid";
+  } else if (order.status === "confirmed" || order.status === "preparing" || order.status === "ready") {
+    status = "pending";
+  } else if (order.status === "voided") {
+    status = "refunded";
+  } else {
+    status = "pending";
+  }
+
   return {
     id: order.id,
     invoice_number: order.order_number,
     order_type: order.order_type,
-    status: order.status,
+    status,
     customer: order.customer,
     table: order.table,
     items: (order.items ?? []).map((item) => ({
@@ -60,6 +76,12 @@ function orderToInvoice(order: Order): Invoice {
     placed_at: order.placed_at,
     completed_at: order.completed_at,
     created_at: order.created_at,
+    statutory_discount_type: order.statutory_discount_type,
+    statutory_discount_reference: order.statutory_discount_reference,
+    statutory_discount_name: order.statutory_discount_name,
+    qualified_amount: order.qualified_amount,
+    statutory_discount_amount: order.statutory_discount_amount,
+    vat_exempt_sales: order.vat_exempt_sales,
   };
 }
 

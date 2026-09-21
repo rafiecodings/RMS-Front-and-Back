@@ -2,7 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/utils";
-import { useTaxRate } from "@/features/settings/hooks/useSettings";
+import { useSettings, useTaxRate } from "@/features/settings/hooks/useSettings";
 
 interface CartSummaryProps {
   subtotal: number;
@@ -22,6 +22,18 @@ export function CartSummary({
   totalAmount,
 }: CartSummaryProps) {
   const taxRate = useTaxRate();
+  const { data: settings } = useSettings();
+  const vatEnabled = settings ? Boolean(settings.vat_enabled) : true;
+  const vatInclusive = settings ? Boolean(settings.vat_inclusive) : true;
+
+  // For VAT-inclusive: gross = totalAmount, vatable = totalAmount - vatAmount
+  // For VAT-exclusive: gross = subtotal - discount + serviceCharge, vatable = gross
+  const vatableSales = vatEnabled && vatInclusive
+    ? Math.max(0, Math.round((totalAmount - vatAmount) * 100) / 100)
+    : vatEnabled
+      ? Math.max(0, Math.round((subtotal - discountAmount + serviceChargeAmount) * 100) / 100)
+      : 0;
+
   return (
     <div className="space-y-2 text-sm">
       <div className="flex items-center justify-between">
@@ -36,10 +48,18 @@ export function CartSummary({
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">VAT ({taxRate}%)</span>
-        <span>{formatCurrency(vatAmount)}</span>
-      </div>
+      {vatEnabled && (
+        <>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">VATable Sales</span>
+            <span>{formatCurrency(vatableSales)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">VAT ({taxRate}%)</span>
+            <span>{formatCurrency(vatAmount)}</span>
+          </div>
+        </>
+      )}
 
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-xs">

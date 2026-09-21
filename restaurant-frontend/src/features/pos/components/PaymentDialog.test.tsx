@@ -48,7 +48,7 @@ describe("PaymentDialog", () => {
     const processButton = screen.getByRole("button", { name: "Process Payment" });
     expect(processButton).toBeDisabled();
 
-    await user.type(screen.getByPlaceholderText("0.00"), "500");
+    await user.type(screen.getByPlaceholderText("Enter amount received"), "500");
 
     expect(processButton).toBeEnabled();
     expect(screen.queryByText("Remaining")).not.toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("PaymentDialog", () => {
     const onProcessPayment = vi.fn();
     renderWithProviders(<PaymentDialog {...baseProps} onProcessPayment={onProcessPayment} />);
 
-    await user.type(screen.getByPlaceholderText("0.00"), "500");
+    await user.type(screen.getByPlaceholderText("Enter amount received"), "500");
     await user.click(screen.getByRole("button", { name: "Process Payment" }));
 
     expect(onProcessPayment).toHaveBeenCalledTimes(1);
@@ -73,26 +73,26 @@ describe("PaymentDialog", () => {
 
     // Split payment was intentionally removed (one order → one payment → one method).
     expect(screen.queryByRole("button", { name: /add method/i })).toBeNull();
-    expect(screen.getAllByPlaceholderText("0.00")).toHaveLength(1);
+    expect(screen.getAllByPlaceholderText("Enter amount received")).toHaveLength(1);
   });
 
   it("blocks payment when amount is insufficient and shows validation", async () => {
     const user = userEvent.setup();
     renderWithProviders(<PaymentDialog {...baseProps} />);
 
-    await user.type(screen.getByPlaceholderText("0.00"), "100");
+    await user.type(screen.getByPlaceholderText("Enter amount received"), "100");
 
     const processButton = screen.getByRole("button", { name: "Process Payment" });
     expect(processButton).toBeDisabled();
     expect(
-      screen.getByText(/insufficient amount received/i)
+      screen.getByText(/insufficient amount\. minimum:/i)
     ).toBeInTheDocument();
   });
 
   it("disables the process button while processing", () => {
     renderWithProviders(<PaymentDialog {...baseProps} isProcessing />);
     expect(
-      screen.getByRole("button", { name: "Process Payment" })
+      screen.getByRole("button", { name: /^Processing/ })
     ).toBeDisabled();
   });
 });

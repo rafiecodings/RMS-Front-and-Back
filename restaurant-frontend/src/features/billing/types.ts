@@ -8,11 +8,23 @@ import type {
   OrderItemModifier,
 } from "@/lib/types";
 
+export type InvoiceStatus =
+  | "unpaid"
+  | "pending"
+  | "partial"
+  | "paid"
+  | "refunded";
+
+export type StatutoryDiscountType =
+  | "senior_citizen"
+  | "pwd"
+  | null;
+
 export interface Invoice {
   id: string;
   invoice_number: string;
   order_type: OrderType;
-  status: OrderStatus;
+  status: InvoiceStatus;
   customer?: Customer;
   table?: Table;
   items: InvoiceItem[];
@@ -29,6 +41,12 @@ export interface Invoice {
   placed_at?: string;
   completed_at?: string;
   created_at: string;
+  statutory_discount_type?: StatutoryDiscountType;
+  statutory_discount_reference?: string;
+  statutory_discount_name?: string;
+  qualified_amount?: number;
+  statutory_discount_amount?: number;
+  vat_exempt_sales?: number;
 }
 
 export interface InvoiceItem {

@@ -17,6 +17,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { canAccessRevenueReport } from "@/lib/utils/permissions";
 import type { MenuItem, OrderType, Order } from "@/lib/types";
 import type { PaymentLine as PosPaymentLine, CartItemType } from "@/features/pos";
+import type { StatutoryDiscountType } from "@/features/pos/components/PaymentDialog";
+import type { PaymentFormData } from "@/lib/types";
 
 export default function PosPage() {
   const router = useRouter();
@@ -39,6 +41,12 @@ export default function PosPage() {
   const [completedCustomerName, setCompletedCustomerName] = useState("");
   const [completedTableNumber, setCompletedTableNumber] = useState("");
   const [completedDiscountName, setCompletedDiscountName] = useState<string | undefined>();
+  // Statutory discount fields for receipt
+  const [completedStatutoryDiscountType, setCompletedStatutoryDiscountType] = useState<"senior_citizen" | "pwd" | null>(null);
+  const [completedStatutoryDiscountName, setCompletedStatutoryDiscountName] = useState<string | undefined>();
+  const [completedStatutoryDiscountAmount, setCompletedStatutoryDiscountAmount] = useState<number>(0);
+  const [completedQualifiedAmount, setCompletedQualifiedAmount] = useState<number>(0);
+  const [completedVatExemptSales, setCompletedVatExemptSales] = useState<number>(0);
   // Server-computed figures captured at payment time so the receipt always
   // mirrors the recorded transaction/invoice instead of client cart math.
   const [completedItems, setCompletedItems] = useState<CartItemType[]>([]);
@@ -60,6 +68,11 @@ export default function PosPage() {
     setCompletedItems([]);
     setCompletedTotals(null);
     setCompletedDiscountName(undefined);
+    setCompletedStatutoryDiscountType(null);
+    setCompletedStatutoryDiscountName(undefined);
+    setCompletedStatutoryDiscountAmount(0);
+    setCompletedQualifiedAmount(0);
+    setCompletedVatExemptSales(0);
     setCompletedDue(undefined);
     setCompletedPrevPaid(undefined);
   }
@@ -78,7 +91,15 @@ export default function PosPage() {
     [cart]
   );
 
-  async function payExistingOrder(payments: PosPaymentLine[]) {
+  async function payExistingOrder(
+    payments: PosPaymentLine[],
+    statutoryDiscount?: {
+      type: StatutoryDiscountType;
+      reference: string;
+      name?: string;
+      qualifiedAmount: number;
+    }
+  ) {
     if (!existingOrder) return;
     const orderId = existingOrder.id;
     const backendTotal = existingOrder.total_amount;
@@ -110,19 +131,36 @@ export default function PosPage() {
       totalAmount: backendTotal,
     });
     setCompletedDiscountName(existingOrder.applied_discount?.name);
+    
+    // Capture statutory discount data for receipt
+    setCompletedStatutoryDiscountType(existingOrder.statutory_discount_type ?? null);
+    setCompletedStatutoryDiscountName(existingOrder.statutory_discount_name);
+    setCompletedStatutoryDiscountAmount(existingOrder.statutory_discount_amount ?? 0);
+    setCompletedQualifiedAmount(existingOrder.qualified_amount ?? 0);
+    setCompletedVatExemptSales(existingOrder.vat_exempt_sales ?? 0);
+    
     setCompletedDue(dueNow);
     setCompletedPrevPaid(alreadyPaid);
 
     // Single payment settles the remaining balance. The dialog already emits
     // the exact due for card/e-wallet and the full tendered amount for cash.
     const payment = payments[0];
+    const paymentData: PaymentFormData = {
+      payment_method: payment.method,
+      amount: Math.round(payment.amount * 100) / 100,
+      reference: payment.reference,
+    };
+
+    if (statutoryDiscount) {
+      paymentData.statutory_discount_type = statutoryDiscount.type;
+      paymentData.statutory_discount_reference = statutoryDiscount.reference;
+      paymentData.statutory_discount_name = statutoryDiscount.name;
+      paymentData.qualified_amount = statutoryDiscount.qualifiedAmount;
+    }
+
     await addPayment.mutateAsync({
       id: orderId,
-      data: {
-        payment_method: payment.method,
-        amount: Math.round(payment.amount * 100) / 100,
-        reference: payment.reference,
-      },
+      data: paymentData,
     });
 
     setCompletedOrderNumber(existingOrder.order_number);
@@ -140,7 +178,13 @@ export default function PosPage() {
     payments: PosPaymentLine[],
     _orderType: OrderType,
     _customerId?: string,
-    _tableId?: string
+    _tableId?: string,
+    statutoryDiscount?: {
+      type: StatutoryDiscountType;
+      reference: string;
+      name?: string;
+      qualifiedAmount: number;
+    }
   ) {
     try {
       const validPayments = payments.filter((p) => p.amount > 0);
@@ -156,7 +200,7 @@ export default function PosPage() {
         return;
       }
 
-      await payExistingOrder(validPayments);
+      await payExistingOrder(validPayments, statutoryDiscount);
     } catch (error) {
       const message =
         (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
@@ -236,7 +280,7 @@ export default function PosPage() {
       <PosHeader
         itemCount={cart.computed.itemCount}
         onClearCart={cart.clearCart}
-        onReport={() => router.push("/reports")}
+        onReport={() => router.push("/reports/revenue")}
         canReport={canReport}
       />
 
@@ -258,6 +302,7 @@ export default function PosPage() {
             onUpdateQuantity={cart.updateQuantity}
             onRemove={cart.removeItem}
             onUpdateNotes={cart.updateItemNotes}
+            onReport={() => router.push("/reports/revenue")}
             existingOrder={existingOrder}
             onSelectExistingOrder={() => setExistingDialogOpen(true)}
             onClearExistingOrder={() => setExistingOrderId(null)}
@@ -297,6 +342,11 @@ export default function PosPage() {
         customerName={completedCustomerName || undefined}
         tableNumber={completedTableNumber || undefined}
         onNewOrder={handleNewOrder}
+        statutoryDiscountType={completedStatutoryDiscountType}
+        statutoryDiscountName={completedStatutoryDiscountName}
+        statutoryDiscountAmount={completedStatutoryDiscountAmount}
+        qualifiedAmount={completedQualifiedAmount}
+        vatExemptSales={completedVatExemptSales}
       />
 
       <ExistingOrderDialog

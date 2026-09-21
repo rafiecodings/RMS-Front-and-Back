@@ -35,17 +35,17 @@ interface IngredientTableProps {
 
 const CATEGORIES = [
   { value: "all", label: "All Categories" },
-  { value: "meat", label: "Meat" },
-  { value: "seafood", label: "Seafood" },
-  { value: "vegetables", label: "Vegetables" },
-  { value: "fruits", label: "Fruits" },
-  { value: "dairy", label: "Dairy" },
-  { value: "grains", label: "Grains" },
-  { value: "spices", label: "Spices" },
-  { value: "condiments", label: "Condiments" },
-  { value: "pantry", label: "Pantry" },
-  { value: "beverages", label: "Beverages" },
-  { value: "other", label: "Other" },
+  { value: "Meat", label: "Meat" },
+  { value: "Seafood", label: "Seafood" },
+  { value: "Vegetables", label: "Vegetables" },
+  { value: "Fruits", label: "Fruits" },
+  { value: "Dairy & Eggs", label: "Dairy & Eggs" },
+  { value: "Grains", label: "Grains" },
+  { value: "Spices & Herbs", label: "Spices & Herbs" },
+  { value: "Condiments", label: "Condiments" },
+  { value: "Pantry", label: "Pantry" },
+  { value: "Beverages", label: "Beverages" },
+  { value: "Other", label: "Other" },
 ];
 
 const STATUS_RING: Record<StockStatus, string> = {

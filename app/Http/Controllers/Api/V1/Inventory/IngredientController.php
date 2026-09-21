@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Inventory;
 
+use App\Enums\IngredientCategory;
 use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class IngredientController extends Controller
 {
@@ -81,7 +83,7 @@ class IngredientController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:100|unique:ingredients,sku',
-            'category' => 'nullable|string|max:255',
+            'category' => ['nullable', 'string', 'max:255', Rule::in(IngredientCategory::values())],
             'unit' => 'required|string|max:50',
             'current_stock' => 'sometimes|numeric|min:0',
             'minimum_stock' => 'sometimes|numeric|min:0',
@@ -158,7 +160,7 @@ class IngredientController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'sku' => "sometimes|string|max:100|unique:ingredients,sku,{$id}",
-            'category' => 'nullable|string|max:255',
+            'category' => ['nullable', 'string', 'max:255', Rule::in(IngredientCategory::values())],
             'unit' => 'sometimes|string|max:50',
             'minimum_stock' => 'sometimes|numeric|min:0',
             'maximum_stock' => 'nullable|numeric|min:0',

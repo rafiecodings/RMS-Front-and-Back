@@ -15,7 +15,15 @@ class LogoutController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return $this->success(null, 'Logged out successfully.')
-            ->withCookie(AuthCookie::forget());
+        // Dev per-tab auth mode: do not clear cookie (token is in sessionStorage per tab)
+        $isDevPerTabAuth = app()->environment('local') && filter_var(env('DEV_PER_TAB_AUTH', false), FILTER_VALIDATE_BOOLEAN);
+
+        $response = $this->success(null, 'Logged out successfully.');
+
+        if ($isDevPerTabAuth) {
+            return $response;
+        }
+
+        return $response->withCookie(AuthCookie::forget());
     }
 }

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
 import {
   Pencil,
@@ -14,22 +14,9 @@ import {
   Clock,
   Users,
 } from "lucide-react";
-import { cn, formatDate, formatLabel } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import type { Customer, CustomerReservation } from "@/lib/types";
 import { EmptyState } from "@/components/shared";
-
-const RESERVATION_STATUS_BADGE: Record<string, string> = {
-  pending:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  confirmed:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  seated:
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  cancelled:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
 
 function formatTime(timeStr: string | undefined | null) {
   if (!timeStr) return "—";
@@ -76,14 +63,10 @@ export function CustomerDetail({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-bold truncate">{customer.name}</h2>
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">
-                  Registered Customer
-                </Badge>
-                {!customer.is_active && (
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0">
-                    Inactive
-                  </Badge>
-                )}
+                <StatusBadge
+                  status={customer.is_active ? "active" : "inactive"}
+                  className="text-[10px] px-1.5 py-0"
+                />
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">Customer since {formatDate(customer.created_at)}</p>
             </div>
@@ -156,21 +139,6 @@ export function CustomerDetail({
           </Card>
         </div>
 
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Visits</p>
-              <p className="text-xl font-bold">{customer.visit_count}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Spent</p>
-              <p className="text-xl font-bold">{customer.total_spent != null ? `₱${Number(customer.total_spent).toLocaleString()}` : "—"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Reservation History */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Reservation History</h3>
@@ -201,15 +169,7 @@ export function CustomerDetail({
                       </div>
                     </div>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-[10px] px-1.5 py-0",
-                      RESERVATION_STATUS_BADGE[r.status] ?? "bg-gray-100 text-gray-700"
-                    )}
-                  >
-                    {formatLabel(r.status)}
-                  </Badge>
+                  <StatusBadge status={r.status} className="text-[10px] px-1.5 py-0" />
                 </div>
               ))}
             </CardContent>
@@ -242,15 +202,7 @@ export function CustomerDetail({
                       </div>
                     </div>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-[10px] px-1.5 py-0",
-                      RESERVATION_STATUS_BADGE[r.status] ?? "bg-gray-100 text-gray-700"
-                    )}
-                  >
-                    {formatLabel(r.status)}
-                  </Badge>
+                  <StatusBadge status={r.status} className="text-[10px] px-1.5 py-0" />
                 </div>
               ))}
             </CardContent>

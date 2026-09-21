@@ -14,6 +14,7 @@ import { EntityActionDropdown } from "@/components/shared";
 import { Users } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared";
 
 interface CustomerTableProps {
   customers: Customer[];
@@ -60,7 +61,6 @@ export function CustomerTable({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead className="text-right">Orders</TableHead>
-              <TableHead className="text-right">Visits</TableHead>
               <TableHead className="text-right">Reservations</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-10" />
@@ -73,14 +73,16 @@ export function CustomerTable({
                   <button onClick={() => onView?.(customer)} className="font-medium hover:underline text-left">
                     {customer.name}
                   </button>
+                  {(customer.phone || customer.email) && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[220px]">
+                      {customer.phone ?? customer.email}
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">{customer.total_orders}</TableCell>
-                <TableCell className="text-right">{customer.visit_count ?? 0}</TableCell>
                 <TableCell className="text-right">{customer.total_reservations ?? 0}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", customer.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-900/40 dark:text-gray-400")}>
-                    {customer.is_active ? "Active" : "Inactive"}
-                  </Badge>
+                  <StatusBadge status={customer.is_active ? "active" : "inactive"} />
                 </TableCell>
                 <TableCell>
                   <EntityActionDropdown onView={onView ? () => onView(customer) : undefined} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
@@ -90,23 +92,27 @@ export function CustomerTable({
           </TableBody>
         </Table>
       </div>
-      <div className="md:hidden space-y-3">
+<div className="md:hidden space-y-3">
         {customers.map((customer) => (
           <div key={customer.id} className="rounded-xl border bg-card p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <button onClick={() => onView?.(customer)} className="font-semibold hover:underline line-clamp-1 text-left">
-                {customer.name}
-              </button>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", customer.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600")}>
-                  {customer.is_active ? "Active" : "Inactive"}
-                </Badge>
+              <div className="min-w-0">
+                <button onClick={() => onView?.(customer)} className="font-semibold hover:underline line-clamp-1 text-left">
+                  {customer.name}
+                </button>
+                {(customer.phone || customer.email) && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {customer.phone ?? customer.email}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={customer.is_active ? "active" : "inactive"} />
                 <EntityActionDropdown onView={onView ? () => onView(customer) : undefined} viewLabel="View Details" editHref={onEdit ? undefined : canEdit ? `/customers/${customer.id}/edit` : undefined} onEdit={onEdit ? () => onEdit(customer) : undefined} onAction={onDelete ? () => onDelete(customer) : undefined} onArchive={onArchive && customer.is_active ? () => onArchive(customer) : undefined} archiveLabel="Archive" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-sm">
               <div><p className="text-xs text-muted-foreground">Orders</p><p className="font-medium">{customer.total_orders}</p></div>
-              <div><p className="text-xs text-muted-foreground">Visits</p><p className="font-medium">{customer.visit_count ?? 0}</p></div>
               <div><p className="text-xs text-muted-foreground">Reservations</p><p className="font-medium">{customer.total_reservations ?? 0}</p></div>
             </div>
           </div>
@@ -115,5 +121,3 @@ export function CustomerTable({
     </>
   );
 }
-
-

@@ -28,7 +28,10 @@ export function SearchInput({
       />
       {value && (
         <button
+          type="button"
           onClick={() => onChange("")}
+          aria-label="Clear search"
+          title="Clear search"
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 min-h-8 min-w-8 flex items-center justify-center"
         >
           <X className="h-4 w-4" />

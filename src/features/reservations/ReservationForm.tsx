@@ -131,7 +131,7 @@ export function ReservationForm({
   function tableDisplayLabel(id: string): string | null {
     const found = availableTables.find((t) => t.id === id) ?? assignableTables.find((t) => t.id === id) ?? (initialData?.table as unknown as Table | undefined);
     if (!found) return null;
-    return `T${(found as Table).number} — ${(found as Table).name ?? "Table"} (cap: ${(found as Table).capacity})`;
+    return `${(found as Table).number} — ${(found as Table).name ?? "Table"} (cap: ${(found as Table).capacity})`;
   }
   const selectedTableLabel = formData.table_id ? tableDisplayLabel(formData.table_id) ?? (customersLoading ? "Loading..." : "Unavailable table") : null;
 
@@ -453,7 +453,7 @@ export function ReservationForm({
               )}
               {assignableTables.map((t: Table) => (
                 <SelectItem key={t.id} value={t.id} className="truncate">
-                  T{t.number} — {t.name ?? "Table"} (cap: {t.capacity})
+                  {t.number} — {t.name ?? "Table"} (cap: {t.capacity})
                 </SelectItem>
               ))}
               {formData.table_id && !assignableTables.some((t) => t.id === formData.table_id) && (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ProductionThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import QueryProvider from "@/providers/QueryProvider";
 import "./globals.css";
@@ -34,17 +34,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ProductionThemeProvider>
           <QueryProvider>
             <AuthProvider>{children}</AuthProvider>
           </QueryProvider>
           <Toaster position="top-right" richColors />
-        </ThemeProvider>
+        </ProductionThemeProvider>
       </body>
     </html>
   );

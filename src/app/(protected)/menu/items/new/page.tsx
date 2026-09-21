@@ -47,6 +47,7 @@ export default function NewMenuItemPage() {
         ) : (
           <MenuItemForm
             categories={categoryList}
+            isCategoriesLoading={categories.list.isLoading}
             onSubmit={handleSubmit}
             isLoading={create.isPending}
             submitLabel="Create Item"

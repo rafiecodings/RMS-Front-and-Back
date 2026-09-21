@@ -84,6 +84,7 @@ export default function EditMenuItemPage({
           <MenuItemForm
             initialData={item}
             categories={categoryList}
+            isCategoriesLoading={categories.list.isLoading}
             onSubmit={handleSubmit}
             isLoading={update.isPending}
             submitLabel="Update Item"

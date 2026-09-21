@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner, EmptyState } from "@/components/shared";
+import { StatusBadge } from "@/components/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,22 +22,7 @@ import {
   MapPin,
 } from "lucide-react";
 import type { Reservation, ReservationStatus } from "@/lib/types";
-import { cn, formatLabel } from "@/lib/utils";
-
-const STATUS_BADGE: Record<ReservationStatus, string> = {
-  pending:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  confirmed:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  seated:
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  cancelled:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  no_show:
-    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
+import { cn } from "@/lib/utils";
 
 const STATUS_GLOW: Record<ReservationStatus, string> = {
   pending:
@@ -76,11 +61,14 @@ function formatDate(dateStr: string | undefined | null) {
 
 function formatTime(timeStr: string | undefined | null) {
   if (!timeStr) return "—";
-  const [h, m] = timeStr.split(":");
-  const hour = parseInt(h ?? "0") || 0;
+  const parts = (timeStr || "").split(":");
+  if (parts.length < 2) return "—";
+  const hour = parseInt(parts[0] || "0", 10);
+  if (isNaN(hour)) return "—";
+  const minute = parts[1] || "00";
   const ampm = hour >= 12 ? "PM" : "AM";
   const h12 = hour % 12 || 12;
-  return `${h12}:${m ?? "00"} ${ampm}`;
+  return `${h12}:${minute} ${ampm}`;
 }
 
 interface ReservationTableProps {
@@ -269,21 +257,12 @@ export function ReservationTable({
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span>{res.table ? `T${res.table.number}` : "No table"}</span>
+              <span>{res.table ? res.table.number : "No table"}</span>
             </div>
           </div>
 
           <div className="mt-3 pt-3 border-t border-current/10">
-            <Badge
-              variant="secondary"
-              className={cn(
-                "text-[10px] px-1.5 py-0",
-                STATUS_BADGE[res.status] ?? STATUS_BADGE["pending"],
-                res.archived_at && "opacity-70"
-              )}
-            >
-              {formatLabel(res.status)}
-            </Badge>
+            <StatusBadge status={res.status} className={res.archived_at ? "opacity-70" : undefined} />
           </div>
         </div>
       ))}

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/shared";
 import {
   Pencil,
   User,
@@ -17,23 +17,7 @@ import {
   XCircle,
   ChevronRight,
 } from "lucide-react";
-import type { Reservation, ReservationStatus } from "@/lib/types";
-import { cn, formatLabel } from "@/lib/utils";
-
-const STATUS_BADGE: Record<ReservationStatus, string> = {
-  pending:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  confirmed:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  seated:
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  cancelled:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  no_show:
-    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
+import type { Reservation } from "@/lib/types";
 
 function formatDate(dateStr: string | undefined | null) {
   if (!dateStr) return "—";
@@ -49,11 +33,14 @@ function formatDate(dateStr: string | undefined | null) {
 
 function formatTime(timeStr: string | undefined | null) {
   if (!timeStr) return "—";
-  const [h, m] = timeStr.split(":");
-  const hour = parseInt(h ?? "0") || 0;
+  const parts = (timeStr || "").split(":");
+  if (parts.length < 2) return "—";
+  const hour = parseInt(parts[0] || "0", 10);
+  if (isNaN(hour)) return "—";
+  const minute = parts[1] || "00";
   const ampm = hour >= 12 ? "PM" : "AM";
   const h12 = hour % 12 || 12;
-  return `${h12}:${m ?? "00"} ${ampm}`;
+  return `${h12}:${minute} ${ampm}`;
 }
 
 export function ReservationDetail({
@@ -84,15 +71,10 @@ export function ReservationDetail({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold">{reservation.reservation_number}</h2>
-            <Badge
-              variant="secondary"
-              className={cn(
-                "text-[10px] px-1.5 py-0",
-                STATUS_BADGE[reservation.status] ?? STATUS_BADGE["pending"],
-              )}
-            >
-              {formatLabel(reservation.status)}
-            </Badge>
+            <StatusBadge
+              status={reservation.status}
+              className={`text-[10px] px-1.5 py-0${reservation.archived_at ? " opacity-70" : ""}`}
+            />
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Created {formatDate(reservation.created_at)}

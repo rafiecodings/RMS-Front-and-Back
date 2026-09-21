@@ -20,6 +20,7 @@ import type { MenuItem, MenuItemFormData, MenuCategory } from "@/lib/types";
 interface MenuItemFormProps {
   initialData?: MenuItem;
   categories: MenuCategory[];
+  isCategoriesLoading?: boolean;
   onSubmit: (data: MenuItemFormData) => void;
   isLoading?: boolean;
   submitLabel?: string;
@@ -34,6 +35,7 @@ interface FormErrors {
 export function MenuItemForm({
   initialData,
   categories,
+  isCategoriesLoading = false,
   onSubmit,
   isLoading,
   submitLabel = "Save Item",
@@ -81,6 +83,12 @@ export function MenuItemForm({
 
   const activeCategories = categories.filter((c) => c.is_active);
   const selectedCategory = categories.find((c) => c.id === formData.category_id);
+  // Resolve the visible trigger label explicitly so the raw category UUID is
+  // never user-facing: while categories load (or the referenced category is
+  // missing) the Base UI Select would otherwise fall back to the raw value.
+  const categoryTriggerLabel = isCategoriesLoading
+    ? "Loading categories..."
+    : (selectedCategory?.name ?? (formData.category_id ? "Unknown Category" : undefined));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,28 +117,45 @@ export function MenuItemForm({
             onValueChange={(val) =>
               setFormData((prev) => ({ ...prev, category_id: val ?? "" }))
             }
+            disabled={isCategoriesLoading}
           >
             <SelectTrigger
               className="w-full"
               aria-invalid={touched.category_id && !!errors.category_id}
             >
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Select category">
+                {categoryTriggerLabel}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {activeCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="truncate">
-                  {c.name}
-                </SelectItem>
-              ))}
-              {formData.category_id && !selectedCategory && (
-                <SelectItem value={formData.category_id} disabled className="truncate">
-                  Unavailable category
-                </SelectItem>
-              )}
-              {activeCategories.length === 0 && !formData.category_id && (
-                <SelectItem value="none" disabled>
-                  No categories
-                </SelectItem>
+              {isCategoriesLoading ? (
+                formData.category_id ? (
+                  <SelectItem value={formData.category_id} disabled className="truncate">
+                    Loading categories...
+                  </SelectItem>
+                ) : (
+                  <SelectItem value="loading" disabled>
+                    Loading categories...
+                  </SelectItem>
+                )
+              ) : (
+                <>
+                  {activeCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="truncate">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                  {formData.category_id && !selectedCategory && (
+                    <SelectItem value={formData.category_id} disabled className="truncate">
+                      Unknown Category
+                    </SelectItem>
+                  )}
+                  {activeCategories.length === 0 && !formData.category_id && (
+                    <SelectItem value="none" disabled>
+                      No categories
+                    </SelectItem>
+                  )}
+                </>
               )}
             </SelectContent>
           </Select>

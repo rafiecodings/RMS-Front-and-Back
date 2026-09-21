@@ -64,7 +64,7 @@ export default function EditTablePage({
   return (
     <div>
       <PageHeader
-        title={`Edit Table T${table.number}`}
+          title={`Edit Table ${table.number}`}
         description="Update table details"
         action={
           <Button variant="outline" size="sm" render={<Link href="/tables" />}>

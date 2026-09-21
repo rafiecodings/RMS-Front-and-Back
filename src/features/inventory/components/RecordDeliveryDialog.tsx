@@ -74,8 +74,9 @@ export function RecordDeliveryDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Quantity *{ingredientUnit ? ` (${ingredientUnit})` : ""}</Label>
+            <Label htmlFor="delivery-quantity" className="text-sm font-medium">Quantity *{ingredientUnit ? ` (${ingredientUnit})` : ""}</Label>
             <Input
+              id="delivery-quantity"
               type="number"
               min={0.01}
               step={0.01}
@@ -86,8 +87,9 @@ export function RecordDeliveryDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Notes (optional)</Label>
+            <Label htmlFor="delivery-notes" className="text-sm font-medium">Notes (optional)</Label>
             <Input
+              id="delivery-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional delivery notes"

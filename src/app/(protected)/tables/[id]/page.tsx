@@ -5,8 +5,7 @@ import Link from "next/link";
 import { PageHeader, LoadingSpinner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/shared";
 import {
   ArrowLeft,
   Pencil,
@@ -15,21 +14,6 @@ import {
   Hash,
 } from "lucide-react";
 import { useTables } from "@/lib/hooks";
-import { cn } from "@/lib/utils";
-import type { TableStatus } from "@/lib/types";
-
-const STATUS_STYLES: Record<TableStatus, string> = {
-  available:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  occupied:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  reserved:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  needs_cleaning:
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  maintenance:
-    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
 
 export default function TableDetailPage({
   params,
@@ -67,11 +51,11 @@ export default function TableDetailPage({
     );
   }
 
-  return (
-    <div>
-      <PageHeader
-        title={`Table T${table.number}`}
-        description={table.name}
+return (
+      <div>
+        <PageHeader
+          title={`Table ${table.number}`}
+          description={table.name}
         action={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" render={<Link href="/tables" />}>
@@ -99,7 +83,7 @@ export default function TableDetailPage({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Table Number</p>
-                  <p className="text-sm font-medium">T{table.number}</p>
+                  <p className="text-sm font-medium">{table.number}</p>
                 </div>
               </div>
 
@@ -126,22 +110,6 @@ export default function TableDetailPage({
               </div>
             </div>
 
-            <Separator />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {table.zone && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Zone</p>
-                  <p className="text-sm">{table.zone}</p>
-                </div>
-              )}
-              {table.section && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Section</p>
-                  <p className="text-sm">{table.section}</p>
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -149,15 +117,7 @@ export default function TableDetailPage({
           <Card>
             <CardContent className="pt-1">
               <div className="text-center">
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "text-sm px-3 py-1",
-                    STATUS_STYLES[table.status]
-                  )}
-                >
-                  {table.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                </Badge>
+                <StatusBadge status={table.status} className="text-sm px-3 py-1" />
                 <p className="text-xs text-muted-foreground mt-2">Current Status</p>
               </div>
             </CardContent>

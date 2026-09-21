@@ -37,6 +37,7 @@ describe("self-service attendance", () => {
     render(<SelfAttendance />);
     expect(screen.getByText(/Clocked in since/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Clock Out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirm Clock Out" }));
     expect(state.clockOut.mutate).toHaveBeenCalledWith({ staff_id: "own-profile" }, expect.any(Object));
   });
 

@@ -50,8 +50,10 @@ describe("TableGridView archived presentation", () => {
   it("shows an Archived badge instead of the operational status", () => {
     render(<TableGridView tables={[T1, TT99]} />);
     expect(screen.getByText("Archived")).toBeInTheDocument();
-    // Only the active table keeps its operational badge.
-    expect(screen.getAllByText("available")).toHaveLength(1);
+    // Only the active table keeps its operational status badge (Available).
+    // The archived table shows "Archived" badge with a title showing underlying status.
+    const availableBadges = screen.getAllByText("Available");
+    expect(availableBadges).toHaveLength(1);
   });
 
   it("hides operational actions for archived tables, keeps Restore", async () => {

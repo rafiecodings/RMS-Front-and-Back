@@ -58,13 +58,13 @@ describe("ReservationForm table availability", () => {
     await user.click(tableTrigger);
 
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: /T1 —/ })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /1 —/ })).toBeInTheDocument();
     });
     expect(screen.getByRole("option", { name: "No table" })).toBeInTheDocument();
     expect(screen.queryByText(/auto-assign/i)).toBeNull();
-    expect(screen.queryByRole("option", { name: /T2 —/ })).toBeNull();
-    expect(screen.queryByRole("option", { name: /T3 —/ })).toBeNull();
-    expect(screen.queryByRole("option", { name: /T4 —/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /2 —/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /3 —/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /4 —/ })).toBeNull();
   });
 
   it("clears an invalidated table, shows a conflict message, and blocks submit until reconfirmed", async () => {
@@ -73,9 +73,9 @@ describe("ReservationForm table availability", () => {
     const { rerender } = render(<ReservationForm onSubmit={onSubmit} />);
     await fillGuest(user);
 
-    // A. User selects T1 — submitted state carries the table id.
+    // A. User selects 1 — submitted state carries the table id.
     await user.click(tableCombobox());
-    await user.click(await screen.findByRole("option", { name: /T1 —/ }));
+    await user.click(await screen.findByRole("option", { name: /1 —/ }));
     await user.click(screen.getByRole("button", { name: /Save Reservation/ }));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe("ReservationForm table availability", () => {
     ).toBeNull();
     onSubmit.mockClear();
 
-    // C. Availability refresh removes T1 (e.g. overlapping reservation).
+    // C. Availability refresh removes table "1" (e.g. overlapping reservation).
     mockTables.current = [
       { id: "t-5", number: "5", capacity: 2, status: "available", is_active: true },
     ];
@@ -94,7 +94,7 @@ describe("ReservationForm table availability", () => {
 
     // D + E. Selection cleared, human-readable conflict message, no UUID.
     const conflict = await screen.findByText(
-      /Table T1 is no longer available for this time/
+      /Table 1 — Table \(cap: 4\) is no longer available for this time/
     );
     expect(conflict.textContent).not.toMatch(/[0-9a-f]{8}-/);
     expect(document.body.textContent).not.toMatch(/t-1/);
@@ -125,7 +125,7 @@ describe("ReservationForm table availability", () => {
     await fillGuest(user);
 
     await user.click(tableCombobox());
-    await user.click(await screen.findByRole("option", { name: /T1 —/ }));
+    await user.click(await screen.findByRole("option", { name: /1 —/ }));
     // Selection confirmed via submitted state.
     await user.click(screen.getByRole("button", { name: /Save Reservation/ }));
     await waitFor(() => {
@@ -138,10 +138,10 @@ describe("ReservationForm table availability", () => {
       { id: "t-5", number: "5", capacity: 2, status: "available", is_active: true },
     ];
     rerender(<ReservationForm onSubmit={onSubmit} />);
-    await screen.findByText(/Table T1 is no longer available for this time/);
+    await screen.findByText(/Table 1 — Table \(cap: 4\) is no longer available for this time/);
 
     await user.click(tableCombobox());
-    await user.click(await screen.findByRole("option", { name: /T5 —/ }));
+    await user.click(await screen.findByRole("option", { name: /5 —/ }));
     await waitFor(() => {
       expect(
         screen.queryByText(/no longer available for this time/)
@@ -177,7 +177,7 @@ describe("ReservationForm table availability", () => {
     await fillGuest(user);
 
     await user.click(tableCombobox());
-    await user.click(await screen.findByRole("option", { name: /T1 —/ }));
+    await user.click(await screen.findByRole("option", { name: /1 —/ }));
     expect(
       screen.queryByText(/no longer available for this time/)
     ).toBeNull();

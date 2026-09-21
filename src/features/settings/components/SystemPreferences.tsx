@@ -34,6 +34,7 @@ const formSchema = z.object({
   currency: z.string().min(1),
   currency_symbol: z.string().min(1),
   vat_enabled: z.boolean(),
+  vat_registered: z.boolean(),
   vat_inclusive: z.boolean(),
   default_tax_rate: z.coerce.number().min(0).max(100),
   service_charge_enabled: z.boolean(),
@@ -55,7 +56,8 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
       currency: "PHP",
       currency_symbol: "₱",
       vat_enabled: true,
-      vat_inclusive: false,
+      vat_registered: false,
+      vat_inclusive: true,
       default_tax_rate: 12,
       service_charge_enabled: false,
       default_service_charge: 0,
@@ -72,7 +74,8 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
       currency: settings.currency || "PHP",
       currency_symbol: settings.currency_symbol || "₱",
       vat_enabled: settings.vat_enabled ?? true,
-      vat_inclusive: settings.vat_inclusive ?? false,
+      vat_registered: settings.vat_registered ?? false,
+      vat_inclusive: settings.vat_inclusive ?? true,
       default_tax_rate: settings.default_tax_rate,
       service_charge_enabled: settings.service_charge_enabled,
       default_service_charge: settings.default_service_charge,
@@ -92,7 +95,7 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
             <CardTitle>Billing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><span className="text-muted-foreground">VAT:</span> {settings.vat_enabled ? `Enabled (${settings.default_tax_rate}%)` : "Disabled"}{settings.vat_inclusive ? " · Inclusive" : ""}</p>
+            <p><span className="text-muted-foreground">VAT:</span> {settings.vat_enabled ? `Enabled (${settings.default_tax_rate}%)` : "Disabled"}{settings.vat_inclusive ? " · Inclusive" : ""}{settings.vat_registered ? " · Registered" : ""}</p>
             <p><span className="text-muted-foreground">Service Charge:</span> {settings.service_charge_enabled ? `${settings.default_service_charge}%` : "Disabled"}</p>
             <p><span className="text-muted-foreground">Currency:</span> {settings.currency || "Not provided"} ({settings.currency_symbol})</p>
             <p className="text-xs text-muted-foreground mt-3">
@@ -195,17 +198,29 @@ export function SystemPreferences({ canEdit = false }: { canEdit?: boolean }) {
               />
               <FormField
                 control={form.control}
-                name="vat_inclusive"
+                name="vat_registered"
                 render={({ field }) => (
                   <FormItem className="flex items-center gap-2">
                     <FormControl>
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={!vatEnabled} />
                     </FormControl>
-                    <FormLabel className="!mt-0">VAT Inclusive</FormLabel>
+                    <FormLabel className="!mt-0">VAT Registered</FormLabel>
                   </FormItem>
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="vat_inclusive"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={!vatEnabled} />
+                  </FormControl>
+                  <FormLabel className="!mt-0">VAT Inclusive</FormLabel>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

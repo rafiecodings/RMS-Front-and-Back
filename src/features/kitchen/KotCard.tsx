@@ -26,6 +26,7 @@ const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
 
 const STATUS_BORDER: Record<KotStatus, string> = {
   received: "border-l-blue-500",
+  pending: "border-l-blue-500",
   in_progress: "border-l-amber-500",
   ready: "border-l-emerald-500",
   completed: "border-l-gray-400",
@@ -49,21 +50,23 @@ interface KotCardProps {
 export function KotCard({ kot, onStatusAdvance, onViewDetail, onArchive }: KotCardProps) {
   const TypeIcon = (kot.order?.order_type ? TYPE_ICONS[kot.order.order_type] : null) ?? UtensilsCrossed;
   const tableNumber = kot.order?.table?.number;
-  const nextStatus: Record<KotStatus, KotStatus | null> = {
+const nextStatus: Record<KotStatus, KotStatus | null> = {
     received: "in_progress",
+    pending: "in_progress",
     in_progress: "ready",
     ready: null,
     completed: null,
     voided: null,
   };
+
   const nextLabel: Record<KotStatus, string> = {
     received: "Start Preparing",
+    pending: "Start Preparing",
     in_progress: "Mark Ready",
     ready: "Complete",
     completed: "Archive",
     voided: "Voided",
   };
-
   const canAdvance = nextStatus[kot.status] !== null;
   const canArchive = kot.status === "ready" || kot.status === "completed";
   const isTerminal =

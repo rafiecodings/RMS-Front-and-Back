@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,19 +21,6 @@ import {
 } from "lucide-react";
 import type { Table as TableType, TableStatus } from "@/lib/types";
 import { cn, formatLabel } from "@/lib/utils";
-
-const STATUS_BADGE: Record<TableStatus, string> = {
-  available:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  occupied:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  reserved:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  needs_cleaning:
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  maintenance:
-    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
 
 const STATUS_GLOW: Record<TableStatus, string> = {
   available:
@@ -108,7 +95,7 @@ export function TableGridView({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">
-                T{table.number}
+                {table.number}
               </span>
             </div>
             <DropdownMenu>
@@ -177,7 +164,7 @@ export function TableGridView({
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <span className="text-lg font-bold">T{table.number}</span>
+            <span className="text-lg font-bold">{table.number}</span>
             {table.name && (
               <span className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
                 {table.name}
@@ -191,23 +178,9 @@ export function TableGridView({
               {table.capacity}
             </div>
             {isArchived ? (
-              <Badge
-                variant="secondary"
-                className="text-[9px] px-1 py-0 h-4 bg-muted text-muted-foreground"
-                title={`Underlying status: ${formatLabel(table.status)}`}
-              >
-                Archived
-              </Badge>
+              <StatusBadge status="inactive" label="Archived" className="text-[9px] px-1 py-0 h-4" title={`Underlying status: ${formatLabel(table.status)}`} />
             ) : (
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "text-[9px] px-1 py-0 h-4",
-                  STATUS_BADGE[table.status]
-                )}
-              >
-                {formatLabel(table.status)}
-              </Badge>
+              <StatusBadge status={table.status} className="text-[9px] px-1 py-0 h-4" />
             )}
           </div>
         </div>

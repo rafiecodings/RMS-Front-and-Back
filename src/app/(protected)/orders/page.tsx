@@ -35,6 +35,8 @@ export default function OrdersPage() {
   const [viewId, setViewId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Order | null>(null);
+  const [unarchiveTarget, setUnarchiveTarget] = useState<Order | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
   const canCreate = canEdit(user?.role, "orders");
@@ -46,11 +48,12 @@ export default function OrdersPage() {
       per_page: ITEMS_PER_PAGE,
       ...(debouncedSearch && { search: debouncedSearch }),
       ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(showArchived && { archived: true }),
     }),
-    [page, debouncedSearch, statusFilter]
+    [page, debouncedSearch, statusFilter, showArchived]
   );
 
-  const { list, create, update, cancel, archive, updateStatus } = useOrders(params);
+  const { list, create, update, cancel, archive, unarchive, updateStatus } = useOrders(params);
   const { list: miList } = useMenuItems({ per_page: 200 });
   const { list: custList } = useCustomers({ per_page: 200, is_active: true } as unknown as Record<string, unknown>);
   const { list: tableList } = useTables();
@@ -126,6 +129,24 @@ export default function OrdersPage() {
             ?.response?.data?.message ||
           (error as { message?: string })?.message ||
           "Failed to archive order";
+        toast.error(message);
+      },
+    });
+  }
+
+  function handleUnarchiveConfirm() {
+    if (!unarchiveTarget) return;
+    unarchive.mutate(unarchiveTarget.id, {
+      onSuccess: () => {
+        toast.success(`Order ${unarchiveTarget.order_number} restored`);
+        setUnarchiveTarget(null);
+      },
+      onError: (error) => {
+        const message =
+          (error as { response?: { data?: { message?: string } }; message?: string })
+            ?.response?.data?.message ||
+          (error as { message?: string })?.message ||
+          "Failed to restore order";
         toast.error(message);
       },
     });
@@ -238,6 +259,17 @@ export default function OrdersPage() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button
+              variant={showArchived ? "default" : "outline"}
+              onClick={() => {
+                setShowArchived(!showArchived);
+                setPage(1);
+              }}
+              className="whitespace-nowrap"
+            >
+              {showArchived ? "Current" : "Archived"}
+            </Button>
           </div>
         </div>
 
@@ -250,6 +282,7 @@ export default function OrdersPage() {
           onView={(o) => setViewId(o.id)}
           onEdit={(o) => setEditId(o.id)}
           onArchive={canArchive ? setArchiveTarget : undefined}
+          onUnarchive={canArchive ? setUnarchiveTarget : undefined}
           onSendToKitchen={canConfirm && !updateStatus.isPending ? handleSendToKitchen : undefined}
           onServeOrder={canServe && !updateStatus.isPending ? handleServeOrder : undefined}
         />
@@ -298,6 +331,20 @@ export default function OrdersPage() {
         confirmText="Archive Order"
         onConfirm={handleArchiveConfirm}
         isLoading={archive.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!unarchiveTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnarchiveTarget(null);
+          }
+        }}
+        title="Restore Order"
+        description={`Are you sure you want to restore order ${unarchiveTarget?.order_number}? This will return it to the active orders list.`}
+        confirmText="Restore Order"
+        onConfirm={handleUnarchiveConfirm}
+        isLoading={unarchive.isPending}
       />
 
       <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>

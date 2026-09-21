@@ -70,14 +70,15 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   const menuItems = useMemo(() => miList.data?.data?.data ?? [], [miList.data]);
   const customers = useMemo(() => custList.data?.data?.data ?? [], [custList.data]);
   const tables = useMemo(() => tableList.data ?? [], [tableList.data]);
-  const customerDisplay = customerId ? (customers.find((c) => c.id === customerId)?.name ?? "Unavailable customer") : null;
-  const tableDisplay = tableId ? (tables.find((t) => t.id === tableId) ? `T${tables.find((t) => t.id === tableId)!.number} — ${tables.find((t) => t.id === tableId)!.capacity} seats` : "Unavailable table") : null;
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [customerId, setCustomerId] = useState<string>("");
   const [tableId, setTableId] = useState<string>("");
+
+  const customerDisplay = customerId ? (customers.find((c) => c.id === customerId)?.name ?? "Unavailable customer") : null;
+  const tableDisplay = tableId ? (tables.find((t) => t.id === tableId) ? `T${tables.find((t) => t.id === tableId)!.number} — ${tables.find((t) => t.id === tableId)!.capacity} seats` : "Unavailable table") : null;
   const [notes, setNotes] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [mobileView, setMobileView] = useState<"menu" | "cart">("menu");

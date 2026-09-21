@@ -196,68 +196,7 @@ export function ConfirmDialog({
   );
 }
 
-export const StatusBadge = memo(function StatusBadge({
-  status,
-  className,
-}: {
-  status: string;
-  className?: string;
-}) {
-  const variants: Record<string, string> = {
-    available: "bg-success/10 text-success",
-    occupied: "bg-destructive/10 text-destructive",
-    reserved: "bg-warning/10 text-warning",
-    needs_cleaning: "bg-warning/10 text-warning",
-    maintenance: "bg-muted text-muted-foreground",
-    pending: "bg-blue-500/10 text-blue-500",
-    confirmed: "bg-indigo-500/10 text-indigo-500",
-    preparing: "bg-amber-500/10 text-amber-500",
-    ready: "bg-emerald-500/10 text-emerald-500",
-    completed: "bg-green-500/10 text-green-500",
-    cancelled: "bg-red-500/10 text-red-500",
-    received: "bg-info/10 text-info",
-    in_progress: "bg-warning/10 text-warning",
-    draft: "bg-muted text-muted-foreground",
-    approved: "bg-success/10 text-success",
-    rejected: "bg-destructive/10 text-destructive",
-    ordered: "bg-info/10 text-info",
-    partial: "bg-warning/10 text-warning",
-    paid: "bg-success/10 text-success",
-    unpaid: "bg-warning/10 text-warning",
-    refunded: "bg-info/10 text-info",
-    active: "bg-success/10 text-success",
-    inactive: "bg-muted text-muted-foreground",
-    expired: "bg-muted text-muted-foreground",
-    low: "bg-warning/10 text-warning",
-    critical: "bg-destructive/10 text-destructive",
-    out_of_stock: "bg-destructive/10 text-destructive",
-    normal: "bg-info/10 text-info",
-    rush: "bg-destructive/10 text-destructive",
-    waiting: "bg-warning/10 text-warning",
-    seated: "bg-success/10 text-success",
-    served: "bg-emerald-500/10 text-emerald-500",
-    no_show: "bg-muted text-muted-foreground",
-    voided: "bg-destructive/10 text-destructive",
-    swap: "bg-info/10 text-info",
-    absent: "bg-red-500/10 text-red-500",
-    late: "bg-amber-500/10 text-amber-500",
-    half_day: "bg-orange-500/10 text-orange-500",
-    on_leave: "bg-blue-500/10 text-blue-500",
-  };
 
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-current/15 px-2.5 py-0.5 font-mono text-[11px] font-medium leading-4",
-        variants[status] || "bg-muted text-muted-foreground",
-        className
-      )}
-    >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-      {formatLabel(status)}
-    </span>
-  );
-});
 
 interface StatsCardProps {
   title: string;
@@ -510,3 +449,4 @@ export { EntityActionDropdown } from "./EntityActionDropdown";
 export { ErrorBoundary } from "./ErrorBoundary";
 
 export { MenuItemImage } from "./MenuItemImage";
+export { StatusBadge } from "./StatusBadge";

@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, CheckCircle2, UtensilsCrossed, ShoppingBag, HelpCircle } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, CheckCircle2, UtensilsCrossed, ShoppingBag, HelpCircle, RotateCcw } from "lucide-react";
 import type { Order, OrderType } from "@/lib/types";
 import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -46,6 +46,7 @@ interface OrderTableProps {
   onView?: (order: Order) => void;
   onEdit?: (order: Order) => void;
   onArchive?: (order: Order) => void;
+  onUnarchive?: (order: Order) => void;
   onSendToKitchen?: (order: Order) => void;
   onServeOrder?: (order: Order) => void;
 }
@@ -57,6 +58,7 @@ export function OrderTable({
   onView,
   onEdit,
   onArchive,
+  onUnarchive,
   onSendToKitchen,
   onServeOrder,
 }: OrderTableProps) {
@@ -137,7 +139,7 @@ export function OrderTable({
                     {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
+<TableCell className="text-xs text-muted-foreground">
                   {order.placed_at ? formatDateTime(order.placed_at) : "—"}
                 </TableCell>
                 <TableCell>
@@ -148,31 +150,31 @@ export function OrderTable({
                       <MoreHorizontal className="h-4 w-4" />
                       <span className="sr-only">Actions</span>
                     </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {onView && (
-                    <DropdownMenuItem onClick={() => onView(order)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </DropdownMenuItem>
-                  )}
-                  {(order.status === "pending" || order.status === "confirmed") && onEdit && (
-                    <DropdownMenuItem onClick={() => onEdit(order)}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                  )}
-                  {order.status === "pending" && onSendToKitchen && (
-                    <DropdownMenuItem onClick={() => onSendToKitchen(order)}>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send to Kitchen
-                    </DropdownMenuItem>
-                  )}
-                  {order.status === "ready" && onServeOrder && (
-                    <DropdownMenuItem onClick={() => onServeOrder(order)}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Mark as Served
-                    </DropdownMenuItem>
-                  )}
+                    <DropdownMenuContent align="end">
+                      {onView && (
+                        <DropdownMenuItem onClick={() => onView(order)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </DropdownMenuItem>
+                      )}
+                      {(order.status === "pending" || order.status === "confirmed") && onEdit && (
+                        <DropdownMenuItem onClick={() => onEdit(order)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {order.status === "pending" && onSendToKitchen && (
+                        <DropdownMenuItem onClick={() => onSendToKitchen(order)}>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send to Kitchen
+                        </DropdownMenuItem>
+                      )}
+                      {order.status === "ready" && onServeOrder && (
+                        <DropdownMenuItem onClick={() => onServeOrder(order)}>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Mark as Served
+                        </DropdownMenuItem>
+                      )}
                       {onCancel &&
                         // Backend state machine: served orders can only move
                         // to completed — offering Cancel would 409.
@@ -190,7 +192,8 @@ export function OrderTable({
                         )}
                       {onArchive &&
                         (order.status === "completed" ||
-                          order.status === "cancelled") && (
+                          order.status === "cancelled") &&
+                        !order.archived_at && (
                           <DropdownMenuItem
                             onClick={() => onArchive(order)}
                           >
@@ -198,7 +201,16 @@ export function OrderTable({
                             Archive
                           </DropdownMenuItem>
                         )}
-                    </DropdownMenuContent>
+                      {onUnarchive &&
+                        order.archived_at && (
+                          <DropdownMenuItem
+                            onClick={() => onUnarchive(order)}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Restore
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
@@ -230,7 +242,27 @@ export function OrderTable({
                       {order.status === "pending" && onSendToKitchen && <DropdownMenuItem onClick={() => onSendToKitchen(order)}><Send className="h-4 w-4 mr-2" />Send to Kitchen</DropdownMenuItem>}
                       {order.status === "ready" && onServeOrder && <DropdownMenuItem onClick={() => onServeOrder(order)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark as Served</DropdownMenuItem>}
                       {onCancel && (["pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
-                      {onArchive && (["completed","cancelled"].includes(order.status)) && <DropdownMenuItem onClick={() => onArchive(order)}><Archive className="h-4 w-4 mr-2" />Archive</DropdownMenuItem>}
+                      {onArchive &&
+                        (order.status === "completed" ||
+                          order.status === "cancelled") &&
+                        !order.archived_at && (
+                          <DropdownMenuItem
+                            onClick={() => onArchive(order)}
+                          >
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                        )}
+                      {onUnarchive &&
+                        order.archived_at && (
+                          <DropdownMenuItem
+                            onClick={() => onUnarchive(order)}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Restore
+                          </DropdownMenuItem>
+                        )}
+                      
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

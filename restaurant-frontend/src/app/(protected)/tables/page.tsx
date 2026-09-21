@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ConfirmDialog, LoadingSpinner, ErrorState } from "@/components/shared";
+import { PageHeader, ConfirmDialog, LoadingSpinner, ErrorState, EmptyState, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/providers/AuthProvider";
 import { canCreateTable, canEditTable, canArchiveTable, canChangeTableStatus } from "@/lib/utils/permissions";
 import {
@@ -29,22 +29,8 @@ import {
 } from "lucide-react";
 import { useTables } from "@/lib/hooks";
 import type { Table as TableType, TableStatus, TableFormData } from "@/lib/types";
-import { cn, formatLabel } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { formatLabel } from "@/lib/utils";
 import { toast } from "sonner";
-
-const STATUS_BADGE: Record<TableStatus, string> = {
-  available:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  occupied:
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  reserved:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  needs_cleaning:
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  maintenance:
-    "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
 
 export default function TablesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -91,7 +77,7 @@ export default function TablesPage() {
     tables.update.mutate(
       { id: table.id, data: { status } as unknown as Partial<TableType> },
       {
-        onSuccess: () => toast.success(`Table T${table.number} updated to ${formatLabel(status)}`),
+        onSuccess: () => toast.success(`Table ${table.number} updated to ${formatLabel(status)}`),
         onError: () => toast.error("Failed to update table status"),
       }
     );
@@ -102,7 +88,7 @@ export default function TablesPage() {
     if (!archiveTarget) return;
     tables.archive.mutate(archiveTarget.id, {
       onSuccess: () => {
-        toast.success(`Table T${archiveTarget.number} archived`);
+        toast.success(`Table ${archiveTarget.number} archived`);
         setArchiveTarget(null);
       },
       onError: (err) => {
@@ -119,7 +105,7 @@ export default function TablesPage() {
     if (!restoreTarget) return;
     tables.restore.mutate(restoreTarget.id, {
       onSuccess: () => {
-        toast.success(`Table T${restoreTarget.number} restored`);
+        toast.success(`Table ${restoreTarget.number} restored`);
         setRestoreTarget(null);
       },
       onError: () => toast.error("Failed to restore table"),
@@ -231,21 +217,22 @@ export default function TablesPage() {
         )}
 
         {filteredTables.length === 0 && !tables.list.isLoading && !tables.list.isError && (
-          <div className="text-center py-12 text-muted-foreground">
-            <LayoutGrid className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p>
-              {statusFilter !== "all"
-                ? `No tables with status "${formatLabel(statusFilter)}"`
-                : "No tables yet. Add one to get started."}
-            </p>
-          </div>
+          <EmptyState
+            title={statusFilter !== "all" ? `No tables with status "${formatLabel(statusFilter)}"` : showArchived ? "No tables found" : "No tables match these filters"}
+            description={
+              statusFilter !== "all" || showArchived
+                ? "Try adjusting your filters."
+                : "Add your first table to get started."
+            }
+            icon={<LayoutGrid className="h-8 w-8" />}
+          />
         )}
 
         <ConfirmDialog
           open={!!statusActionTarget}
           onOpenChange={(open) => !open && setStatusActionTarget(null)}
           title="Change Table Status"
-          description={statusActionTarget ? `Change table T${statusActionTarget.table.number} to "${formatLabel(statusActionTarget.status)}"?` : ""}
+          description={statusActionTarget ? `Change table ${statusActionTarget.table.number} to "${formatLabel(statusActionTarget.status)}"?` : ""}
           confirmText="Confirm"
           onConfirm={handleStatusConfirm}
           isLoading={tables.update.isPending}
@@ -255,7 +242,7 @@ export default function TablesPage() {
           open={!!archiveTarget}
           onOpenChange={(open) => !open && setArchiveTarget(null)}
           title="Archive Table"
-          description={`Archive table T${archiveTarget?.number}? It will be hidden from active lists and cannot be assigned to new orders until restored.`}
+          description={`Archive table ${archiveTarget?.number}? It will be hidden from active lists and cannot be assigned to new orders until restored.`}
           confirmText="Archive"
           variant="destructive"
           onConfirm={handleArchiveTable}
@@ -266,7 +253,7 @@ export default function TablesPage() {
           open={!!restoreTarget}
           onOpenChange={(open) => !open && setRestoreTarget(null)}
           title="Restore Table"
-          description={`Restore table T${restoreTarget?.number}? It will reappear in active lists.`}
+          description={`Restore table ${restoreTarget?.number}? It will reappear in active lists.`}
           confirmText="Restore"
           onConfirm={handleRestoreTable}
           isLoading={tables.restore.isPending}
@@ -303,7 +290,7 @@ export default function TablesPage() {
           <DialogContent className="sm:max-w-md w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col p-0 gap-0">
             <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
               <DialogTitle>
-                Table T{viewTarget?.number}
+                Table {viewTarget?.number}
                 {viewTarget?.name ? ` · ${viewTarget.name}` : ""}
               </DialogTitle>
             </DialogHeader>
@@ -311,22 +298,14 @@ export default function TablesPage() {
               <div className="space-y-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4">
                 <div className="flex items-center gap-2">
                   {viewTarget.is_active === false ? (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground"
-                    >
-                      Archived
-                    </Badge>
+                    <StatusBadge
+                      status="inactive"
+                      label="Archived"
+                      className="text-[10px] px-1.5 py-0"
+                      title={`Underlying status: ${formatLabel(viewTarget.status)}`}
+                    />
                   ) : (
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "text-[10px] px-1.5 py-0",
-                        STATUS_BADGE[viewTarget.status]
-                      )}
-                    >
-                      {formatLabel(viewTarget.status)}
-                    </Badge>
+                    <StatusBadge status={viewTarget.status} className="text-[10px] px-1.5 py-0" />
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -335,16 +314,8 @@ export default function TablesPage() {
                     <p className="font-medium">{viewTarget.capacity} seats</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Section</p>
-                    <p className="font-medium">{viewTarget.section || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Zone</p>
-                    <p className="font-medium">{viewTarget.zone || "—"}</p>
-                  </div>
-                  <div>
                     <p className="text-muted-foreground">Shape</p>
-                    <p className="font-medium">{viewTarget.shape || "—"}</p>
+                    <p className="font-medium">{viewTarget.shape ? formatLabel(viewTarget.shape) : "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Wheelchair Access</p>

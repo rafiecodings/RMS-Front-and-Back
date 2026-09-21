@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared";
 import { LoadingSpinner } from "@/components/shared";
 import {
   DropdownMenu,
@@ -74,8 +75,6 @@ export function TableList({
                 Table <ArrowUpDown className="h-3 w-3" />
               </span>
             </TableHead>
-            <TableHead className="hidden md:table-cell">Zone</TableHead>
-            <TableHead className="text-center">Capacity</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden lg:table-cell text-center">
               Accessible
@@ -87,18 +86,15 @@ export function TableList({
           {tables.map((table) => (
             <TableRow key={table.id}>
               <TableCell>
-                <Link
-                  href={`/tables/${table.id}`}
-                  className="font-semibold hover:underline"
-                >
-                  T{table.number}
-                </Link>
-                <span className="text-muted-foreground text-xs ml-1.5">
-                  {table.name}
-                </span>
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">
-                {table.zone || "—"}
+<Link
+                    href={`/tables/${table.id}`}
+                    className="font-semibold hover:underline"
+                  >
+                    {table.number}
+                  </Link>
+                  <span className="text-muted-foreground text-xs ml-1.5">
+                    {table.name}
+                  </span>
               </TableCell>
               <TableCell className="text-center">
                 <span className="inline-flex items-center gap-1 text-sm">
@@ -106,15 +102,7 @@ export function TableList({
                 </span>
               </TableCell>
               <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "text-[10px] px-1.5 py-0",
-                    STATUS_BADGE[table.status]
-                  )}
-                >
-                  {table.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                </Badge>
+                <StatusBadge status={table.status} className="text-[10px] px-1.5 py-0" />
               </TableCell>
               <TableCell className="hidden lg:table-cell text-center text-muted-foreground">
                 {table.is_wheelchair_accessible ? "Yes" : "No"}

@@ -6,10 +6,10 @@ import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useThemeContext } from "@/providers/ThemeProvider";
 
 function ThemeToggle() {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useThemeContext();
 
   return (
     <Button

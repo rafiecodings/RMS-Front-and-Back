@@ -49,6 +49,7 @@ export interface RestaurantSettings {
   currency_symbol?: string;
   default_tax_rate: number;
   vat_enabled: boolean;
+  vat_registered: boolean;
   vat_inclusive: boolean;
   default_service_charge: number;
   service_charge_enabled: boolean;
@@ -81,6 +82,7 @@ export function normalizeSettings(raw: unknown): RestaurantSettings {
         : Number(r.default_service_charge ?? 0),
     service_charge_enabled: Boolean(r.service_charge_enabled),
     vat_enabled: Boolean(r.vat_enabled),
+    vat_registered: Boolean(r.vat_registered),
     vat_inclusive: Boolean(r.vat_inclusive),
     allow_negative_inventory: Boolean(r.allow_negative_inventory),
     order_prefix: typeof r.order_prefix === "string" ? r.order_prefix : undefined,
@@ -104,6 +106,7 @@ export interface SystemPreferencesFormData {
   currency: string;
   currency_symbol: string;
   vat_enabled: boolean;
+  vat_registered: boolean;
   vat_inclusive: boolean;
   default_tax_rate: number;
   default_service_charge: number;

@@ -23,7 +23,9 @@ const customer = {
 describe("Customer manuscript scope", () => {
   it("A: table shows customer records", () => {
     render(<CustomerTable customers={[customer]} onView={vi.fn()} />);
-    expect(screen.getByText("Juan Dela Cruz")).toBeInTheDocument();
+    // Desktop table + mobile card both render the name (one CSS-hidden per
+    // breakpoint), so assert presence across all matches.
+    expect(screen.getAllByText("Juan Dela Cruz").length).toBeGreaterThan(0);
   });
 
   it("C: table does NOT show tier labels", () => {

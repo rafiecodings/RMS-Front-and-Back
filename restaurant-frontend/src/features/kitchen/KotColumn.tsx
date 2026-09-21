@@ -17,6 +17,7 @@ interface KotColumnProps {
 
 const COLUMN_HEADER_STYLES: Record<KotStatus, string> = {
   received: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+  pending: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
   in_progress:
     "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
   ready:
@@ -28,6 +29,7 @@ const COLUMN_HEADER_STYLES: Record<KotStatus, string> = {
 
 const COLUMN_DOT: Record<KotStatus, string> = {
   received: "bg-blue-500",
+  pending: "bg-blue-500",
   in_progress: "bg-amber-500",
   ready: "bg-emerald-500",
   completed: "bg-gray-400",

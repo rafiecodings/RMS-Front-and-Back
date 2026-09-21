@@ -92,15 +92,22 @@ export interface PurchaseOrderItem {
   received_quantity?: number;
 }
 
-export type PurchaseOrderStatus =
-  | "draft"
+export type ActivePurchaseOrderStatus =
   | "pending"
   | "confirmed"
+  | "received"
+  | "cancelled";
+
+export type LegacyPurchaseOrderStatus =
+  | "draft"
   | "approved"
   | "ordered"
   | "partial"
-  | "received"
-  | "cancelled";
+  | "delivered";
+
+export type PurchaseOrderStatus =
+  | ActivePurchaseOrderStatus
+  | LegacyPurchaseOrderStatus;
 
 export interface StockMovement {
   id: string;

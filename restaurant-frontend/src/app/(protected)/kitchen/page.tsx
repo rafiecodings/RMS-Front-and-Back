@@ -47,6 +47,7 @@ export default function KitchenPage() {
   function handleStatusAdvance(kot: Kot) {
     const nextStatus: Record<KotStatus, KotStatus | null> = {
       received: "in_progress",
+      pending: "in_progress",
       in_progress: "ready",
       ready: null,
       completed: null,

@@ -2,6 +2,11 @@ import { Customer } from "./customer";
 import { Table } from "./table";
 import { User } from "./api";
 
+export type StatutoryDiscountType =
+  | "senior_citizen"
+  | "pwd"
+  | null;
+
 export interface Order {
   id: string;
   invoice_id?: string | null;
@@ -44,6 +49,12 @@ export interface Order {
   created_at: string;
   updated_at: string;
   archived_at?: string | null;
+  statutory_discount_type?: StatutoryDiscountType;
+  statutory_discount_reference?: string;
+  statutory_discount_name?: string;
+  qualified_amount?: number;
+  statutory_discount_amount?: number;
+  vat_exempt_sales?: number;
 }
 
 export interface OrderItem {
@@ -129,6 +140,10 @@ export interface PaymentFormData {
   payment_method: PaymentMethod;
   amount: number;
   reference?: string;
+  statutory_discount_type?: StatutoryDiscountType;
+  statutory_discount_reference?: string;
+  statutory_discount_name?: string;
+  qualified_amount?: number;
 }
 
 export interface RefundFormData {

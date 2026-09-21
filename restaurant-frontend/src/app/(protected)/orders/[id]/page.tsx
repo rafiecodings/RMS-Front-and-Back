@@ -87,13 +87,15 @@ export default function OrderDetailPage({
     );
   }
 
-  const isTerminal = TERMINAL_STATUSES.includes(order.status);
-  const isPaid = order.payment_status === "paid";
-  const hasPayments = order.payments.length > 0;
+  const currentOrder = order;
+
+  const isTerminal = TERMINAL_STATUSES.includes(currentOrder.status);
+  const isPaid = currentOrder.payment_status === "paid";
+  const hasPayments = currentOrder.payments.length > 0;
   const canVoid =
-    canIssueRefund && !isTerminal && !isPaid && order.payment_status !== "refunded";
+    canIssueRefund && !isTerminal && !isPaid && currentOrder.payment_status !== "refunded";
   // Manuscript scope: refund UI hidden from defense flow (backend retained).
-  const canRefund = false && canIssueRefund && hasPayments && order.payment_status !== "refunded";
+  const canRefund = false && canIssueRefund && hasPayments && currentOrder.payment_status !== "refunded";
 
   function handleStatusChange(status: OrderStatus) {
     if (status === "cancelled") {
@@ -102,7 +104,7 @@ export default function OrderDetailPage({
     }
 
     updateStatus.mutate(
-      { id: order!.id, status },
+      { id: currentOrder.id, status },
       {
         onSuccess: () =>
           toast.success(`Order updated to ${status.replace(/_/g, " ")}`),
@@ -113,10 +115,10 @@ export default function OrderDetailPage({
 
   function handleCancelConfirm() {
     cancel.mutate(
-      { id: order!.id, reason: cancelReason || "Cancelled by staff" },
+      { id: currentOrder.id, reason: cancelReason || "Cancelled by staff" },
       {
         onSuccess: () => {
-          toast.success(`Order ${order!.order_number} cancelled`);
+          toast.success(`Order ${currentOrder.order_number} cancelled`);
           setCancelTarget(false);
           setCancelReason("");
         },
@@ -136,10 +138,10 @@ export default function OrderDetailPage({
       return;
     }
     voidOrder.mutate(
-      { id: order!.id, reason: voidReason.trim() },
+      { id: currentOrder.id, reason: voidReason.trim() },
       {
         onSuccess: () => {
-          toast.success(`Order ${order!.order_number} voided`);
+          toast.success(`Order ${currentOrder.order_number} voided`);
           setVoidTarget(false);
           setVoidReason("");
         },
@@ -149,11 +151,11 @@ export default function OrderDetailPage({
   }
 
   function openRefund() {
-    if (!order!.invoice_id) {
+    if (!currentOrder.invoice_id) {
       toast.error("No invoice found for this order.");
       return;
     }
-    const first = order!.payments[0];
+    const first = currentOrder.payments[0];
     setRefundPaymentId(first?.id ?? "");
     setRefundAmount(first ? String(first.amount) : "");
     setRefundReason("");
@@ -161,12 +163,12 @@ export default function OrderDetailPage({
   }
 
   function selectedPaymentAmount() {
-    const p = order!.payments.find((pay) => pay.id === refundPaymentId);
+    const p = currentOrder.payments.find((pay) => pay.id === refundPaymentId);
     return p ? p.amount : 0;
   }
 
   function handleRefundConfirm() {
-    if (!order!.invoice_id) {
+    if (!currentOrder.invoice_id) {
       toast.error("No invoice found for this order.");
       return;
     }
@@ -190,7 +192,7 @@ export default function OrderDetailPage({
 
     refund.mutate(
       {
-        invoiceId: order!.invoice_id,
+        invoiceId: currentOrder.invoice_id,
         data: {
           payment_id: refundPaymentId,
           amount,
@@ -217,7 +219,7 @@ export default function OrderDetailPage({
           <div className="flex flex-wrap items-center gap-2">
             {!isTerminal && (
               <OrderStatusSelect
-                currentStatus={order.status as OrderStatus}
+                currentStatus={currentOrder.status as OrderStatus}
                 onStatusChange={handleStatusChange}
                 disabled={updateStatus.isPending}
                 canConfirm={canConfirmOrder(role)}
@@ -251,7 +253,7 @@ export default function OrderDetailPage({
           </div>
         }
       />
-      <OrderDetail order={order} />
+      <OrderDetail order={currentOrder} />
 
       <ConfirmDialog
         open={cancelTarget}
@@ -260,7 +262,7 @@ export default function OrderDetailPage({
           if (!open) setCancelReason("");
         }}
         title="Cancel Order"
-        description={`Are you sure you want to cancel order ${order.order_number}? This action cannot be undone.`}
+        description={`Are you sure you want to cancel order ${currentOrder.order_number}? This action cannot be undone.`}
         confirmText="Cancel Order"
         variant="destructive"
         onConfirm={handleCancelConfirm}
@@ -273,7 +275,7 @@ export default function OrderDetailPage({
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Void Order {order.order_number}</DialogTitle>
+            <DialogTitle>Void Order {currentOrder.order_number}</DialogTitle>
             <DialogDescription>
               Voiding reverses inventory and frees the table. This requires a reason and
               cannot be done on a paid order.
@@ -326,7 +328,7 @@ export default function OrderDetailPage({
                 value={refundPaymentId}
                 onValueChange={(value) => {
                   setRefundPaymentId(value ?? "");
-                  const p = order!.payments.find((pay) => pay.id === value);
+                  const p = currentOrder.payments.find((pay) => pay.id === value);
                   setRefundAmount(p ? String(p.amount) : "");
                 }}
               >
@@ -334,7 +336,7 @@ export default function OrderDetailPage({
                   <SelectValue placeholder="Select payment" />
                 </SelectTrigger>
                 <SelectContent>
-                  {order.payments.map((pay) => (
+                  {currentOrder.payments.map((pay) => (
                     <SelectItem key={pay.id} value={pay.id}>
                       {pay.payment_method.replace(/_/g, " ")} — {pay.amount.toFixed(2)}
                     </SelectItem>

@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner, ErrorState } from "@/components/shared";
+import { LoadingSpinner, ErrorState, StatusBadge } from "@/components/shared";
 import { CustomerDetail } from "./CustomerDetail";
 import { ExternalLink, Pencil, Archive, X } from "lucide-react";
 import type { Customer } from "@/lib/types";
@@ -37,8 +36,7 @@ export function CustomerDetailsDialog({ open, onOpenChange, customer, isLoading,
               {customer && (
                 <>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] px-1.5 py-0">Registered Customer</Badge>
-                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${customer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>{customer.is_active ? "Active" : "Inactive"}</Badge>
+                    <StatusBadge status={customer.is_active ? "active" : "inactive"} className="text-[10px] px-1.5 py-0" />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Customer since {new Date(customer.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                 </>

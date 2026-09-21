@@ -1,10 +1,124 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { DEV_PER_TAB_AUTH } from "@/lib/utils/constants";
 
-export function ThemeProvider({
-  children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+const DEV_THEME_KEY = "rms_dev_theme";
+
+type Theme = "light" | "dark" | "system";
+
+interface ThemeContextType {
+  theme: Theme;
+  resolvedTheme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function useThemeContext() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useThemeContext must be used within a ThemeProvider");
+  }
+  return context;
+}
+
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  if (DEV_PER_TAB_AUTH) {
+    return (sessionStorage.getItem(DEV_THEME_KEY) as Theme) || "system";
+  }
+  return (localStorage.getItem("theme") as Theme) || "system";
+}
+
+function applyTheme(theme: Theme) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  if (theme === "system") {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.classList.add(prefersDark ? "dark" : "light");
+  } else {
+    root.classList.add(theme);
+  }
+}
+
+function ThemeProviderInner({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
+    return getInitialTheme();
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<Theme>("system");
+  const [mounted, setMounted] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    const initial = getInitialTheme();
+    setThemeState(initial);
+    applyTheme(initial);
+    setResolvedTheme(initial);
+    setMounted(true);
+
+    if (initial === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e: MediaQueryListEvent) => {
+        const resolved = e.matches ? "dark" : "light";
+        applyTheme(resolved);
+        setResolvedTheme(resolved);
+      };
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setTheme = useCallback((newTheme: Theme) => {
+    setThemeState(newTheme);
+    applyTheme(newTheme);
+    setResolvedTheme(newTheme);
+    
+    if (DEV_PER_TAB_AUTH) {
+      sessionStorage.setItem(DEV_THEME_KEY, newTheme);
+    } else {
+      localStorage.setItem("theme", newTheme);
+    }
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  const value = {
+    theme,
+    resolvedTheme,
+    setTheme,
+  };
+
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  if (DEV_PER_TAB_AUTH) {
+    return <ThemeProviderInner>{children}</ThemeProviderInner>;
+  }
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
+}
+
+export function ProductionThemeProvider({ children }: { children: React.ReactNode }) {
+  return <ThemeProvider>{children}</ThemeProvider>;
 }

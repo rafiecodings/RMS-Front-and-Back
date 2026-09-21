@@ -33,7 +33,7 @@ export interface KotItem {
   modifiers?: { name: string; price: number }[];
 }
 
-export type KotStatus = "received" | "in_progress" | "ready" | "completed" | "voided";
+export type KotStatus = "received" | "pending" | "in_progress" | "ready" | "completed" | "voided";
 
 export type KotItemStatus = "pending" | "in_progress" | "ready";
 

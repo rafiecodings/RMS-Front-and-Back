@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, ConfirmDialog } from "@/components/shared";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ArrowLeft, CheckCircle, Truck, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Truck, XCircle, FileText, CheckCheck, Package, PackageCheck } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useState } from "react";
-import type { PurchaseOrder, PurchaseOrderStatus } from "@/lib/types";
+import type { PurchaseOrder, PurchaseOrderStatus, ActivePurchaseOrderStatus } from "@/lib/types";
 
 interface PurchaseOrderDetailProps {
   order: PurchaseOrder;
@@ -15,12 +15,8 @@ interface PurchaseOrderDetailProps {
   isUpdating?: boolean;
 }
 
-const STATUS_FLOW: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
-  draft: ["pending", "cancelled"],
+const STATUS_FLOW: Record<ActivePurchaseOrderStatus, ActivePurchaseOrderStatus[]> = {
   pending: ["confirmed", "cancelled"],
-  approved: ["confirmed", "cancelled"],
-  ordered: ["confirmed", "cancelled"],
-  partial: ["confirmed", "cancelled"],
   confirmed: ["received", "cancelled"],
   received: [],
   cancelled: [],
@@ -41,7 +37,7 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
   const [pendingStatus, setPendingStatus] = useState<PurchaseOrderStatus | null>(null);
 
   // UI hint only — backend authorization is the source of truth.
-  const nextStatuses = (STATUS_FLOW[order.status] ?? []).filter((s) => {
+  const nextStatuses = (STATUS_FLOW[order.status as ActivePurchaseOrderStatus] ?? []).filter((s) => {
     if (s === "confirmed" && userRole === "inventory_staff") return false;
     if (s === "received" && isCreator) return false;
     return true;
@@ -87,6 +83,12 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
               confirmed: <Truck className="h-4 w-4 mr-1" />,
               received: <CheckCircle className="h-4 w-4 mr-1" />,
               cancelled: <XCircle className="h-4 w-4 mr-1" />,
+              // Legacy statuses (display only)
+              draft: <FileText className="h-4 w-4 mr-1" />,
+              approved: <CheckCheck className="h-4 w-4 mr-1" />,
+              ordered: <Truck className="h-4 w-4 mr-1" />,
+              partial: <Package className="h-4 w-4 mr-1" />,
+              delivered: <PackageCheck className="h-4 w-4 mr-1" />,
             };
             return (
               <Button

@@ -7,6 +7,14 @@ vi.mock("@/features/reports/hooks/useReports", () => ({
   useRevenueReport: () => ({ data: null, isLoading: false, isError: false }),
   useSalesReport: () => ({ data: null, isLoading: false, isError: false }),
   useInventoryReport: () => ({ data: null, isLoading: false, isError: false }),
+  useExportReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("@/features/reports/hooks/useDemandForecast", () => ({
+  useDemandForecast: () => ({ data: null, isLoading: false, isError: false, refetch: vi.fn() }),
+  useIngredientForecast: () => ({ data: null, isLoading: false, isError: false, refetch: vi.fn() }),
+}));
+vi.mock("@/features/reports/hooks/useAiInsights", () => ({
+  useAiInsights: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, isError: false }),
 }));
 
 describe("Reports hub manuscript scope", () => {
@@ -14,7 +22,8 @@ describe("Reports hub manuscript scope", () => {
 
   it.each(["Revenue", "Sales", "Menu Performance", "Inventory"])("shows %s", (title) => {
     render(<ReportsPage />);
-    expect(screen.getByText(title)).toBeInTheDocument();
+    // Titles may appear in both nav cards and section headings.
+    expect(screen.getAllByText(title).length).toBeGreaterThan(0);
   });
 
   it.each(["Customers", "Staff"])("hub does NOT show %s", (title) => {

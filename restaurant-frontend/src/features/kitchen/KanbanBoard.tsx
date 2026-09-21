@@ -11,7 +11,7 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS: { title: string; statuses: KotStatus[] }[] = [
-  { title: "NEW ORDERS", statuses: ["received"] },
+  { title: "NEW ORDERS", statuses: ["received", "pending"] },
   { title: "PREPARING", statuses: ["in_progress"] },
   { title: "READY", statuses: ["ready"] },
 ];

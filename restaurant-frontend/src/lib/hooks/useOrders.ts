@@ -157,6 +157,23 @@ export function useOrders(
     },
   });
 
+  const unarchive = useMutation({
+    mutationFn: (id: string) =>
+      api.delete<ApiResponse<Order>>(`/orders/${id}/archive`),
+    onSuccess: (res) => {
+      const order = res.data.data;
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      addNotification(queryClient, {
+        type: "info",
+        icon: "info",
+        title: "Order restored",
+        description: `Order #${order.order_number} has been restored.`,
+        action: { label: "View order", href: `/orders/${order.id}` },
+      });
+    },
+  });
+
   const voidOrder = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api.post<ApiResponse<Order>>(`/orders/${id}/void`, { reason }),
@@ -219,6 +236,7 @@ export function useOrders(
     addPayment,
     cancel,
     archive,
+    unarchive,
     voidOrder,
     refund,
   };

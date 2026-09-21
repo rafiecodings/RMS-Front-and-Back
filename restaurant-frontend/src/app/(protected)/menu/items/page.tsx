@@ -280,6 +280,7 @@ export default function MenuItemsPage() {
             <MenuItemForm
               initialData={activeModal.mode === "edit" ? activeModal.item : undefined}
               categories={categoryList}
+              isCategoriesLoading={categories.list.isLoading}
               onSubmit={activeModal.mode === "edit" ? handleEdit : handleCreate}
               isLoading={create.isPending || update.isPending}
               submitLabel={activeModal.mode === "edit" ? "Update Item" : "Create Item"}

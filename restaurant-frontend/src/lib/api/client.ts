@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_URL } from "@/lib/utils/constants";
+import { API_URL, DEV_PER_TAB_AUTH, DEV_AUTH_TOKEN_KEY } from "@/lib/utils/constants";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -8,10 +8,22 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true,
+  // In dev per-tab auth mode, disable credentials to prevent cookie-based auth fallback
+  withCredentials: !DEV_PER_TAB_AUTH,
 });
 
 let isRedirecting = false;
+
+api.interceptors.request.use((config) => {
+  // Dev per-tab auth: read token from sessionStorage and set Authorization header
+  if (DEV_PER_TAB_AUTH && typeof window !== "undefined") {
+    const token = sessionStorage.getItem(DEV_AUTH_TOKEN_KEY);
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
 
 api.interceptors.response.use(
   (response) => response,
@@ -26,7 +38,15 @@ api.interceptors.response.use(
       window.location.pathname !== "/login"
     ) {
       isRedirecting = true;
-      window.dispatchEvent(new CustomEvent("rms:force-logout"));
+      // In dev per-tab mode, only force logout current tab
+      if (DEV_PER_TAB_AUTH) {
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(DEV_AUTH_TOKEN_KEY);
+        }
+        window.location.href = "/login";
+      } else {
+        window.dispatchEvent(new CustomEvent("rms:force-logout"));
+      }
       setTimeout(() => {
         isRedirecting = false;
       }, 5000);

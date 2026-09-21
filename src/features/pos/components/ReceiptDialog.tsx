@@ -35,6 +35,11 @@ interface ReceiptDialogProps {
   customerName?: string;
   tableNumber?: string;
   onNewOrder: () => void;
+  statutoryDiscountType?: "senior_citizen" | "pwd" | null;
+  statutoryDiscountName?: string;
+  statutoryDiscountAmount?: number;
+  qualifiedAmount?: number;
+  vatExemptSales?: number;
 }
 
 export function ReceiptDialog({
@@ -55,6 +60,11 @@ export function ReceiptDialog({
   customerName,
   tableNumber,
   onNewOrder,
+  statutoryDiscountType,
+  statutoryDiscountName,
+  statutoryDiscountAmount,
+  qualifiedAmount,
+  vatExemptSales,
 }: ReceiptDialogProps) {
   const taxRate = useTaxRate();
   const { data: settings } = useSettings();
@@ -145,7 +155,7 @@ export function ReceiptDialog({
               })}
             </div>
 
-            <Separator className="print:bg-gray-300" />
+<Separator className="print:bg-gray-300" />
 
             <div className="space-y-1">
               <div className="flex justify-between">
@@ -157,6 +167,18 @@ export function ReceiptDialog({
                   <span>{discountName ?? "Discount / Promotion"}</span>
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
+              )}
+              {statutoryDiscountType !== null && statutoryDiscountAmount && statutoryDiscountAmount > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT-Exempt Sales</span>
+                    <span>{formatCurrency(vatExemptSales ?? 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-destructive">
+                    <span>{statutoryDiscountName ?? (statutoryDiscountType === "senior_citizen" ? "Senior Citizen Discount" : "PWD Discount")}</span>
+                    <span>-{formatCurrency(statutoryDiscountAmount)}</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">VATable Sales</span>

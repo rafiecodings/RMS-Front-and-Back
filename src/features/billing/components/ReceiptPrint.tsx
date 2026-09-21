@@ -22,6 +22,17 @@ export function ReceiptPrint({
   const taxRate = useTaxRate();
   const { data: settings } = useSettings();
   const { user } = useAuth();
+  const vatEnabled = settings ? Boolean(settings.vat_enabled) : true;
+  const vatInclusive = settings ? Boolean(settings.vat_inclusive) : true;
+
+  // For VAT-inclusive: gross = total_amount, vatable = total_amount - tax_amount
+  // For VAT-exclusive: gross = subtotal - discount + service_charge, vatable = gross
+  const vatableSales = vatEnabled && vatInclusive
+    ? Math.max(0, Math.round((invoice.total_amount - invoice.tax_amount) * 100) / 100)
+    : vatEnabled
+      ? Math.max(0, Math.round((invoice.subtotal - invoice.discount_amount + invoice.service_charge) * 100) / 100)
+      : 0;
+
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -129,10 +140,30 @@ export function ReceiptPrint({
                 <span>-{formatCurrency(invoice.discount_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">VAT ({taxRate}%)</span>
-              <span>{formatCurrency(invoice.tax_amount)}</span>
-            </div>
+            {invoice.statutory_discount_type && invoice.statutory_discount_amount && invoice.statutory_discount_amount > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VAT-Exempt Sales</span>
+                  <span>{formatCurrency(invoice.vat_exempt_sales ?? 0)}</span>
+                </div>
+                <div className="flex justify-between text-destructive">
+                  <span>{invoice.statutory_discount_name ?? (invoice.statutory_discount_type === "senior_citizen" ? "Senior Citizen Discount" : "PWD Discount")}</span>
+                  <span>-{formatCurrency(invoice.statutory_discount_amount)}</span>
+                </div>
+              </>
+            )}
+            {vatEnabled && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VATable Sales</span>
+                  <span>{formatCurrency(vatableSales)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VAT ({taxRate}%)</span>
+                  <span>{formatCurrency(invoice.tax_amount)}</span>
+                </div>
+              </>
+            )}
             {invoice.service_charge > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Service Charge</span>

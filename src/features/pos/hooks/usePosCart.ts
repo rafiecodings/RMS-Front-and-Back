@@ -79,6 +79,7 @@ export function usePosCart() {
       ? settings.default_tax_rate
       : 12;
   const vatInclusive = settings ? Boolean(settings.vat_inclusive) : true;
+  const vatEnabled = settings ? Boolean(settings.vat_enabled) : true;
 
   const addItem = useCallback(
     (item: CartItem) => dispatch({ type: "ADD_ITEM", item }),
@@ -143,6 +144,7 @@ export function usePosCart() {
       serviceChargeAmount,
       taxRate,
       vatInclusive,
+      vatEnabled,
     });
 
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
@@ -156,7 +158,7 @@ export function usePosCart() {
       totalAmount: totals.totalAmount,
       itemCount,
     };
-  }, [state.items, settings, taxRate, vatInclusive]);
+  }, [state.items, settings, taxRate, vatInclusive, vatEnabled]);
 
   return {
     state,

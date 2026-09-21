@@ -8,10 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Discount;
 use App\Models\Invoice;
 use App\Models\MenuItem;
-use App\Models\Payment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Models\Payment;
+use App\Models\RestaurantSetting;
 use App\Models\Table;
 use App\Services\OrderWorkflowService;
 use App\Services\PricingService;
@@ -387,7 +388,7 @@ class OrderController extends Controller
             return $this->notFound('Order not found.');
         }
 
-        return $this->success([
+return $this->success([
             'id' => $order->id,
             'invoice_id' => $order->invoice?->id,
             'order_number' => $order->order_number,
@@ -409,6 +410,12 @@ class OrderController extends Controller
             'payment_method' => $order->payment_method,
             'notes' => $order->notes,
             'cancellation_reason' => $order->cancellation_reason,
+            'statutory_discount_type' => $order->statutory_discount_type,
+            'statutory_discount_reference' => $order->statutory_discount_reference,
+            'statutory_discount_name' => $order->statutory_discount_name,
+            'qualified_amount' => (float) $order->qualified_amount,
+            'statutory_discount_amount' => (float) $order->statutory_discount_amount,
+            'vat_exempt_sales' => (float) $order->vat_exempt_sales,
             'customer' => $order->customer ? [
                 'id' => $order->customer->id,
                 'name' => $order->customer->name,
@@ -678,6 +685,12 @@ class OrderController extends Controller
         // Idempotent: archiving an already-archived order is a no-op.
         if ($order->archived_at === null) {
             $order->update(['archived_at' => now()]);
+
+            \App\Services\AuditLogger::record('order_archived', $order, [
+                'description' => "Order {$order->order_number} archived",
+                'from' => 'active',
+                'to' => 'archived',
+            ]);
         }
 
         return $this->success([
@@ -700,6 +713,12 @@ class OrderController extends Controller
         }
 
         $order->update(['archived_at' => null]);
+
+        \App\Services\AuditLogger::record('order_unarchived', $order, [
+            'description' => "Order {$order->order_number} restored from archive",
+            'from' => 'archived',
+            'to' => 'active',
+        ]);
 
         return $this->success([
             'id' => $order->id,
@@ -1160,13 +1179,35 @@ class OrderController extends Controller
             'payment_method' => 'required|string|in:cash,card,e_wallet',
             'amount' => 'required|numeric|min:0.01',
             'reference' => 'nullable|string|max:255',
+            'statutory_discount_type' => 'nullable|string|in:senior_citizen,pwd',
+            'statutory_discount_reference' => 'nullable|string|max:100',
+            'statutory_discount_name' => 'nullable|string|max:100',
+            'qualified_amount' => 'nullable|numeric|min:0',
         ]);
+
+        // Validate statutory discount requirements
+        $statutoryDiscountType = $validated['statutory_discount_type'] ?? null;
+        $qualifiedAmount = (float) ($validated['qualified_amount'] ?? 0);
+
+        if ($statutoryDiscountType !== null) {
+            if (empty($validated['statutory_discount_reference'])) {
+                return $this->error('Statutory discount reference (OSCA/PWD ID) is required.', 422);
+            }
+            if ($qualifiedAmount <= 0) {
+                return $this->error('Qualified amount must be greater than zero for statutory discount.', 422);
+            }
+            if ($qualifiedAmount > $order->subtotal - $order->discount_amount) {
+                return $this->error('Qualified amount cannot exceed order subtotal minus ordinary discount.', 422);
+            }
+        }
 
         $invoice = Invoice::where('order_id', $order->id)->first();
 
+        $settings = RestaurantSetting::first();
+
         if (!$invoice) {
             $invoice = Invoice::create([
-                'invoice_number' => 'INV-' . strtoupper(uniqid()),
+                'invoice_number' => 'INV-' . \Illuminate\Support\Str::uuid(),
                 'order_id' => $order->id,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
@@ -1176,11 +1217,62 @@ class OrderController extends Controller
                 'amount_paid' => 0,
                 'balance' => $order->total,
                 'status' => 'pending',
+                'vatable_sales' => $order->subtotal - $order->tax_amount,
+                'vat_exempt_sales' => $order->vat_exempt_sales ?? 0,
+                'vat_enabled_snapshot' => (bool) ($settings?->vat_enabled ?? true),
+                'vat_inclusive_snapshot' => (bool) ($settings?->vat_inclusive ?? true),
+                'tax_rate_snapshot' => (float) ($settings?->default_tax_rate ?? 12),
+                'seller_tin_snapshot' => $settings?->tax_id,
+                'seller_branch_code_snapshot' => $settings?->branch_code,
+                'seller_registered_name_snapshot' => $settings?->name,
+                'seller_address_snapshot' => $settings?->address,
             ]);
         }
 
         if ($invoice->status === 'paid') {
             return $this->error('This order is already fully paid.', 409);
+        }
+
+        // Recompute totals with statutory discount if provided
+        if ($statutoryDiscountType !== null && $qualifiedAmount > 0) {
+            $pricing = app(PricingService::class);
+            $totals = $pricing->orderTotalsWithStatutoryDiscount(
+                (float) $order->subtotal,
+                (float) $order->discount_amount,
+                $statutoryDiscountType,
+                $qualifiedAmount,
+                $validated['statutory_discount_reference'] ?? null
+            );
+
+            // Update order with recomputed totals
+            $order->update([
+                'tax_amount' => $totals['tax_amount'],
+                'statutory_discount_type' => $totals['statutory_discount_type'],
+                'statutory_discount_reference' => $validated['statutory_discount_reference'],
+                'statutory_discount_name' => $validated['statutory_discount_name'] ?? ($statutoryDiscountType === 'senior_citizen' ? 'Senior Citizen Discount' : 'PWD Discount'),
+                'qualified_amount' => $totals['qualified_amount'],
+                'statutory_discount_amount' => $totals['statutory_discount_amount'],
+                'vat_exempt_sales' => $totals['vat_exempt_sales'],
+                'total' => $totals['total'],
+            ]);
+
+            // Update invoice with recomputed totals
+            $invoice->update([
+                'tax_amount' => $totals['tax_amount'],
+                'statutory_discount_type' => $totals['statutory_discount_type'],
+                'statutory_discount_reference' => $validated['statutory_discount_reference'],
+                'statutory_discount_name' => $validated['statutory_discount_name'] ?? ($statutoryDiscountType === 'senior_citizen' ? 'Senior Citizen Discount' : 'PWD Discount'),
+                'qualified_amount' => $totals['qualified_amount'],
+                'statutory_discount_amount' => $totals['statutory_discount_amount'],
+                'vat_exempt_sales' => $totals['vat_exempt_sales'],
+                'vatable_sales' => $totals['vatable_sales'],
+                'total' => $totals['total'],
+                'balance' => $totals['total'],
+            ]);
+
+            // Refresh to get updated values
+            $order->refresh();
+            $invoice->refresh();
         }
 
         $balanceDue = round((float) $invoice->balance, 2);
@@ -1281,7 +1373,8 @@ class OrderController extends Controller
             $freshCustomer?->recordCompletedVisit((float) $order->total);
         }
 
-        \App\Services\AuditLogger::record('payment_completed', $order, [
+        $statutoryDiscountType = $validated['statutory_discount_type'] ?? null;
+        $auditDetails = [
             'description' => sprintf(
                 'Processed %s payment of ₱%s for %s%s',
                 str_replace('_', ' ', $validated['payment_method']),
@@ -1292,7 +1385,20 @@ class OrderController extends Controller
             'method' => $validated['payment_method'],
             'amount' => $balanceDue,
             'change' => $change,
-        ]);
+        ];
+
+        if ($statutoryDiscountType !== null) {
+            $reference = $validated['statutory_discount_reference'] ?? null;
+            $auditDetails['statutory_discount_type'] = $statutoryDiscountType;
+            // Mask statutory reference in audit log: show only last 4 chars
+            $auditDetails['statutory_discount_reference'] = $reference
+                ? '********' . substr($reference, -4)
+                : null;
+            $auditDetails['statutory_discount_amount'] = (float) $order->statutory_discount_amount;
+            $auditDetails['qualified_amount'] = (float) $order->qualified_amount;
+        }
+
+        \App\Services\AuditLogger::record('payment_completed', $order, $auditDetails);
 
         return $this->created([
             'id' => $payment->id,

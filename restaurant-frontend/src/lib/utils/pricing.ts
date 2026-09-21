@@ -17,6 +17,8 @@ export interface OrderTotalsInput {
   taxRate: number;
   /** Whether menu prices are VAT-inclusive (production default: true). */
   vatInclusive?: boolean;
+  /** Whether VAT is enabled at all (production default: true). */
+  vatEnabled?: boolean;
 }
 
 export interface OrderTotals {
@@ -38,9 +40,10 @@ export function computeOrderTotals(input: OrderTotalsInput): OrderTotals {
   const gross = round2(Math.max(0, subtotal - discountAmount + serviceChargeAmount));
   const taxRate = Math.max(0, input.taxRate);
   const vatInclusive = input.vatInclusive ?? true;
+  const vatEnabled = input.vatEnabled ?? true;
 
   let vatAmount = 0;
-  if (taxRate > 0 && gross > 0) {
+  if (vatEnabled && taxRate > 0 && gross > 0) {
     if (vatInclusive) {
       const vatable = round2(gross / (1 + taxRate / 100));
       vatAmount = round2(gross - vatable);

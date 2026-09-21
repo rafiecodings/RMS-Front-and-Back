@@ -258,6 +258,71 @@ class CapstoneEndToEndTest extends TestCase
         $this->assertEquals(300.0, (float) $this->ingredient->refresh()->current_stock);
     }
 
+    public function test_duplicate_invoice_creation_idempotent(): void
+    {
+        // Create a served order
+        $created = $this->actingAs($this->user)->postJson('/api/v1/orders', [
+            'order_type' => 'dine_in',
+            'table_id' => $this->table->id,
+            'items' => [['menu_item_id' => $this->menuItem->id, 'quantity' => 1]],
+        ]);
+        $created->assertCreated();
+        $orderId = $created->json('data.id');
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'confirmed'])
+            ->assertOk();
+        $kot = KotTicket::where('order_id', $orderId)->firstOrFail();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$kot->id}/status", ['status' => 'in_progress'])
+            ->assertOk();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/kot/{$kot->id}/status", ['status' => 'ready'])
+            ->assertOk();
+        $this->actingAs($this->user)
+            ->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'served'])
+            ->assertOk();
+
+        $order = Order::findOrFail($orderId);
+        $total = (float) $order->total;
+
+        // First payment creates invoice
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$orderId}/payments", [
+                'payment_method' => 'cash',
+                'amount' => $total,
+            ])
+            ->assertStatus(201);
+
+        $invoice1 = Invoice::where('order_id', $orderId)->first();
+        $this->assertNotNull($invoice1);
+        $invoiceNumber1 = $invoice1->invoice_number;
+
+        // Second concurrent payment request should return existing invoice (idempotent)
+        // The first payment already set status to 'paid', so second returns 409
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/orders/{$orderId}/payments", [
+                'payment_method' => 'cash',
+                'amount' => $total,
+            ])
+            ->assertStatus(409);
+
+        // Verify only ONE invoice exists for this order
+        $invoiceCount = Invoice::where('order_id', $orderId)->count();
+        $this->assertEquals(1, $invoiceCount);
+
+        $invoice2 = Invoice::where('order_id', $orderId)->first();
+        $this->assertEquals($invoiceNumber1, $invoice2->invoice_number);
+
+        // Also test the explicit invoice generation endpoint
+        $this->actingAs($this->user)
+            ->postJson('/api/v1/invoices/generate', ['order_id' => $orderId])
+            ->assertStatus(409); // Already has invoice
+
+        $invoiceCount = Invoice::where('order_id', $orderId)->count();
+        $this->assertEquals(1, $invoiceCount);
+    }
+
     public function test_walk_in_completes_full_workflow_without_customer_or_loyalty_mutation(): void
     {
         $customerCount = Customer::count();

@@ -21,6 +21,20 @@ class Invoice extends BaseModel
         'amount_paid',
         'balance',
         'status',
+        'statutory_discount_type',
+        'statutory_discount_reference',
+        'statutory_discount_name',
+        'qualified_amount',
+        'statutory_discount_amount',
+        'vat_exempt_sales',
+        'vatable_sales',
+        'vat_enabled_snapshot',
+        'vat_inclusive_snapshot',
+        'tax_rate_snapshot',
+        'seller_tin_snapshot',
+        'seller_branch_code_snapshot',
+        'seller_registered_name_snapshot',
+        'seller_address_snapshot',
     ];
 
     protected $casts = [
@@ -31,6 +45,13 @@ class Invoice extends BaseModel
         'total' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
+        'qualified_amount' => 'decimal:2',
+        'statutory_discount_amount' => 'decimal:2',
+        'vat_exempt_sales' => 'decimal:2',
+        'vatable_sales' => 'decimal:2',
+        'vat_enabled_snapshot' => 'boolean',
+        'vat_inclusive_snapshot' => 'boolean',
+        'tax_rate_snapshot' => 'decimal:2',
     ];
 
     public function getTable(): string

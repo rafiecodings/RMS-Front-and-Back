@@ -289,7 +289,8 @@ class PricingService
 
         $serviceChargeEnabled = (bool) ($settings?->service_charge_enabled ?? false);
         $serviceChargeRate = (float) ($settings?->default_service_charge ?? 0);
-        $taxRate = max(0.0, (float) ($settings?->default_tax_rate ?? 0));
+        $vatEnabled = (bool) ($settings?->vat_enabled ?? true);
+        $taxRate = $vatEnabled ? max(0.0, (float) ($settings?->default_tax_rate ?? 0)) : 0.0;
         $vatInclusive = (bool) ($settings?->vat_inclusive ?? true);
 
         $serviceCharge = $serviceChargeEnabled ? round($subtotal * ($serviceChargeRate / 100), 2) : 0.0;
@@ -316,6 +317,153 @@ class PricingService
             'subtotal' => $subtotal,
             'tax_amount' => $taxAmount,
             'discount_amount' => $discountAmount,
+            'service_charge' => $serviceCharge,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Compute order totals with statutory discount (Senior Citizen / PWD).
+     *
+     * This method implements the Philippine statutory discount calculation:
+     * 1. Qualified portion: VAT is removed from the qualified amount
+     * 2. 20% statutory discount applied to VAT-exempt base
+     * 3. VAT computed only on remaining VATable portion
+     * 4. Ordinary discount is NOT applied when statutory discount is active (no stacking)
+     *
+     * For VAT-INCLUSIVE transactions:
+     *   G = gross (subtotal - ordinary_discount + service_charge) [ordinary discount ignored if statutory active]
+     *   Q = qualified VAT-inclusive amount
+     *   r = VAT rate (e.g., 0.12)
+     *   Q_NET = Q / (1 + r)          -- VAT-exempt base
+     *   Q_VAT_REMOVED = Q - Q_NET    -- embedded VAT removed from qualified amount
+     *   SC_DISCOUNT = Q_NET * 0.20   -- 20% statutory discount on VAT-exempt base
+     *   N_GROSS = G - Q              -- non-qualified gross
+     *   N_VATABLE = N_GROSS / (1+r)  -- VATable sales
+     *   VAT = N_GROSS - N_VATABLE    -- VAT on non-qualified only
+     *   TOTAL = G - Q_VAT_REMOVED - SC_DISCOUNT
+     *
+     * For VAT-EXCLUSIVE transactions:
+     *   Same logic but qualifiedAmount is already VAT-exclusive
+     *
+     * @param float $subtotal Order subtotal (before any discounts)
+     * @param float $discountAmount Ordinary discount amount (promo/manual) - IGNORED if statutory discount active
+     * @param string|null $statutoryDiscountType 'senior_citizen' | 'pwd' | null
+     * @param float $qualifiedAmount Amount eligible for statutory discount
+     * @param string|null $statutoryDiscountReference Reference ID (OSCA/PWD ID)
+     * @return array{
+     *     subtotal: float,
+     *     tax_amount: float,
+     *     discount_amount: float,
+     *     statutory_discount_amount: float,
+     *     statutory_discount_type: string|null,
+     *     qualified_amount: float,
+     *     vat_exempt_sales: float,
+     *     service_charge: float,
+     *     total: float,
+     * }
+     */
+    public function orderTotalsWithStatutoryDiscount(
+        float $subtotal,
+        float $discountAmount = 0.0,
+        ?string $statutoryDiscountType = null,
+        float $qualifiedAmount = 0.0,
+        ?string $statutoryDiscountReference = null
+    ): array {
+        $settings = RestaurantSetting::first();
+
+        $subtotal = round($subtotal, 2);
+        $discountAmount = round(min(max(0.0, $discountAmount), $subtotal), 2);
+        $qualifiedAmount = round(min(max(0.0, $qualifiedAmount), $subtotal - $discountAmount), 2);
+
+        $serviceChargeEnabled = (bool) ($settings?->service_charge_enabled ?? false);
+        $serviceChargeRate = (float) ($settings?->default_service_charge ?? 0);
+        $vatEnabled = (bool) ($settings?->vat_enabled ?? true);
+        $taxRate = $vatEnabled ? max(0.0, (float) ($settings?->default_tax_rate ?? 0)) : 0.0;
+        $vatInclusive = (bool) ($settings?->vat_inclusive ?? true);
+
+        $serviceCharge = $serviceChargeEnabled ? round($subtotal * ($serviceChargeRate / 100), 2) : 0.0;
+
+        // Determine if statutory discount is active
+        $isStatutoryActive = ($statutoryDiscountType !== null && $qualifiedAmount > 0);
+
+        // When statutory discount is active, ordinary discount is NOT applied (no stacking)
+        $effectiveDiscountAmount = $isStatutoryActive ? 0.0 : $discountAmount;
+        $afterOrdinaryDiscount = round($subtotal - $effectiveDiscountAmount, 2);
+
+        // Validate statutory discount
+        $statutoryDiscountAmount = 0.0;
+        $vatExemptSales = 0.0;
+        $qualifiedVatRemoved = 0.0;
+
+        if ($isStatutoryActive) {
+            // The qualified amount is the VAT-inclusive gross amount for the qualified items
+            // Remove embedded VAT to get VAT-exempt base
+            if ($vatInclusive && $taxRate > 0) {
+                // qualifiedAmount is VAT-inclusive, extract VAT-exempt base
+                $vatExemptBase = round($qualifiedAmount / (1 + ($taxRate / 100)), 2);
+            } else {
+                // qualifiedAmount is already VAT-exclusive
+                $vatExemptBase = $qualifiedAmount;
+            }
+
+            // Embedded VAT removed from qualified amount
+            $qualifiedVatRemoved = $vatInclusive && $taxRate > 0
+                ? round($qualifiedAmount - $vatExemptBase, 2)
+                : 0.0;
+
+            // 20% statutory discount on VAT-exempt base
+            $statutoryDiscountAmount = round($vatExemptBase * 0.20, 2);
+            $vatExemptSales = $vatExemptBase;
+
+            // Cap at the qualified amount (discount cannot exceed the qualified portion)
+            $statutoryDiscountAmount = min($statutoryDiscountAmount, $qualifiedAmount);
+        }
+
+        // Calculate VATable sales: total gross minus qualified amount (only when statutory discount applies)
+        // Gross = after ordinary discount + service charge
+        $gross = round(max(0.0, $afterOrdinaryDiscount + $serviceCharge), 2);
+
+        // VATable gross = gross - qualified amount (the qualified portion is VAT-exempt)
+        // Only subtract qualified amount when statutory discount is actually applied
+        if ($isStatutoryActive) {
+            $vatableGross = round(max(0.0, $gross - $qualifiedAmount), 2);
+        } else {
+            $vatableGross = $gross;
+        }
+
+        // Compute VAT on VATable portion only
+        $taxAmount = 0.0;
+        $vatableSales = 0.0;
+
+        if ($taxRate > 0 && $vatableGross > 0) {
+            if ($vatInclusive) {
+                $vatableSales = round($vatableGross / (1 + ($taxRate / 100)), 2);
+                $taxAmount = round($vatableGross - $vatableSales, 2);
+            } else {
+                $taxAmount = round($vatableGross * ($taxRate / 100), 2);
+                $vatableSales = $vatableGross;
+            }
+        }
+
+        // Total calculation:
+        // For VAT-inclusive: TOTAL = G - Q_VAT_REMOVED - SC_DISCOUNT
+        // For VAT-exclusive: TOTAL = G + VAT - SC_DISCOUNT
+        if ($vatInclusive) {
+            $total = round($gross - $qualifiedVatRemoved - $statutoryDiscountAmount, 2);
+        } else {
+            $total = round($gross + $taxAmount - $statutoryDiscountAmount, 2);
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'tax_amount' => $taxAmount,
+            'discount_amount' => $effectiveDiscountAmount, // 0 when statutory active
+            'statutory_discount_amount' => $statutoryDiscountAmount,
+            'statutory_discount_type' => $statutoryDiscountType,
+            'qualified_amount' => $qualifiedAmount,
+            'vat_exempt_sales' => $vatExemptSales,
+            'vatable_sales' => $vatableSales,
             'service_charge' => $serviceCharge,
             'total' => $total,
         ];

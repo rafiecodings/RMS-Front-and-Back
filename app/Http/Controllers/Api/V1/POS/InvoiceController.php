@@ -84,7 +84,7 @@ class InvoiceController extends Controller
             return $this->error('Invoice already exists for this order.', 409);
         }
 
-        $invoiceNumber = 'INV-' . strtoupper(uniqid());
+        $invoiceNumber = 'INV-' . \Illuminate\Support\Str::uuid();
 
         $invoice = Invoice::create([
             'invoice_number' => $invoiceNumber,

@@ -49,6 +49,6 @@ if (!function_exists('generate_kot_number')) {
 if (!function_exists('generate_invoice_number')) {
     function generate_invoice_number(): string
     {
-        return 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        return 'INV-' . \Illuminate\Support\Str::uuid();
     }
 }

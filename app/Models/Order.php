@@ -33,6 +33,12 @@ class Order extends BaseModel
         'notes',
         'cancellation_reason',
         'created_by',
+        'statutory_discount_type',
+        'statutory_discount_reference',
+        'statutory_discount_name',
+        'qualified_amount',
+        'statutory_discount_amount',
+        'vat_exempt_sales',
     ];
 
     protected $casts = [
@@ -43,6 +49,9 @@ class Order extends BaseModel
         'service_charge' => 'decimal:2',
         'total' => 'decimal:2',
         'archived_at' => 'datetime',
+        'qualified_amount' => 'decimal:2',
+        'statutory_discount_amount' => 'decimal:2',
+        'vat_exempt_sales' => 'decimal:2',
     ];
 
     public function getTable(): string

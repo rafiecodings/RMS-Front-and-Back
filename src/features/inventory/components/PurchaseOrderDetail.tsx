@@ -4,7 +4,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, ConfirmDialog } from "@/components/shared";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ArrowLeft, CheckCircle, Truck, XCircle, FileText, CheckCheck, Package, PackageCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleCheck,
+  Truck,
+  XCircle,
+  FileText,
+  CheckCheck,
+  Package,
+  PackageCheck,
+} from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useState } from "react";
 import type { PurchaseOrder, PurchaseOrderStatus, ActivePurchaseOrderStatus } from "@/lib/types";
@@ -79,9 +88,9 @@ export function PurchaseOrderDetail({ order, onStatusChange, isUpdating }: Purch
         <div className="flex flex-wrap gap-2">
               {nextStatuses.map((status) => {
             const icons: Record<string, React.ReactNode> = {
-              pending: <CheckCircle className="h-4 w-4 mr-1" />,
+              pending: <CircleCheck className="h-4 w-4 mr-1" />,
               confirmed: <Truck className="h-4 w-4 mr-1" />,
-              received: <CheckCircle className="h-4 w-4 mr-1" />,
+              received: <CircleCheck className="h-4 w-4 mr-1" />,
               cancelled: <XCircle className="h-4 w-4 mr-1" />,
               // Legacy statuses (display only)
               draft: <FileText className="h-4 w-4 mr-1" />,

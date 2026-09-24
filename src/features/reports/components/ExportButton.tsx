@@ -59,7 +59,7 @@ export function ExportButton({ reportType, period, dateRange }: ExportButtonProp
       disabled={exportMutation.isPending}
     >
       {exportMutation.isPending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />
       ) : (
         <Download className="mr-2 h-4 w-4" />
       )}

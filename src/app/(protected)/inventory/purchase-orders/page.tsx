@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { DialogBodySkeleton, PageHeader } from "@/components/shared";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { LoadingSpinner } from "@/components/shared";
 import {
   PurchaseOrderTable,
   PurchaseOrderStats,
@@ -134,9 +133,7 @@ export default function PurchaseRequestsPage() {
             <DialogTitle>Purchase Request Details</DialogTitle>
           </DialogHeader>
           {viewLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
+            <DialogBodySkeleton />
           ) : viewOrder ? (
             <PurchaseOrderDetail
               order={viewOrder}

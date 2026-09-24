@@ -8,22 +8,28 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  Grid3X3,
+  Armchair,
   Calendar,
   UtensilsCrossed,
-  ClipboardList,
+  ReceiptText,
   ChefHat,
   CreditCard,
-  Package,
   BarChart3,
   Settings,
   UserCog,
   Store,
-  ShoppingBag,
   ShoppingCart,
-  Truck,
-  ClipboardCheck,
-  FileBarChart,
+  BadgePercent,
+  LayoutGrid,
+  BookOpen,
+  Warehouse,
+  PackageSearch,
+  PackagePlus,
+  BriefcaseBusiness,
+  SquareMenu,
+  Boxes,
+  ChartPie,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import { SIDEBAR_ROLES } from "@/lib/utils/permissions";
@@ -49,9 +55,9 @@ const navGroups: NavGroup[] = [
     label: "Operations",
     items: [
       { label: "Customers", href: "/customers", icon: Users, roles: SIDEBAR_ROLES.customers },
-      { label: "Tables", href: "/tables", icon: Grid3X3, roles: SIDEBAR_ROLES.tables },
+      { label: "Tables", href: "/tables", icon: Armchair, roles: SIDEBAR_ROLES.tables },
       { label: "Reservations", href: "/reservations", icon: Calendar, roles: SIDEBAR_ROLES.reservations },
-      { label: "Orders", href: "/orders", icon: ClipboardList, roles: SIDEBAR_ROLES.orders },
+      { label: "Orders", href: "/orders", icon: ReceiptText, roles: SIDEBAR_ROLES.orders },
       { label: "Kitchen", href: "/kitchen", icon: ChefHat, roles: SIDEBAR_ROLES.kitchen },
       { label: "POS", href: "/pos", icon: CreditCard, roles: SIDEBAR_ROLES.pos },
     ],
@@ -59,24 +65,24 @@ const navGroups: NavGroup[] = [
   {
     label: "Menu",
     items: [
-      { label: "Categories", href: "/menu/categories", icon: ShoppingBag, roles: SIDEBAR_ROLES.staff },
+      { label: "Categories", href: "/menu/categories", icon: LayoutGrid, roles: SIDEBAR_ROLES.staff },
       { label: "Items", href: "/menu/items", icon: UtensilsCrossed, roles: SIDEBAR_ROLES.staff },
-      { label: "Promotions & Discounts", href: "/menu/promotions", icon: Store, roles: SIDEBAR_ROLES.staff },
+      { label: "Promotions & Discounts", href: "/menu/promotions", icon: BadgePercent, roles: SIDEBAR_ROLES.staff },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Ingredients", href: "/inventory/ingredients", icon: Package, roles: SIDEBAR_ROLES.inventory },
-      { label: "Recipes", href: "/inventory/recipes", icon: ClipboardCheck, roles: SIDEBAR_ROLES.inventory },
-      { label: "Inventory Monitoring", href: "/inventory", icon: FileBarChart, roles: SIDEBAR_ROLES.inventory },
-      { label: "Replenishment Requests", href: "/inventory/replenishment", icon: Truck, roles: SIDEBAR_ROLES.inventory },
+      { label: "Ingredients", href: "/inventory/ingredients", icon: Boxes, roles: SIDEBAR_ROLES.inventory },
+      { label: "Recipes", href: "/inventory/recipes", icon: BookOpen, roles: SIDEBAR_ROLES.inventory },
+      { label: "Inventory Monitoring", href: "/inventory", icon: PackageSearch, roles: SIDEBAR_ROLES.inventory },
+      { label: "Replenishment Requests", href: "/inventory/replenishment", icon: PackagePlus, roles: SIDEBAR_ROLES.inventory },
     ],
   },
   {
     label: "Management",
     items: [
-      { label: "Staff", href: "/staff", icon: UserCog, roles: SIDEBAR_ROLES.staff },
+      { label: "Staff", href: "/staff", icon: BriefcaseBusiness, roles: SIDEBAR_ROLES.staff },
     ],
   },
   {
@@ -84,9 +90,9 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Revenue", href: "/reports/revenue", icon: BarChart3, roles: SIDEBAR_ROLES.reports },
       { label: "Sales", href: "/reports/sales", icon: ShoppingCart, roles: SIDEBAR_ROLES.reports },
-      { label: "Menu", href: "/reports/menu", icon: ShoppingBag, roles: SIDEBAR_ROLES.reports },
-      { label: "Inventory", href: "/reports/inventory", icon: Package, roles: SIDEBAR_ROLES.reports },
-      { label: "Forecasting / Analytics", href: "/analytics", icon: FileBarChart, roles: SIDEBAR_ROLES.reports },
+      { label: "Menu", href: "/reports/menu", icon: SquareMenu, roles: SIDEBAR_ROLES.reports },
+      { label: "Inventory", href: "/reports/inventory", icon: Warehouse, roles: SIDEBAR_ROLES.reports },
+      { label: "Forecasting / Analytics", href: "/analytics", icon: ChartPie, roles: SIDEBAR_ROLES.reports },
     ],
   },
   {
@@ -94,7 +100,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Restaurant Settings", href: "/settings/restaurant", icon: Settings, roles: SIDEBAR_ROLES.settings },
       { label: "Users & Roles", href: "/settings/users", icon: UserCog, roles: SIDEBAR_ROLES.settings },
-      { label: "Audit Logs", href: "/settings/audit-logs", icon: ClipboardList, roles: SIDEBAR_ROLES.settings },
+      { label: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText, roles: SIDEBAR_ROLES.settings },
     ],
   },
 ];

@@ -58,7 +58,7 @@ describe("self-service attendance", () => {
   it("does not enable a punch before the profile loads", () => {
     state.profile.isLoading = true;
     render(<SelfAttendance />);
-    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+    expect(screen.getByRole("status")).toHaveAccessibleName("Loading your attendance");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 

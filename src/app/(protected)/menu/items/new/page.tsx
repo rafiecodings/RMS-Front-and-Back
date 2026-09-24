@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, DialogBodySkeleton } from "@/components/shared";
 import { MenuItemForm } from "@/features/menu";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -43,7 +43,7 @@ export default function NewMenuItemPage() {
       />
       <div className="rounded-lg border bg-card p-6 shadow-sm max-w-2xl">
         {categories.list.isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading categories...</p>
+          <DialogBodySkeleton lines={6} />
         ) : (
           <MenuItemForm
             categories={categoryList}

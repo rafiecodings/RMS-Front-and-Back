@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSkeleton, ErrorState } from "@/components/shared";
+import { PageHeader, LoadingSkeleton, ErrorState, TableLoadingRows } from "@/components/shared";
 import { useIngredients, useStockMovements, useReplenishmentRequests } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { StockMovementTable } from "@/features/inventory";
@@ -13,11 +13,11 @@ import {
 } from "@/lib/utils/inventoryStatus";
 import {
   Package,
-  CheckCircle2,
-  AlertTriangle,
+  CircleCheck,
+  TriangleAlert,
   XCircle,
   ArrowUpCircle,
-  DollarSign,
+  PhilippinePeso,
   ClipboardList,
 } from "lucide-react";
 
@@ -109,14 +109,14 @@ export default function InventoryPage() {
 
   const statCards = [
     { label: "Total Ingredients", value: String(counts.total), icon: Package, tone: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", tint: "ring-blue-200 dark:ring-blue-800/50" },
-    { label: "Healthy", value: String(counts.healthy), icon: CheckCircle2, tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", tint: "ring-emerald-200 dark:ring-emerald-800/50" },
-    { label: "Low Stock", value: String(counts.low), icon: AlertTriangle, tone: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", tint: "ring-amber-200 dark:ring-amber-800/50" },
+    { label: "Healthy", value: String(counts.healthy), icon: CircleCheck, tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", tint: "ring-emerald-200 dark:ring-emerald-800/50" },
+    { label: "Low Stock", value: String(counts.low), icon: TriangleAlert, tone: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", tint: "ring-amber-200 dark:ring-amber-800/50" },
     { label: "Out of Stock", value: String(counts.out), icon: XCircle, tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300", tint: "ring-red-200 dark:ring-red-800/50" },
     { label: "Overstock", value: String(counts.over), icon: ArrowUpCircle, tone: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", tint: "ring-violet-200 dark:ring-violet-800/50" },
     {
       label: "Inventory Value",
       value: counts.value.toLocaleString("en-PH", { style: "currency", currency: "PHP" }),
-      icon: DollarSign,
+      icon: PhilippinePeso,
       tone: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
       tint: "ring-teal-200 dark:ring-teal-800/50",
     },
@@ -186,9 +186,10 @@ export default function InventoryPage() {
             </thead>
             <tbody>
               {statsLoading ? (
-                <tr>
-                  <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td>
-                </tr>
+                <TableLoadingRows
+                  rows={5}
+                  colSpan={canRequestReplenishment ? 8 : 7}
+                />
               ) : enriched.length === 0 ? (
                 <tr>
                   <td colSpan={canRequestReplenishment ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">

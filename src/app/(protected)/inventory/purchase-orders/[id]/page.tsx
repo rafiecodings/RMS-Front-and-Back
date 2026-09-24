@@ -1,11 +1,12 @@
 "use client";
 
 import { use } from "react";
-import { EmptyState, LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton, EmptyState } from "@/components/shared";
 import { PurchaseOrderDetail } from "@/features/inventory";
 import { usePurchaseOrder, usePurchaseOrders } from "@/lib/hooks";
 import type { PurchaseOrderStatus } from "@/lib/types";
 import { toast } from "sonner";
+import { PackageSearch } from "lucide-react";
 
 export default function PurchaseRequestDetailPage({
   params,
@@ -19,9 +20,7 @@ export default function PurchaseRequestDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -29,6 +28,7 @@ export default function PurchaseRequestDetailPage({
     return (
       <EmptyState
         title="Purchase request not found"
+        icon={<PackageSearch className="h-8 w-8" />}
         description="This purchase request may have been deleted."
       />
     );

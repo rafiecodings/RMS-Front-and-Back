@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { isValidElement } from "react"
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils"
 
@@ -60,9 +61,14 @@ function Button({
   size = "default",
   render,
   nativeButton,
+  loading = false,
+  disabled,
+  children,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & {
   nativeButton?: boolean
+  /** Shows a spinner, disables the button and sets `aria-busy` while true. */
+  loading?: boolean
 }) {
   return (
     <ButtonPrimitive
@@ -70,8 +76,18 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       render={render}
       nativeButton={nativeButton ?? !isLinkElement(render)}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {loading && (
+        <LoaderCircle
+          aria-hidden="true"
+          className="size-4 animate-spin motion-reduce:animate-none"
+        />
+      )}
+      {children}
+    </ButtonPrimitive>
   )
 }
 

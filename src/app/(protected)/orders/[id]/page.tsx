@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { use } from "react";
 import Link from "next/link";
-import {
-  PageHeader,
-  LoadingSpinner,
-  ConfirmDialog,
-} from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, ConfirmDialog } from "@/components/shared";
 import { OrderDetail, OrderStatusSelect } from "@/features/orders";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,9 +60,7 @@ export default function OrderDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -298,9 +292,8 @@ export default function OrderDetailPage({
             <Button
               variant="destructive"
               onClick={handleVoidConfirm}
-              disabled={voidOrder.isPending}
+              loading={voidOrder.isPending}
             >
-              {voidOrder.isPending && <LoadingSpinner size="sm" className="mr-2" />}
               Void Order
             </Button>
           </DialogFooter>
@@ -373,9 +366,8 @@ export default function OrderDetailPage({
             <Button
               variant="destructive"
               onClick={handleRefundConfirm}
-              disabled={refund.isPending}
+              loading={refund.isPending}
             >
-              {refund.isPending && <LoadingSpinner size="sm" className="mr-2" />}
               Process Refund
             </Button>
           </DialogFooter>

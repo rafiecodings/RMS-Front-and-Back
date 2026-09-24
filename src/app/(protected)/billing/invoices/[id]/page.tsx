@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton } from "@/components/shared";
 import { InvoiceDetail, ReceiptPrint } from "@/features/billing";
 import { useInvoice } from "@/features/billing";
 
@@ -18,9 +18,7 @@ export default function InvoiceDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 

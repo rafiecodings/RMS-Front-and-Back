@@ -4,7 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton } from "@/components/shared";
 import { RefundForm } from "@/features/billing";
 import { useInvoice } from "@/features/billing";
 
@@ -18,9 +18,7 @@ export default function ProcessRefundPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 

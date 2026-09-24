@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, EmptyState, LoadingSpinner, ConfirmDialog, ErrorState } from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, EmptyState, ConfirmDialog, ErrorState } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StockAdjustDialog } from "@/features/inventory";
@@ -11,7 +11,7 @@ import { StockMovementTable } from "@/features/inventory";
 import { useAuth } from "@/providers/AuthProvider";
 import { canManageIngredients } from "@/lib/utils/permissions";
 import { formatCurrency } from "@/lib/utils";
-import { Pencil, PackagePlus } from "lucide-react";
+import { Pencil, PackagePlus, PackageX } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { StockAdjustFormData } from "@/lib/types";
@@ -46,9 +46,7 @@ export default function IngredientDetailPage() {
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -65,6 +63,7 @@ export default function IngredientDetailPage() {
     return (
       <EmptyState
         title="Ingredient not found"
+        icon={<PackageX className="h-8 w-8" />}
         description="This ingredient may have been deleted."
         action={<Button onClick={() => router.push("/inventory/ingredients")}>Back to Ingredients</Button>}
       />

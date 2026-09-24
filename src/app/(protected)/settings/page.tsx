@@ -2,10 +2,7 @@
 
 import { PageHeader } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Building2,
-  Settings,
-} from "lucide-react";
+import { Building2, Settings } from "lucide-react";
 import { SettingsSidebar } from "@/features/settings";
 import Link from "next/link";
 

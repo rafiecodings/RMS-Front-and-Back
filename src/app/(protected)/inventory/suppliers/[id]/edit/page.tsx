@@ -1,13 +1,14 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader, EmptyState } from "@/components/shared";
 import { SupplierForm } from "@/features/inventory";
 import { useSuppliers } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { canEdit } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { SupplierFormData } from "@/lib/types";
+import { Truck } from "lucide-react";
 
 export default function EditSupplierPage() {
   const params = useParams();
@@ -21,9 +22,7 @@ export default function EditSupplierPage() {
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 
@@ -31,6 +30,7 @@ export default function EditSupplierPage() {
     return (
       <EmptyState
         title="Supplier not found"
+        icon={<Truck className="h-8 w-8" />}
         description="This supplier may have been deleted."
       />
     );

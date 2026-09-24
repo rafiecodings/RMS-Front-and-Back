@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingCart, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { ShoppingCart, Clock, CircleCheck, CircleAlert } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
 
 interface PurchaseOrderStatsProps {
@@ -40,13 +40,13 @@ export function PurchaseOrderStats({ stats, isLoading }: PurchaseOrderStatsProps
     {
       label: "Received (Month)",
       value: stats?.receivedThisMonth ?? 0,
-      icon: CheckCircle,
+      icon: CircleCheck,
       color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     },
     {
       label: "Total Spent",
       value: new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(stats?.totalSpent ?? 0),
-      icon: AlertCircle,
+      icon: CircleAlert,
       color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
     },
   ];

@@ -1,11 +1,12 @@
 "use client";
 
 import { use } from "react";
-import { EmptyState, LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton, EmptyState } from "@/components/shared";
 import { RecipeDetail } from "@/features/inventory";
 import { useRecipe } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { canManageRecipes } from "@/lib/utils/permissions";
+import { BookOpen } from "lucide-react";
 
 export default function RecipeDetailPage({
   params,
@@ -18,9 +19,7 @@ export default function RecipeDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -28,6 +27,7 @@ export default function RecipeDetailPage({
     return (
       <EmptyState
         title="Recipe not found"
+        icon={<BookOpen className="h-8 w-8" />}
         description="This recipe may have been deleted."
       />
     );

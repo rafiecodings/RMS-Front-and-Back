@@ -3,12 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ShoppingCart,
-  CheckCircle2,
+  CircleCheck,
   XCircle,
   CalendarCheck,
   Package,
   LogIn,
-  LogOutIcon,
+  LogOut,
 } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import type { DashboardSummary } from "@/lib/types";
@@ -22,7 +22,7 @@ const ACTIVITY_CONFIG: Record<
     color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
   },
   order_completed: {
-    icon: CheckCircle2,
+    icon: CircleCheck,
     color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
   },
   order_cancelled: {
@@ -46,7 +46,7 @@ const ACTIVITY_CONFIG: Record<
     color: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
   },
   staff_clock_out: {
-    icon: LogOutIcon,
+    icon: LogOut,
     color: "bg-gray-100 text-gray-600 dark:bg-gray-900/40 dark:text-gray-400",
   },
 };

@@ -10,7 +10,7 @@ import {
   DrillDownChart,
 } from "@/features/analytics";
 import { useSalesTrends } from "@/features/analytics/hooks/useAnalytics";
-import { ShoppingCart, TrendingUp, DollarSign } from "lucide-react";
+import { ShoppingCart, TrendingUp, PhilippinePeso } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
@@ -45,7 +45,7 @@ export default function SalesAnalyticsPage() {
               value={analytics.total_sales}
               format="currency"
               change={analytics.sales_growth}
-              icon={<DollarSign className="h-4 w-4" />}
+              icon={<PhilippinePeso className="h-4 w-4" />}
             />
             <KpiCard
               title="Items Sold"

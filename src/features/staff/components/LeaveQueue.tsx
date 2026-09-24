@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -91,7 +92,16 @@ export function LeaveQueue() {
         </Select>
       </div>
 
-      {list.isLoading ? <p role="status">Loading...</p>
+      {list.isLoading ? (
+          <div className="space-y-3 py-2" role="status" aria-label="Loading leave requests">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
+        )
         : list.isError ? <p role="alert">Unable to load.</p>
         : items.length === 0 ? <p className="text-sm text-muted-foreground">No requests.</p>
         : (

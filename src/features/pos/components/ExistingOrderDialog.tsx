@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/shared";
+import { DialogBodySkeleton } from "@/components/shared";
 import { Search, Receipt } from "lucide-react";
 import { useUnpaidOrders } from "@/lib/hooks";
 import { formatCurrency, formatLabel } from "@/lib/utils";
@@ -78,9 +78,7 @@ export function ExistingOrderDialog({
 
         <div className="space-y-2 max-h-[50vh] overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <LoadingSpinner size="lg" />
-            </div>
+            <DialogBodySkeleton lines={4} />
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
               <Receipt className="h-8 w-8 opacity-40" />

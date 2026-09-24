@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import { PageHeader, ConfirmDialog, SearchInput, ErrorState, TablePagination } from "@/components/shared";
+import { PageHeader, ConfirmDialog, SearchInput, ErrorState, TablePagination, CardGridSkeleton, EmptyState } from "@/components/shared";
 import {
   MenuItemList,
   MenuItemCard,
@@ -238,13 +238,17 @@ export default function MenuItemsPage() {
             {list.isError ? (
               <ErrorState message="Failed to load menu items. Please try again." />
             ) : list.isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-muted-foreground">Loading...</p>
-              </div>
+              <CardGridSkeleton
+                count={8}
+                className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                lines={3}
+              />
             ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground">No menu items found</p>
-              </div>
+              <EmptyState
+                title="No menu items found"
+                description="Try a different search, or add your first menu item."
+                icon={<LayoutGrid className="h-8 w-8" />}
+              />
             ) : (
               <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((item) => (

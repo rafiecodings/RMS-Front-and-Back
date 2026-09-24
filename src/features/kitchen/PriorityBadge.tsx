@@ -36,7 +36,7 @@ export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
         className={cn(
           "h-1.5 w-1.5 rounded-full",
           PRIORITY_DOT[priority],
-          priority === "urgent" && "animate-ping"
+          priority === "urgent" && "motion-safe:animate-ping"
         )}
       />
       {priority}

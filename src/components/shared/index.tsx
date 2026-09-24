@@ -3,7 +3,14 @@
 import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatLabel, safeNumber } from "@/lib/utils";
-import { Loader2, ChevronLeft, ChevronRight, type LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +125,11 @@ export function LoadingSkeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-xl bg-muted", className)}
+      className={cn(
+        "animate-pulse rounded-xl bg-muted",
+        "motion-safe:animate-shimmer motion-safe:skeleton-shimmer",
+        className
+      )}
       {...props}
     />
   );
@@ -139,7 +150,11 @@ export const LoadingSpinner = memo(function LoadingSpinner({
 
   return (
     <Loader2
-      className={cn("animate-spin text-muted-foreground", sizeClasses[size], className)}
+      className={cn(
+        "animate-spin motion-reduce:animate-none text-muted-foreground",
+        sizeClasses[size],
+        className
+      )}
     />
   );
 });
@@ -195,8 +210,6 @@ export function ConfirmDialog({
     </Dialog>
   );
 }
-
-
 
 interface StatsCardProps {
   title: string;
@@ -357,13 +370,22 @@ export function TableLoadingRows({
   rows?: number;
   colSpan?: number;
 }) {
+  const widths = ["w-3/4", "w-2/3", "w-1/2", "w-3/5", "w-2/5", "w-1/3", "w-4/5"];
   return (
     <>
-      {Array.from({ length: rows }).map((_, i) => (
-        <tr key={i}>
-          <td colSpan={colSpan} className="px-4 py-3">
-            <div className="h-5 bg-muted rounded animate-pulse" />
-          </td>
+      {Array.from({ length: rows }).map((_, r) => (
+        <tr key={r}>
+          {Array.from({ length: colSpan }).map((_, c) => (
+            <td key={c} className="px-4 py-3.5">
+              <div
+                className={cn(
+                  "h-4 rounded-md bg-muted",
+                  widths[(r + c) % widths.length],
+                  "animate-pulse motion-safe:animate-shimmer motion-safe:skeleton-shimmer"
+                )}
+              />
+            </td>
+          ))}
         </tr>
       ))}
     </>
@@ -389,64 +411,23 @@ export function TableEmptyRow({
   );
 }
 
-interface PeriodFilterProps {
-  value: string;
-  onChange: (period: string) => void;
-  periods?: { label: string; value: string }[];
-}
-
-const DEFAULT_PERIODS = [
-  { label: "Today", value: "today" },
-  { label: "This Week", value: "week" },
-  { label: "This Month", value: "month" },
-  { label: "This Year", value: "year" },
-  { label: "Custom", value: "custom" },
-];
-
-export function PeriodFilter({
-  value,
-  onChange,
-  periods = DEFAULT_PERIODS,
-}: PeriodFilterProps) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {periods.map((period) => (
-        <Button
-          key={period.value}
-          variant={value === period.value ? "default" : "outline"}
-          size="sm"
-          className="rounded-lg"
-          onClick={() => onChange(period.value)}
-        >
-          {period.label}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-interface ActiveBadgeProps {
-  isActive: boolean;
-}
-
-export const ActiveBadge = memo(function ActiveBadge({ isActive }: ActiveBadgeProps) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border border-transparent",
-        isActive
-          ? "bg-success/10 text-success"
-          : "bg-muted text-muted-foreground"
-      )}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-});
-
 export { SearchInput } from "./SearchInput";
 export { EntityActionDropdown } from "./EntityActionDropdown";
 export { ErrorBoundary } from "./ErrorBoundary";
 
 export { MenuItemImage } from "./MenuItemImage";
 export { StatusBadge } from "./StatusBadge";
+export { AppSplash } from "./AppSplash";
+
+export {
+  PageHeaderSkeleton,
+  StatsCardsSkeleton,
+  CardGridSkeleton,
+  ChartSkeleton,
+  TableSkeleton,
+  ListPageSkeleton,
+  FormPageSkeleton,
+  DetailPageSkeleton,
+  DialogBodySkeleton,
+  KanbanSkeleton,
+} from "./PageSkeletons";

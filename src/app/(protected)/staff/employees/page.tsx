@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ConfirmDialog, LoadingSpinner } from "@/components/shared";
+import { DialogBodySkeleton, PageHeader, ConfirmDialog } from "@/components/shared";
 import {
   Dialog,
   DialogContent,
@@ -208,9 +208,7 @@ export default function EmployeesPage() {
               onEdit={canManage ? () => { setEditStaff(viewStaff); setViewStaff(null); } : undefined}
             />
           ) : (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
+            <DialogBodySkeleton />
           )}
         </DialogContent>
       </Dialog>

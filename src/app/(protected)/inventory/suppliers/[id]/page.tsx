@@ -2,14 +2,14 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, EmptyState, LoadingSpinner, ConfirmDialog, ErrorState } from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, EmptyState, ConfirmDialog, ErrorState } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { canEdit } from "@/lib/utils/permissions";
 import { formatDate } from "@/lib/utils";
-import { Mail, Phone, Pencil, Power } from "lucide-react";
+import { Mail, Phone, Pencil, Power, Truck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -33,9 +33,7 @@ export default function SupplierDetailPage() {
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -52,6 +50,7 @@ export default function SupplierDetailPage() {
     return (
       <EmptyState
         title="Supplier not found"
+        icon={<Truck className="h-8 w-8" />}
         description="This supplier may have been deleted."
         action={<Button onClick={() => router.push("/inventory/suppliers")}>Back to Suppliers</Button>}
       />

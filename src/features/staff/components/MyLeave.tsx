@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,7 +48,13 @@ export function MyLeave() {
   const [selected, setSelected] = useState<LeaveRequest | null>(null);
   const [form, setForm] = useState({ leave_type: "sick" as LeaveType, start_date: "", end_date: "", reason: "" });
 
-  if (profile.isLoading) return <p role="status">Loading your leave...</p>;
+  if (profile.isLoading)
+    return (
+      <div className="space-y-3" role="status" aria-label="Loading your leave">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    );
   if (profile.isError) return <div role="alert"><p>Unable to load your leave.</p></div>;
   if (!staffId) return <p role="status">No staff profile linked. Ask an admin to link your profile.</p>;
 
@@ -123,7 +130,13 @@ export function MyLeave() {
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">History</h3>
-        {list.isLoading ? <p role="status">Loading requests...</p>
+        {list.isLoading ? (
+          <div className="space-y-2 py-1" role="status" aria-label="Loading leave requests">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded-lg" />
+            ))}
+          </div>
+        )
           : list.isError ? <p role="alert">Unable to load requests.</p>
           : ownOnly.length === 0 ? <p className="text-sm text-muted-foreground">No leave requests.</p>
           : (

@@ -1,7 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { PageHeader } from "@/components/shared";
+import {
+  PageHeader,
+  StatsCardsSkeleton,
+  ChartSkeleton,
+  CardGridSkeleton,
+  ErrorState,
+  EmptyState,
+} from "@/components/shared";
 import {
   RevenueCards,
   SalesSummary,
@@ -12,7 +19,7 @@ import {
   RecentActivity,
 } from "@/features/dashboard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, LayoutDashboard } from "lucide-react";
 import { useDashboard } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import {
@@ -43,33 +50,39 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div>
+      <div className="space-y-6" role="status" aria-label="Loading dashboard">
         <PageHeader title="Dashboard" description="Overview of your restaurant" />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading dashboard...</div>
+        <StatsCardsSkeleton count={4} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ChartSkeleton />
+          <ChartSkeleton />
         </div>
+        <CardGridSkeleton count={6} className="sm:grid-cols-2 lg:grid-cols-3" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Dashboard" description="Overview of your restaurant" />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Failed to load dashboard data. Please try again.</div>
-        </div>
+        <ErrorState
+          message="Failed to load dashboard data. Please try again."
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Dashboard" description="Overview of your restaurant" />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">No dashboard data available.</div>
-        </div>
+        <EmptyState
+          title="No dashboard data yet"
+          description="Once orders start coming in, your overview will appear here."
+          icon={<LayoutDashboard className="h-8 w-8" />}
+        />
       </div>
     );
   }

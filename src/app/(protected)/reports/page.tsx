@@ -2,17 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner, ErrorState } from "@/components/shared";
+import { PageHeader, StatsCardsSkeleton, ErrorState } from "@/components/shared";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  ShoppingCart,
-  Package,
-  BarChart3,
-  Receipt,
-  ArrowRight,
-  RefreshCw,
-} from "lucide-react";
+import { ShoppingCart, Package, BarChart3, Receipt, ArrowRight, RefreshCw } from "lucide-react";
 import {
   ReportFilters,
   ReportSummaryCard,
@@ -105,7 +98,7 @@ export default function ReportsPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={anyLoading}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${anyLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${anyLoading ? "animate-spin motion-reduce:animate-none" : ""}`} />
               Refresh
             </Button>
             <ExportButton reportType="revenue" period={period} dateRange={dateRange} />
@@ -122,9 +115,7 @@ export default function ReportsPage() {
 
       {/* KPI ROW */}
       {anyLoading ? (
-        <div className="flex justify-center py-16">
-          <LoadingSpinner size="lg" />
-        </div>
+        <StatsCardsSkeleton count={4} />
       ) : anyError ? (
         <ErrorState
           message="Failed to load reports. Please try again."

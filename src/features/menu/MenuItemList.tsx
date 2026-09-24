@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { LoadingSpinner, MenuItemImage } from "@/components/shared";
+import { TableSkeleton, MenuItemImage } from "@/components/shared";
 import { EntityActionDropdown } from "@/components/shared";
 import type { MenuItem } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -35,11 +35,7 @@ export function MenuItemList({
   canEditItem,
 }: MenuItemListProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <TableSkeleton rows={6} columns={5} showToolbar={false} showFooter={false} />;
   }
 
   if (items.length === 0) {

@@ -1,12 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  UtensilsCrossed,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-} from "lucide-react";
+import { UtensilsCrossed, CircleCheck, XCircle, PhilippinePeso } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { MenuItem } from "@/lib/types";
 
@@ -60,7 +55,7 @@ export function MenuStats({ items }: { items: MenuItem[] }) {
       <StatCard
         title="Available"
         value={String(available)}
-        icon={CheckCircle}
+        icon={CircleCheck}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />
       <StatCard
@@ -72,7 +67,7 @@ export function MenuStats({ items }: { items: MenuItem[] }) {
       <StatCard
         title="Avg Price"
         value={formatCurrency(avgPrice)}
-        icon={DollarSign}
+        icon={PhilippinePeso}
         iconColor="bg-amber-500/10 text-amber-600"
       />
     </div>

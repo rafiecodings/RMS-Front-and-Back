@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, ArrowRight, AlertTriangle, AlertOctagon, XCircle } from "lucide-react";
+import { Package, ArrowRight, TriangleAlert, OctagonAlert, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DashboardSummary } from "@/lib/types";
 
 const SEVERITY_CONFIG = {
   low: {
-    icon: AlertTriangle,
+    icon: TriangleAlert,
     badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     rowBg: "hover:bg-amber-50/50 dark:hover:bg-amber-950/20",
   },
   critical: {
-    icon: AlertOctagon,
+    icon: OctagonAlert,
     badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
     rowBg: "hover:bg-red-50/50 dark:hover:bg-red-950/20",
   },

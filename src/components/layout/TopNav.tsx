@@ -3,30 +3,8 @@
 import { NotificationMenu } from "@/components/layout/NotificationMenu";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { Sun, Moon } from "lucide-react";
-import { useThemeContext } from "@/providers/ThemeProvider";
-
-function ThemeToggle() {
-  const { setTheme, resolvedTheme } = useThemeContext();
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="text-muted-foreground hover:text-foreground"
-    >
-      {resolvedTheme === "dark" ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
-      <span className="sr-only">Toggle theme</span>
-    </Button>
-  );
-}
 
 export function TopNav() {
   return (

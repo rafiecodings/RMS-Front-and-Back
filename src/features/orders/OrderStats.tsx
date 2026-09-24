@@ -1,13 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  ShoppingCart,
-  Banknote,
-  TrendingUp,
-  Clock,
-  XCircle,
-} from "lucide-react";
+import { ShoppingCart, Banknote, TrendingUp, Clock, XCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Order } from "@/lib/types";
 

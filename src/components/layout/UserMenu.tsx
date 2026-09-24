@@ -14,12 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { RoleBadge } from "@/features/staff";
 import type { StaffRole } from "@/lib/types";
-import {
-  User,
-  Settings,
-  LogOut,
-  ChevronDown,
-} from "lucide-react";
+import { User, Settings, LogOut, ChevronDown } from "lucide-react";
 
 function getInitials(name: string): string {
   if (!name) return "U";

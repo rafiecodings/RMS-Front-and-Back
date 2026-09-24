@@ -8,6 +8,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { canManageRecipes } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { RecipeFormData } from "@/lib/types";
+import { ShieldX } from "lucide-react";
 
 export default function NewRecipePage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function NewRecipePage() {
     return (
       <EmptyState
         title="Not authorized"
+        icon={<ShieldX className="h-8 w-8" />}
         description="Only managers and admins can create recipes."
       />
     );

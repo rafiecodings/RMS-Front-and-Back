@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Check, ChevronDown } from "lucide-react";
+import { Calendar, Check, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { ReportPeriod, DateRange } from "../types";
@@ -131,7 +131,7 @@ export function ReportFilters({
               open && "ring-2 ring-ring ring-offset-1"
             )}
           >
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>{activeLabel}</span>
             <ChevronDown
               className={cn(

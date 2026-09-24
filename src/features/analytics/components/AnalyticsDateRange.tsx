@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import type { AnalyticsPeriod, DateRange } from "../types";
 
@@ -108,7 +108,7 @@ export function AnalyticsDateRange({
           <Button variant="outline" size="sm" className="max-w-full font-normal" aria-label={`Date range: ${PERIOD_LABELS[period]} ${rangeLabel}`} />
         }
       >
-        <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+        <Calendar className="size-4 shrink-0 text-muted-foreground" />
         <span className="flex min-w-0 items-baseline gap-1.5">
           <span className="shrink-0 text-[0.8rem]">{PERIOD_LABELS[period]}</span>
           <span className="hidden truncate text-xs text-muted-foreground sm:inline">

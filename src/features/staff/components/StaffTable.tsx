@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Search, Eye, Star, Power, Pencil } from "lucide-react";
 import { TableLoadingRows, TableEmptyRow, TablePagination } from "@/components/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RoleBadge } from "./RoleBadge";
 import { safeNumber } from "@/lib/utils";
 import type { Staff, StaffRole } from "@/lib/types";
@@ -176,7 +177,20 @@ export function StaffTable({
       </div>
       <div className="md:hidden space-y-3">
         {isLoading ? (
-          <div className="rounded-xl border p-4 text-center text-sm text-muted-foreground">Loading…</div>
+          <div className="space-y-3" role="status" aria-label="Loading staff">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border bg-card p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="h-3 w-3/5" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-full rounded-lg" />
+              </div>
+            ))}
+          </div>
         ) : staff.length === 0 ? (
           <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No staff members found</div>
         ) : (

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Bell, ShoppingCart, CreditCard, AlertTriangle, Info } from "lucide-react";
+import { Bell, ShoppingCart, CreditCard, TriangleAlert, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/lib/hooks";
@@ -19,7 +19,7 @@ import type { NotificationIcon } from "@/lib/types";
 const ICON_MAP: Record<NotificationIcon, React.ComponentType<{ className?: string }>> = {
   order: ShoppingCart,
   payment: CreditCard,
-  warning: AlertTriangle,
+  warning: TriangleAlert,
   info: Info,
 };
 

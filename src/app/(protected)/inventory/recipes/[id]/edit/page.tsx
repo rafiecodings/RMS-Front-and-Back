@@ -1,13 +1,14 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader, EmptyState } from "@/components/shared";
 import { RecipeForm } from "@/features/inventory";
 import { useRecipes, useRecipe } from "@/lib/hooks";
 import { useAuth } from "@/providers/AuthProvider";
 import { canManageRecipes } from "@/lib/utils/permissions";
 import { toast } from "sonner";
 import type { RecipeFormData } from "@/lib/types";
+import { ShieldX, BookOpen } from "lucide-react";
 
 export default function EditRecipePage() {
   const params = useParams();
@@ -22,6 +23,7 @@ export default function EditRecipePage() {
     return (
       <EmptyState
         title="Not authorized"
+        icon={<ShieldX className="h-8 w-8" />}
         description="Only managers and admins can edit recipes."
       />
     );
@@ -29,9 +31,7 @@ export default function EditRecipePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 
@@ -39,6 +39,7 @@ export default function EditRecipePage() {
     return (
       <EmptyState
         title="Recipe not found"
+        icon={<BookOpen className="h-8 w-8" />}
         description="This recipe may have been deleted."
       />
     );

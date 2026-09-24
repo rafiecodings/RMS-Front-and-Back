@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/shared";
+import { CardGridSkeleton } from "@/components/shared";
 import { Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import type { MenuCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,11 +24,7 @@ export function CategoryList({
   onToggleActive,
 }: CategoryListProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <CardGridSkeleton count={8} lines={2} />;
   }
 
   if (categories.length === 0) {

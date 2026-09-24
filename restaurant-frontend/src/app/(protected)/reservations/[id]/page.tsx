@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner, ConfirmDialog } from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, ConfirmDialog } from "@/components/shared";
 import { ReservationDetail } from "@/features/reservations";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -59,9 +59,7 @@ export default function ReservationDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 

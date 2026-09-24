@@ -5,15 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
-import {
-  Pencil,
-  Phone,
-  Mail,
-  ShoppingCart,
-  Calendar,
-  Clock,
-  Users,
-} from "lucide-react";
+import { Pencil, Phone, Mail, ShoppingCart, Calendar, Clock, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Customer, CustomerReservation } from "@/lib/types";
 import { EmptyState } from "@/components/shared";

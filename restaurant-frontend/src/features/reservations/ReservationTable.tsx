@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LoadingSpinner, EmptyState } from "@/components/shared";
+import { CardGridSkeleton, EmptyState } from "@/components/shared";
 import { StatusBadge } from "@/components/shared";
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   XCircle,
-  CheckCircle,
+  CircleCheck,
   Users,
   Clock,
   MoreHorizontal,
@@ -96,11 +96,7 @@ export function ReservationTable({
   canManage = false,
 }: ReservationTableProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <CardGridSkeleton count={8} lines={3} />;
   }
 
   if (reservations.length === 0) {
@@ -210,7 +206,7 @@ export function ReservationTable({
                     onClick={() => onCheckIn(res)}
                     className="text-blue-600"
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <CircleCheck className="h-4 w-4 mr-2" />
                     Check In
                   </DropdownMenuItem>
                 )}
@@ -219,7 +215,7 @@ export function ReservationTable({
                     onClick={() => onComplete(res)}
                     className="text-emerald-600"
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <CircleCheck className="h-4 w-4 mr-2" />
                     Complete
                   </DropdownMenuItem>
                 )}

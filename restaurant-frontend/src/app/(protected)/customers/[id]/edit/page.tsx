@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader } from "@/components/shared";
 import { CustomerForm } from "@/features/customers";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -38,9 +38,7 @@ export default function EditCustomerPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { EmptyState, LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton, EmptyState } from "@/components/shared";
 import { StaffDetail, PerformanceCard } from "@/features/staff";
 import { useStaffMember, useStaffPerformance } from "@/lib/hooks";
+import { UserX } from "lucide-react";
 
 export default function EmployeeDetailPage() {
   const params = useParams();
@@ -14,9 +15,7 @@ export default function EmployeeDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 
@@ -24,6 +23,7 @@ export default function EmployeeDetailPage() {
     return (
       <EmptyState
         title="Staff member not found"
+        icon={<UserX className="h-8 w-8" />}
         description="This staff member may have been removed."
       />
     );

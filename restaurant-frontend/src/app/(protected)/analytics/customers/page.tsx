@@ -11,7 +11,7 @@ import {
   TopCustomersTable,
 } from "@/features/analytics";
 import { useCustomerAnalytics } from "@/features/analytics/hooks/useAnalytics";
-import { Users, UserPlus, Repeat, DollarSign } from "lucide-react";
+import { Users, UserPlus, Repeat, PhilippinePeso } from "lucide-react";
 import { safeNumber } from "@/lib/utils";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
@@ -63,7 +63,7 @@ export default function CustomerAnalyticsPage() {
               title="Avg Lifetime Value"
               value={analytics.average_lifetime_value}
               format="currency"
-              icon={<DollarSign className="h-4 w-4" />}
+              icon={<PhilippinePeso className="h-4 w-4" />}
             />
           </div>
 

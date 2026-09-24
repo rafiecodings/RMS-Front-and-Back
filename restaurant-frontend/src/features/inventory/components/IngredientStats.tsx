@@ -1,6 +1,6 @@
 "use client";
 
-import { Package, AlertTriangle, DollarSign } from "lucide-react";
+import { Package, TriangleAlert, PhilippinePeso } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared";
 import { formatCurrency } from "@/lib/utils";
 
@@ -34,13 +34,13 @@ export function IngredientStats({ stats, isLoading }: IngredientStatsProps) {
     {
       label: "Low Stock",
       value: stats?.lowStock ?? 0,
-      icon: AlertTriangle,
+      icon: TriangleAlert,
       color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     },
     {
       label: "Total Inventory Value",
       value: formatCurrency(stats?.totalValue ?? 0),
-      icon: DollarSign,
+      icon: PhilippinePeso,
       color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     },
   ];

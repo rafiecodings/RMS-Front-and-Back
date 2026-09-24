@@ -4,10 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MenuItemImage } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Pencil,
-  DollarSign,
-} from "lucide-react";
+import { Pencil, PhilippinePeso } from "lucide-react";
 import type { MenuItem } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -82,7 +79,7 @@ export function MenuItemDetail({
               {item.image_url && (
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Image</p>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared";
-import { PackageSearch, RefreshCw, AlertTriangle } from "lucide-react";
+import { PackageSearch, RefreshCw, TriangleAlert } from "lucide-react";
 import { useIngredientForecast } from "../hooks/useDemandForecast";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -40,7 +40,7 @@ export function InventoryForecastCard() {
           </p>
         </div>
         <Button variant="ghost" size="icon-sm" onClick={() => refetch()} aria-label="Refresh forecast">
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin motion-reduce:animate-none" : ""}`} />
         </Button>
       </CardHeader>
       <CardContent>
@@ -92,7 +92,7 @@ export function InventoryForecastCard() {
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[r.status] ?? ""}`}
                   >
                     {(r.status === "Out of Stock" || r.status === "Restock Urgent") && (
-                      <AlertTriangle className="h-3 w-3" />
+                      <TriangleAlert className="h-3 w-3" />
                     )}
                     {r.status}
                   </span>

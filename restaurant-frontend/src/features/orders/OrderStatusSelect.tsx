@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Send } from "lucide-react";
+import { CircleCheck, Send } from "lucide-react";
 import type { OrderStatus } from "@/lib/types";
 
 interface OrderStatusSelectProps {
@@ -51,7 +51,7 @@ export function OrderStatusSelect({
         onClick={() => onStatusChange("served")}
         disabled={disabled}
       >
-        <CheckCircle2 className="h-4 w-4 mr-1.5" />
+        <CircleCheck className="h-4 w-4 mr-1.5" />
         Mark as Served
       </Button>
     );

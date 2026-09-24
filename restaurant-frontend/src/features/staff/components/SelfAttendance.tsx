@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useClockIn, useClockOut, useCurrentStaff } from "@/lib/hooks/useStaff";
@@ -15,7 +16,14 @@ export function SelfAttendance() {
   const staff = profile.data;
   const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
 
-  if (profile.isLoading) return <p role="status">Loading your attendance...</p>;
+  if (profile.isLoading)
+    return (
+      <div className="space-y-4" role="status" aria-label="Loading your attendance">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-10 w-32 rounded-lg" />
+      </div>
+    );
   if (profile.isError) return (
     <div role="alert">
       <p>Unable to load your attendance.</p>

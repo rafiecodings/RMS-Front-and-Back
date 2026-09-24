@@ -11,7 +11,7 @@ import {
   LowStockAlerts,
 } from "@/features/analytics";
 import { useInventoryUsage } from "@/features/analytics/hooks/useAnalytics";
-import { Package, AlertTriangle, DollarSign } from "lucide-react";
+import { Package, TriangleAlert, PhilippinePeso } from "lucide-react";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
 export default function InventoryAnalyticsPage() {
@@ -50,13 +50,13 @@ export default function InventoryAnalyticsPage() {
               title="Usage Cost"
               value={analytics.total_usage_cost}
               format="currency"
-              icon={<DollarSign className="h-4 w-4" />}
+              icon={<PhilippinePeso className="h-4 w-4" />}
             />
             <KpiCard
               title="Wastage Cost"
               value={analytics.wastage_cost}
               format="currency"
-              icon={<AlertTriangle className="h-4 w-4" />}
+              icon={<TriangleAlert className="h-4 w-4" />}
             />
           </div>
 

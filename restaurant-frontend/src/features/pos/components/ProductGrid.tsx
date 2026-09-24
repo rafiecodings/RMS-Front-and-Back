@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { useMenuCategories, useMenuItems } from "@/lib/hooks";
 import { PosProductCard } from "./PosProductCard";
-import { LoadingSpinner } from "@/components/shared";
 import type { MenuItem } from "@/lib/types";
 
 interface ProductGridProps {
@@ -60,8 +60,14 @@ export function ProductGrid({ onAddToCart }: ProductGridProps) {
 
       <div className="flex-1 overflow-y-auto p-3">
         {itemsList.isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <LoadingSpinner size="lg" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="space-y-2 rounded-xl border p-2">
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-3.5 w-1/2" />
+              </div>
+            ))}
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="flex items-center justify-center h-48">

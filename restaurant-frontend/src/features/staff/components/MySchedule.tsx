@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrentStaff, useShiftSchedule } from "@/lib/hooks/useStaff";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 function formatFriendlyDate(dateStr: string): string {
@@ -22,7 +23,14 @@ function OwnScheduleList({ staffId }: { staffId: string }) {
   const items = schedules.data?.data?.data ?? [];
   const ownOnly = items.filter((s) => s.staff_id === staffId);
 
-  if (schedules.isLoading) return <p role="status">Loading shifts...</p>;
+  if (schedules.isLoading)
+    return (
+      <div className="space-y-3 py-1" role="status" aria-label="Loading shifts">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-full rounded-lg" />
+        ))}
+      </div>
+    );
   if (schedules.isError) return <p role="alert">Unable to load shifts.</p>;
   if (ownOnly.length === 0)
     return <p className="text-sm text-muted-foreground">No shifts scheduled.</p>;
@@ -47,7 +55,13 @@ export function MySchedule() {
   const profile = useCurrentStaff();
   const staffId = profile.data?.id;
 
-  if (profile.isLoading) return <p role="status">Loading your schedule...</p>;
+  if (profile.isLoading)
+    return (
+      <div className="space-y-3" role="status" aria-label="Loading your schedule">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    );
   if (profile.isError)
     return (
       <div role="alert">

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { LoadingSpinner, ErrorState } from "@/components/shared";
+import { KanbanSkeleton, ErrorState } from "@/components/shared";
 import {
   KanbanBoard,
   KotDetailSheet,
@@ -151,7 +151,7 @@ export default function KitchenPage() {
               disabled={all.isFetching}
             >
               <RefreshCw
-                className={`h-4 w-4 ${all.isFetching ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${all.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`}
               />
             </Button>
           </div>
@@ -166,9 +166,7 @@ export default function KitchenPage() {
       {/* Kanban Board */}
       <div className="flex-1 overflow-hidden px-4 pt-3 pb-4">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <LoadingSpinner size="lg" />
-          </div>
+          <KanbanSkeleton />
         ) : all.isError ? (
           <div className="flex items-center justify-center h-full p-4">
             <ErrorState

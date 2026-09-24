@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction } from "@/components/ui/card";
-import { Search, AlertTriangle, Eye, Pencil } from "lucide-react";
+import { Search, TriangleAlert, Eye, Pencil } from "lucide-react";
 import { TablePagination } from "@/components/shared";
 import { formatCurrency, cn } from "@/lib/utils";
 import { getStockStatus, STOCK_STATUS_BADGE, STOCK_STATUS_LABEL, type StockStatus } from "@/lib/utils/inventoryStatus";
@@ -119,7 +119,7 @@ export function IngredientTable({
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-1.5 truncate pr-2" title={item.name}>
-                    {isAlert && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+                    {isAlert && <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
                     <span className="truncate">{item.name}</span>
                   </CardTitle>
                   <CardDescription className="capitalize">

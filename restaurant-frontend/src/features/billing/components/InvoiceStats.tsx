@@ -2,8 +2,8 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  DollarSign,
-  AlertCircle,
+  PhilippinePeso,
+  CircleAlert,
   RotateCcw,
   TrendingUp,
   ShoppingCart,
@@ -67,13 +67,13 @@ export function InvoiceStats({ stats, isLoading }: InvoiceStatsProps) {
       <StatCard
         label="Total Revenue"
         value={formatCurrency(stats.total_revenue)}
-        icon={DollarSign}
+        icon={PhilippinePeso}
         className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
       />
       <StatCard
         label="Outstanding"
         value={formatCurrency(stats.outstanding_amount)}
-        icon={AlertCircle}
+        icon={CircleAlert}
         className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
       />
       <StatCard

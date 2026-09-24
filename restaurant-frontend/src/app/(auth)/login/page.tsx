@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LoadingSpinner } from "@/components/shared";
-import { Eye, EyeOff, Store, AlertCircle, Mail, Lock } from "lucide-react";
+import { AppSplash } from "@/components/shared";
+import { Eye, EyeOff, Store, CircleAlert, Mail, Lock, TriangleAlert } from "lucide-react";
 
 interface FormErrors {
   email?: string;
@@ -30,6 +31,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +54,13 @@ export default function LoginPage() {
     const value = field === "email" ? email : password;
     const err = field === "email" ? validateEmail(value) : validatePassword(value);
     setErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
+  /** Caps Lock gives no visual cue in a masked field — surface it explicitly. */
+  const handlePasswordKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (typeof e.getModifierState === "function") {
+      setCapsLockOn(e.getModifierState("CapsLock"));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,11 +116,7 @@ export default function LoginPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <AppSplash />;
   }
 
   return (
@@ -158,7 +163,7 @@ export default function LoginPage() {
 
       {/* RIGHT — login card */}
       <div className="relative flex flex-1 items-center justify-center px-4 py-12">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent lg:hidden" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent lg:hidden" />
         <div className="relative w-full max-w-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
           <div className="mb-8 text-center lg:text-left">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 lg:hidden">
@@ -173,8 +178,11 @@ export default function LoginPage() {
           <div className="rounded-2xl border bg-card p-7 shadow-card sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {apiError && (
-              <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200"
+              >
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{apiError}</span>
               </div>
             )}
@@ -188,6 +196,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@restaurant.com"
                   className="h-11 pl-9 transition-shadow"
+                  autoFocus
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -210,7 +219,15 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -228,8 +245,14 @@ export default function LoginPage() {
                       }));
                     }
                   }}
-                  onBlur={() => handleBlur("password")}
+                  onBlur={() => {
+                    handleBlur("password");
+                    setCapsLockOn(false);
+                  }}
+                  onKeyDown={handlePasswordKey}
+                  onKeyUp={handlePasswordKey}
                   aria-invalid={!!errors.password && touched.password}
+                  aria-describedby={capsLockOn ? "caps-lock-warning" : undefined}
                   disabled={isSubmitting}
                   autoComplete="current-password"
                 />
@@ -247,6 +270,15 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {capsLockOn && (
+                <p
+                  id="caps-lock-warning"
+                  className="flex items-center gap-1.5 text-xs text-warning"
+                >
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                  Caps Lock is on
+                </p>
+              )}
               {errors.password && touched.password && (
                 <p className="text-xs text-destructive">{errors.password}</p>
               )}
@@ -256,9 +288,8 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full h-11 text-base transition-transform active:scale-[0.99]"
-                disabled={isSubmitting}
+                loading={isSubmitting}
               >
-                {isSubmitting && <LoadingSpinner size="sm" className="mr-2" />}
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
             </div>

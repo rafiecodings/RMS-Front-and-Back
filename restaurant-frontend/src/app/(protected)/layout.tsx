@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { BreadcrumbProvider } from "@/components/layout/BreadcrumbContext";
-import { LoadingSpinner } from "@/components/shared";
+import { AppSplash } from "@/components/shared";
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -20,11 +20,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-dvh items-center justify-center bg-background">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <AppSplash />;
   }
 
   if (!isAuthenticated) {

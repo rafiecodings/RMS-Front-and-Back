@@ -38,6 +38,18 @@ vi.mock("@/features/reports", () => ({
 
 vi.mock("@/components/shared", () => ({
   PageHeader: () => <div data-testid="PageHeader" />,
+  // Stubs that surface the props the page passes, so assertions can still read
+  // the rendered copy without pulling in the real component tree.
+  ErrorState: ({ message }: { message: string }) => <div role="alert">{message}</div>,
+  EmptyState: ({ title, description }: { title: string; description?: string }) => (
+    <div role="status">
+      <p>{title}</p>
+      {description ? <p>{description}</p> : null}
+    </div>
+  ),
+  StatsCardsSkeleton: () => <div data-testid="StatsCardsSkeleton" />,
+  ChartSkeleton: () => <div data-testid="ChartSkeleton" />,
+  CardGridSkeleton: () => <div data-testid="CardGridSkeleton" />,
 }));
 
 vi.mock("@/components/ui/button", () => ({

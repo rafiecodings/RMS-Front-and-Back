@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader, EmptyState } from "@/components/shared";
 import { IngredientForm } from "@/features/inventory";
 import { useIngredients } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { IngredientFormData } from "@/lib/types";
+import { PackageX } from "lucide-react";
 
 export default function EditIngredientPage() {
   const params = useParams();
@@ -18,9 +19,7 @@ export default function EditIngredientPage() {
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 
@@ -28,6 +27,7 @@ export default function EditIngredientPage() {
     return (
       <EmptyState
         title="Ingredient not found"
+        icon={<PackageX className="h-8 w-8" />}
         description="This ingredient may have been deleted."
       />
     );

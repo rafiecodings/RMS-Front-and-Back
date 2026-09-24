@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner, ErrorState } from "@/components/shared";
-import { Sparkles, TrendingUp, PackageSearch, AlertTriangle, Lightbulb } from "lucide-react";
+import { Sparkles, TrendingUp, PackageSearch, TriangleAlert, Lightbulb } from "lucide-react";
 import { useAiInsights, type AiInsights as AiInsightsData } from "../hooks/useAiInsights";
 
 interface AiInsightsPanelProps {
@@ -127,7 +127,7 @@ export function AiInsightsPanel({ startDate, endDate, auto = true }: AiInsightsP
                 items={data.inventory_insights}
               />
               <InsightList
-                icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+                icon={<TriangleAlert className="h-4 w-4 text-amber-500" />}
                 title="Risks"
                 items={data.risks}
               />

@@ -2,7 +2,7 @@
 
 import { useLowStockProjection } from "@/features/analytics/hooks/useAnalytics";
 import { Card, CardContent } from "@/components/ui/card";
-import { PackageSearch, AlertTriangle } from "lucide-react";
+import { PackageSearch, TriangleAlert } from "lucide-react";
 
 function KpiStat({
   title,
@@ -72,7 +72,7 @@ export function ForecastKpis() {
             ? `${outOfStock} already out of stock`
             : "ingredients projected to run out soon"
         }
-        icon={AlertTriangle}
+        icon={TriangleAlert}
         iconColor="bg-amber-500/10 text-amber-600"
       />
     </div>

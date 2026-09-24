@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, EmptyState, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader, EmptyState } from "@/components/shared";
 import { StaffForm } from "@/features/staff";
 import { useStaffMember, useStaff } from "@/lib/hooks";
 import { toast } from "sonner";
 import type { StaffFormData } from "@/lib/types";
+import { UserX } from "lucide-react";
 
 export default function EditEmployeePage() {
   const params = useParams();
@@ -17,9 +18,7 @@ export default function EditEmployeePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 
@@ -27,6 +26,7 @@ export default function EditEmployeePage() {
     return (
       <EmptyState
         title="Staff member not found"
+        icon={<UserX className="h-8 w-8" />}
         description="This staff member may have been removed."
       />
     );

@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Inbox,
-  Flame,
-  CheckCircle,
-  Timer,
-} from "lucide-react";
+import { Inbox, Flame, CircleCheck, Timer } from "lucide-react";
 import type { Kot } from "@/lib/types";
 
 interface KitchenStatsProps {
@@ -95,7 +90,7 @@ export function KitchenStats({ kots }: KitchenStatsProps) {
       <StatCard
         title="Ready"
         value={ready}
-        icon={CheckCircle}
+        icon={CircleCheck}
         iconColor="bg-emerald-500/10 text-emerald-600"
       />
       <StatCard

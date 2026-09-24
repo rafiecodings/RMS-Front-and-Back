@@ -9,7 +9,7 @@ const DEV_THEME_KEY = "rms_dev_theme";
 
 type Theme = "light" | "dark" | "system";
 
-interface ThemeContextType {
+export interface ThemeContextType {
   theme: Theme;
   resolvedTheme: Theme;
   setTheme: (theme: Theme) => void;
@@ -23,6 +23,16 @@ export function useThemeContext() {
     throw new Error("useThemeContext must be used within a ThemeProvider");
   }
   return context;
+}
+
+/**
+ * Non-throwing variant for components that also render on the server. The
+ * provider deliberately withholds context until after mount (see
+ * `ThemeProviderInner`), so SSR-time consumers get `undefined` rather than an
+ * exception and can render a neutral placeholder.
+ */
+export function useOptionalThemeContext(): ThemeContextType | undefined {
+  return useContext(ThemeContext);
 }
 
 function getInitialTheme(): Theme {

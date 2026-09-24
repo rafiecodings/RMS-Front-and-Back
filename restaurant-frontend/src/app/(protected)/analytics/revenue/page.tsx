@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { LoadingSpinner } from "@/components/shared";
 import { AnalyticsFilter, KpiCard, RevenueTrendChart, DrillDownChart } from "@/features/analytics";
 import { useRevenueAnalytics } from "@/features/analytics/hooks/useAnalytics";
-import { DollarSign, TrendingUp, ShoppingCart } from "lucide-react";
+import { PhilippinePeso, TrendingUp, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { AnalyticsPeriod, DateRange } from "@/features/analytics/types";
 
@@ -40,7 +40,7 @@ export default function RevenueAnalyticsPage() {
               value={analytics.total_revenue}
               format="currency"
               change={analytics.revenue_growth}
-              icon={<DollarSign className="h-4 w-4" />}
+              icon={<PhilippinePeso className="h-4 w-4" />}
             />
             <KpiCard
               title="Avg Order Value"

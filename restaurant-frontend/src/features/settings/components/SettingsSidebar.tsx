@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  Building2,
-  Settings,
-  ArrowLeft,
-} from "lucide-react";
+import { Building2, Settings, ArrowLeft } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/settings", label: "Overview", icon: Settings },

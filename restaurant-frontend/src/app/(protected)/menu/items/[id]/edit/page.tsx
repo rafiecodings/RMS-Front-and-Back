@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, DialogBodySkeleton, PageHeader } from "@/components/shared";
 import { MenuItemForm } from "@/features/menu";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -42,9 +42,7 @@ export default function EditMenuItemPage({
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 
@@ -79,7 +77,7 @@ export default function EditMenuItemPage({
       />
       <div className="rounded-lg border bg-card p-6 shadow-sm max-w-2xl">
         {categories.list.isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading categories...</p>
+          <DialogBodySkeleton lines={6} />
         ) : (
           <MenuItemForm
             initialData={item}

@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner, EmptyState } from "@/components/shared";
+import { TableSkeleton, EmptyState } from "@/components/shared";
 import { EntityActionDropdown } from "@/components/shared";
 import { Users } from "lucide-react";
 import type { Customer } from "@/lib/types";
@@ -36,11 +36,7 @@ export function CustomerTable({
   canEdit = true,
 }: CustomerTableProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <TableSkeleton rows={6} columns={6} showToolbar={false} showFooter={false} />;
   }
 
   if (customers.length === 0) {

@@ -1,13 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  CalendarCheck,
-  Clock,
-  AlertTriangle,
-  XCircle,
-  Users,
-} from "lucide-react";
+import { CalendarCheck, Clock, TriangleAlert, XCircle, Users } from "lucide-react";
 import type { Reservation } from "@/lib/types";
 
 function StatCard({
@@ -76,7 +70,7 @@ export function ReservationStats({
       <StatCard
         title="Pending"
         value={String(pending)}
-        icon={AlertTriangle}
+        icon={TriangleAlert}
         iconColor="bg-amber-500/10 text-amber-600"
       />
       <StatCard

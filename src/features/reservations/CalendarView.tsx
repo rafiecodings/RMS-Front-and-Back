@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, CalendarDays, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Reservation } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface CalendarViewProps {
@@ -214,7 +215,7 @@ export function CalendarView({
               : "Select a date"}
           </CardTitle>
           {isLoading ? (
-            <span className="text-xs text-muted-foreground">Loading…</span>
+            <Skeleton className="h-5 w-24 rounded-full" />
           ) : (
             selectedReservations.length > 0 && (
               <Badge variant="secondary" className="text-xs rounded-full">

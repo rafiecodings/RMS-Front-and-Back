@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner, ConfirmDialog } from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, ConfirmDialog } from "@/components/shared";
 import { CustomerDetail, EditCustomerDialog } from "@/features/customers";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Archive } from "lucide-react";
@@ -62,9 +62,7 @@ export default function CustomerDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 

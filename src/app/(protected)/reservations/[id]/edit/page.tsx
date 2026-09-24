@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner } from "@/components/shared";
+import { FormPageSkeleton, PageHeader } from "@/components/shared";
 import { ReservationForm } from "@/features/reservations";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -36,9 +36,7 @@ export default function EditReservationPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <FormPageSkeleton />
     );
   }
 

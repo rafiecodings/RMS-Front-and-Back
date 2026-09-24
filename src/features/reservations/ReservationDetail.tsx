@@ -13,7 +13,7 @@ import {
   Users,
   MapPin,
   MessageSquare,
-  CheckCircle,
+  CircleCheck,
   XCircle,
   ChevronRight,
 } from "lucide-react";
@@ -96,7 +96,7 @@ export function ReservationDetail({
           )}
           {canCheckIn && onCheckIn && (
             <Button variant="default" size="sm" onClick={onCheckIn}>
-              <CheckCircle className="h-4 w-4 mr-1.5" />
+              <CircleCheck className="h-4 w-4 mr-1.5" />
               Check In
             </Button>
           )}

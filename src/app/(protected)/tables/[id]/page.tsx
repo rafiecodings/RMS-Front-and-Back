@@ -2,17 +2,10 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { PageHeader, LoadingSpinner } from "@/components/shared";
+import { DetailPageSkeleton, PageHeader, StatusBadge } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/shared";
-import {
-  ArrowLeft,
-  Pencil,
-  Users,
-  Accessibility,
-  Hash,
-} from "lucide-react";
+import { ArrowLeft, Pencil, Users, Accessibility, Hash } from "lucide-react";
 import { useTables } from "@/lib/hooks";
 
 export default function TableDetailPage({
@@ -28,9 +21,7 @@ export default function TableDetailPage({
 
   if (list.isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" />
-      </div>
+      <DetailPageSkeleton />
     );
   }
 

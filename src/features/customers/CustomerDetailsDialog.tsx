@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { LoadingSpinner, ErrorState, StatusBadge } from "@/components/shared";
+import { DialogBodySkeleton, ErrorState, StatusBadge } from "@/components/shared";
 import { CustomerDetail } from "./CustomerDetail";
 import { ExternalLink, Pencil, Archive, X } from "lucide-react";
 import type { Customer } from "@/lib/types";
@@ -46,7 +46,7 @@ export function CustomerDetailsDialog({ open, onOpenChange, customer, isLoading,
         </DialogHeader>
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16"><LoadingSpinner size="lg" /></div>
+            <DialogBodySkeleton />
           ) : isError ? (
             <ErrorState message="Failed to load customer details." onRetry={onRetry} />
           ) : !customer ? (

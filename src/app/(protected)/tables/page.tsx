@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ConfirmDialog, LoadingSpinner, ErrorState, EmptyState, StatusBadge } from "@/components/shared";
+import { PageHeader, ConfirmDialog, CardGridSkeleton, ErrorState, EmptyState, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/providers/AuthProvider";
 import { canCreateTable, canEditTable, canArchiveTable, canChangeTableStatus } from "@/lib/utils/permissions";
 import {
@@ -23,10 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Plus,
-  LayoutGrid,
-} from "lucide-react";
+import { Plus, LayoutGrid } from "lucide-react";
 import { useTables } from "@/lib/hooks";
 import type { Table as TableType, TableStatus, TableFormData } from "@/lib/types";
 import { formatLabel } from "@/lib/utils";
@@ -194,8 +191,12 @@ export default function TablesPage() {
         </label>
 
         {tables.list.isLoading ? (
-          <div className="flex justify-center py-12" role="status" aria-label="Loading tables">
-            <LoadingSpinner size="lg" />
+          <div role="status" aria-label="Loading tables">
+            <CardGridSkeleton
+              count={8}
+              className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              lines={2}
+            />
           </div>
         ) : tables.list.isError ? (
           <ErrorState message="Failed to load tables. Please try again." onRetry={() => tables.list.refetch()} />

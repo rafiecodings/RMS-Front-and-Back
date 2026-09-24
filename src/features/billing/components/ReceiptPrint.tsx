@@ -101,7 +101,7 @@ export function ReceiptPrint({
           {invoice.table && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Table</span>
-              <span>T{invoice.table.number}</span>
+              <span>{invoice.table.number}</span>
             </div>
           )}
 

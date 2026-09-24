@@ -2,20 +2,10 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ClipboardList, ArrowRight } from "lucide-react";
-import { cn, formatCurrency, timeAgo } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared";
+import { formatCurrency, timeAgo } from "@/lib/utils";
 import type { DashboardSummary } from "@/lib/types";
-
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  confirmed: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  preparing: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  served: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
 
 const ORDER_TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine-in",
@@ -58,20 +48,12 @@ export function RecentOrders({ data }: { data: DashboardSummary }) {
                     <span className="text-sm font-semibold">
                       {order.order_number}
                     </span>
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "text-xs px-1.5 py-0",
-                        STATUS_BADGE[order.status] || ""
-                      )}
-                    >
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </Badge>
+                    <StatusBadge status={order.status} className="text-xs px-1.5 py-0" />
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {order.customer_name || "Walk-in"} &middot;{" "}
                     {ORDER_TYPE_LABEL[order.order_type]}
-                    {order.table_number && ` · T${order.table_number}`}
+                    {order.table_number && ` · ${order.table_number}`}
                     {` · ${order.items_count} item${order.items_count !== 1 ? "s" : ""}`}
                   </p>
                 </div>

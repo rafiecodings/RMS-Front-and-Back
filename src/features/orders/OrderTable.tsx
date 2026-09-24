@@ -10,29 +10,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/shared";
+import { TableSkeleton, EmptyState, StatusBadge } from "@/components/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, XCircle, Archive, Send, CheckCircle2, UtensilsCrossed, ShoppingBag, HelpCircle, RotateCcw } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  XCircle,
+  Archive,
+  Send,
+  CircleCheck,
+  UtensilsCrossed,
+  ShoppingBag,
+  HelpCircle,
+  RotateCcw,
+  ReceiptText,
+} from "lucide-react";
 import type { Order, OrderType } from "@/lib/types";
-import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
-
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  confirmed:
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  preparing:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  completed:
-    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 const TYPE_ICONS: Partial<Record<OrderType, React.ComponentType<{ className?: string }>>> = {
   dine_in: UtensilsCrossed,
@@ -63,18 +63,16 @@ export function OrderTable({
   onServeOrder,
 }: OrderTableProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <TableSkeleton rows={6} columns={6} showToolbar={false} showFooter={false} />;
   }
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">No orders found</p>
-      </div>
+      <EmptyState
+        title="No orders found"
+        icon={<ReceiptText className="h-8 w-8" />}
+        description="Try adjusting your search or filters."
+      />
     );
   }
 
@@ -117,7 +115,7 @@ export function OrderTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-xs">
-                  {order.table ? `T${order.table.number}` : "—"}
+                  {order.table ? order.table.number : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-xs">
                   {order.customer?.name ?? "Walk-in"}
@@ -129,15 +127,7 @@ export function OrderTable({
                   {formatCurrency(order.total_amount)}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-[10px] px-1.5 py-0",
-                      STATUS_STYLES[order.status]
-                    )}
-                  >
-                    {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </Badge>
+                  <StatusBadge status={order.status} className="text-[10px] px-1.5 py-0" />
                 </TableCell>
 <TableCell className="text-xs text-muted-foreground">
                   {order.placed_at ? formatDateTime(order.placed_at) : "—"}
@@ -171,7 +161,7 @@ export function OrderTable({
                       )}
                       {order.status === "ready" && onServeOrder && (
                         <DropdownMenuItem onClick={() => onServeOrder(order)}>
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          <CircleCheck className="h-4 w-4 mr-2" />
                           Mark as Served
                         </DropdownMenuItem>
                       )}
@@ -229,18 +219,17 @@ export function OrderTable({
                   {order.order_number}
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", STATUS_STYLES[order.status])}>
-                    {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </Badge>
+                  <StatusBadge status={order.status} className="text-[10px] px-1.5 py-0" />
                   <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" />}>
                       <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Actions</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {onView && <DropdownMenuItem onClick={() => onView(order)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>}
                       {(order.status === "pending" || order.status === "confirmed") && onEdit && <DropdownMenuItem onClick={() => onEdit(order)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>}
                       {order.status === "pending" && onSendToKitchen && <DropdownMenuItem onClick={() => onSendToKitchen(order)}><Send className="h-4 w-4 mr-2" />Send to Kitchen</DropdownMenuItem>}
-                      {order.status === "ready" && onServeOrder && <DropdownMenuItem onClick={() => onServeOrder(order)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark as Served</DropdownMenuItem>}
+                      {order.status === "ready" && onServeOrder && <DropdownMenuItem onClick={() => onServeOrder(order)}><CircleCheck className="h-4 w-4 mr-2" />Mark as Served</DropdownMenuItem>}
                       {onCancel && (["pending","confirmed","preparing","ready"].includes(order.status)) && <DropdownMenuItem onClick={() => onCancel(order)} className="text-destructive"><XCircle className="h-4 w-4 mr-2" />Cancel</DropdownMenuItem>}
                       {onArchive &&
                         (order.status === "completed" ||
@@ -269,7 +258,7 @@ export function OrderTable({
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1"><TypeIcon className="h-3.5 w-3.5" />{order.order_type.replace(/_/g, " ")}</span>
-                {order.order_type === "dine_in" && <span>· {order.table ? `T${order.table.number}` : "No table"}</span>}
+                {order.order_type === "dine_in" && <span>· {order.table ? order.table.number : "No table"}</span>}
               </div>
               <p className="text-xs text-muted-foreground truncate">{order.customer?.name ?? "Walk-in"}</p>
               <div className="flex items-center justify-between">

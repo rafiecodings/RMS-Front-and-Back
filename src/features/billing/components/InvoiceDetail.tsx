@@ -175,7 +175,7 @@ export function InvoiceDetail({
               {invoice.table && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Table</span>
-                  <span>T{invoice.table.number}</span>
+                  <span>{invoice.table.number}</span>
                 </div>
               )}
               {invoice.placed_at && (

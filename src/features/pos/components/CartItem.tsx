@@ -50,6 +50,8 @@ export function CartItem({
           variant="ghost"
           size="icon-xs"
           onClick={() => onRemove(item.id)}
+          aria-label={`Remove ${item.name ?? "item"} from cart`}
+          title="Remove from cart"
           className="shrink-0 text-muted-foreground hover:text-destructive"
         >
           <X className="h-3 w-3" />
@@ -62,6 +64,8 @@ export function CartItem({
             variant="outline"
             size="icon-xs"
             onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+            aria-label={`Decrease quantity of ${item.name ?? "item"}`}
+            title="Decrease quantity"
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -70,6 +74,8 @@ export function CartItem({
             variant="outline"
             size="icon-xs"
             onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+            aria-label={`Increase quantity of ${item.name ?? "item"}`}
+            title="Increase quantity"
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -82,6 +88,8 @@ export function CartItem({
           variant="ghost"
           size="icon-xs"
           onClick={() => setShowNotes(!showNotes)}
+          aria-label={`${showNotes ? "Hide" : "Add"} notes for ${item.name ?? "item"}`}
+          title="Item notes"
           className="h-5 w-5 text-muted-foreground hover:text-foreground"
         >
           <StickyNote className="h-3 w-3" />

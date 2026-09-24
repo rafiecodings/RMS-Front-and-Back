@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import { PageHeader, ConfirmDialog, SearchInput, LoadingSpinner, TablePagination, ErrorState } from "@/components/shared";
+import { DialogBodySkeleton, PageHeader, ConfirmDialog, SearchInput, TablePagination, ErrorState } from "@/components/shared";
 import { OrderTable, OrderStats, OrderForm, OrderDetail } from "@/features/orders";
 import { Button } from "@/components/ui/button";
 import {
@@ -245,7 +245,7 @@ export default function OrdersPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px] min-h-10">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -369,9 +369,7 @@ export default function OrdersPage() {
             <DialogTitle>Order Details</DialogTitle>
           </DialogHeader>
           {viewLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <LoadingSpinner size="lg" />
-            </div>
+            <DialogBodySkeleton />
           ) : viewOrder ? (
             <OrderDetail order={viewOrder} />
           ) : (
@@ -386,9 +384,7 @@ export default function OrdersPage() {
             <DialogTitle>Edit Order</DialogTitle>
           </DialogHeader>
           {editLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <LoadingSpinner size="lg" />
-            </div>
+            <DialogBodySkeleton />
           ) : editOrder && canEditOrder && editInitialData ? (
             <div className="rounded-lg border bg-card p-4 shadow-sm">
               <OrderForm

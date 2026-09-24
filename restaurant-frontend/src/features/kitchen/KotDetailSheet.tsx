@@ -6,13 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/shared";
 import { PriorityBadge } from "./PriorityBadge";
 import { OrderTimer } from "./OrderTimer";
 import type { Kot } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { Archive } from "lucide-react";
 
 interface KotDetailSheetProps {
@@ -21,20 +20,6 @@ interface KotDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   onArchive?: (kot: Kot) => void;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  received: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  in_progress:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  completed: "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300",
-};
-
-const ITEM_STATUS_STYLES: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-700",
-  in_progress: "bg-amber-100 text-amber-700",
-  ready: "bg-emerald-100 text-emerald-700",
-};
 
 export function KotDetailSheet({
   kot,
@@ -56,15 +41,7 @@ export function KotDetailSheet({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               {kot.kot_number}
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  STATUS_STYLES[kot.status]
-                )}
-              >
-                {kot.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-              </Badge>
+              <StatusBadge status={kot.status} className="text-[10px] px-1.5 py-0" />
             </DialogTitle>
             <PriorityBadge priority={kot.priority} />
           </div>
@@ -86,7 +63,7 @@ export function KotDetailSheet({
             {tableNumber && (
               <div>
                 <p className="text-xs text-muted-foreground">Table</p>
-                <p className="font-medium">T{tableNumber}</p>
+                <p className="font-medium">{tableNumber}</p>
               </div>
             )}
             {customerName && (
@@ -139,15 +116,7 @@ export function KotDetailSheet({
                         </span>
                       )}
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "text-[9px] px-1 py-0",
-                        ITEM_STATUS_STYLES[item.status]
-                      )}
-                    >
-                      {item.status}
-                    </Badge>
+                    <StatusBadge status={item.status} className="text-[9px] px-1 py-0 h-4" />
                   </div>
                   {item.modifiers && item.modifiers.length > 0 && (
                     <p className="text-xs text-muted-foreground">

@@ -4,17 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/shared";
 import { PriorityBadge } from "./PriorityBadge";
 import { OrderTimer } from "./OrderTimer";
-import {
-  UtensilsCrossed,
-  ShoppingBag,
-  Truck,
-  Play,
-  CheckCircle,
-  Eye,
-  Archive,
-} from "lucide-react";
+import { UtensilsCrossed, ShoppingBag, Truck, Play, CircleCheck, Eye, Archive } from "lucide-react";
 import type { Kot, KotStatus, KotPriority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -101,7 +94,7 @@ const nextStatus: Record<KotStatus, KotStatus | null> = {
               {tableNumber && (
                 <>
                   <span>·</span>
-                  <span className="font-medium">T{tableNumber}</span>
+                  <span className="font-medium">{tableNumber}</span>
                 </>
               )}
               {kot.station && (
@@ -113,6 +106,7 @@ const nextStatus: Record<KotStatus, KotStatus | null> = {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <StatusBadge status={kot.status} className="text-[9px] px-1 py-0 h-4" />
             <PriorityBadge priority={kot.priority} />
             <OrderTimer createdAt={kot.created_at} status={kot.status} stopAt={stopAt} />
           </div>
@@ -141,7 +135,7 @@ const nextStatus: Record<KotStatus, KotStatus | null> = {
                 )}
               </div>
               {item.status === "ready" && (
-                <CheckCircle className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
+                <CircleCheck className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
               )}
             </div>
           ))}
@@ -188,7 +182,7 @@ const nextStatus: Record<KotStatus, KotStatus | null> = {
               {kot.status === "received" ? (
                 <Play className="h-3.5 w-3.5 mr-1" />
               ) : (
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                <CircleCheck className="h-3.5 w-3.5 mr-1" />
               )}
               {nextLabel[kot.status]}
             </Button>

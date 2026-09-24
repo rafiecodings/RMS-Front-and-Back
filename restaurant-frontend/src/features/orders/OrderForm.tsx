@@ -88,7 +88,7 @@ export function OrderForm({
   const selectedCustomer = customers.find((c) => c.id === formData.customer_id) as Customer | undefined;
   const selectedTable = tables.find((t) => t.id === formData.table_id) as Table | undefined;
   const customerDisplay = formData.customer_id ? (selectedCustomer ? selectedCustomer.name : "Unavailable customer") : null;
-  const tableDisplay = formData.table_id ? (selectedTable ? `T${selectedTable.number} — ${selectedTable.capacity} seats` : "Unavailable table") : null;
+  const tableDisplay = formData.table_id ? (selectedTable ? `${selectedTable.number} — ${selectedTable.capacity} seats` : "Unavailable table") : null;
 
   const filteredMenuItems = menuItems.filter(
     (item) =>
@@ -263,7 +263,7 @@ export function OrderForm({
                 <SelectItem value="">No Table</SelectItem>
                 {availableTables.map((t) => (
                   <SelectItem key={t.id} value={t.id} className="truncate">
-                    T{t.number} — {t.capacity} seats
+                    {t.number} — {t.capacity} seats
                     {t.seating ? " · Seated Reservation" : ""}
                   </SelectItem>
                 ))}

@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LoadingSpinner } from "@/components/shared";
+import { CardGridSkeleton } from "@/components/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
   Minus,
@@ -78,7 +79,7 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
   const [tableId, setTableId] = useState<string>("");
 
   const customerDisplay = customerId ? (customers.find((c) => c.id === customerId)?.name ?? "Unavailable customer") : null;
-  const tableDisplay = tableId ? (tables.find((t) => t.id === tableId) ? `T${tables.find((t) => t.id === tableId)!.number} — ${tables.find((t) => t.id === tableId)!.capacity} seats` : "Unavailable table") : null;
+  const tableDisplay = tableId ? (tables.find((t) => t.id === tableId) ? `${tables.find((t) => t.id === tableId)!.number} — ${tables.find((t) => t.id === tableId)!.capacity} seats` : "Unavailable table") : null;
   const [notes, setNotes] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [mobileView, setMobileView] = useState<"menu" | "cart">("menu");
@@ -213,8 +214,21 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <LoadingSpinner size="lg" />
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="min-w-0 flex-1">
+          <CardGridSkeleton
+            count={9}
+            className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+            lines={2}
+          />
+        </div>
+        <div className="w-full space-y-3 lg:w-90">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))}
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
       </div>
     );
   }
@@ -380,7 +394,7 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
                       <SelectItem value="none">No table</SelectItem>
                       {availableTables.map((t: Table) => (
                         <SelectItem key={t.id} value={t.id} className="truncate">
-                          T{t.number}
+                          {t.number}
                           {t.section ? ` · ${t.section}` : ""} — {t.capacity} seats
                           {t.seating ? " · Seated Reservation" : ""}
                         </SelectItem>
@@ -487,12 +501,11 @@ export function PosOrderScreen({ onOrderSent }: PosOrderScreenProps) {
                 type="button"
                 size="lg"
                 className="w-full h-12 text-base"
+                loading={create.isPending || updateStatus.isPending}
                 disabled={!canSend}
                 onClick={handleSendToKitchen}
               >
-                {create.isPending || updateStatus.isPending ? (
-                  <LoadingSpinner size="sm" className="mr-2" />
-                ) : (
+                {!create.isPending && !updateStatus.isPending && (
                   <Send className="h-4 w-4 mr-2" />
                 )}
                 Send to Kitchen

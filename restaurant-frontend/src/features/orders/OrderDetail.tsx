@@ -3,21 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/shared";
 import { OrderTimeline } from "./OrderTimeline";
 import type { Order } from "@/lib/types";
-import { cn, formatCurrency, formatTime } from "@/lib/utils";
-
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  confirmed:
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  preparing:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  ready: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  completed:
-    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
+import { formatCurrency, formatTime } from "@/lib/utils";
 
 interface OrderDetailProps {
   order: Order;
@@ -33,15 +22,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold">{order.order_number}</h2>
-            <Badge
-              variant="secondary"
-              className={cn(
-                "text-[10px] px-1.5 py-0",
-                STATUS_STYLES[order.status]
-              )}
-            >
-              {order.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-            </Badge>
+            <StatusBadge status={order.status} className="text-[10px] px-1.5 py-0" />
             <Badge variant="outline" className="text-[10px] capitalize">
               {order.order_type.replace(/_/g, " ")}
             </Badge>

@@ -2,6 +2,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import os from "node:os";
 
+// HostForge production builds must never be blocked: the Docker build
+// environment holds port 3000 on PID 1, which is not a dev server, and there
+// is no shared .next cache to corrupt.
+if (process.env.HOSTFORGE === "true") {
+  process.exit(0);
+}
+
 // Production/CI/container builds (e.g. HostForge Docker) must never be
 // blocked: PID 1 or platform services may hold port 3000 there, and there is
 // no shared .next cache with a dev server to corrupt. Only enforce the guard

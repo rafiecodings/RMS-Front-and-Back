@@ -97,5 +97,21 @@ export function useMenuItems(
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
   });
 
-  return { list, create, update, remove, toggleAvailability };
+  const uploadImage = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      // Never let a JSON content type reach this request: axios would convert
+      // the FormData to JSON via formDataToJSON() and drop the binary, so the
+      // server would receive no file at all (422 on the `image` field).
+      return api.post<ApiResponse<{ id: string; image_url: string }>>(
+        `/menu/items/${id}/images`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
+  });
+
+  return { list, create, update, remove, toggleAvailability, uploadImage };
 }

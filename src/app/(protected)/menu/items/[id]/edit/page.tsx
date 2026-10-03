@@ -19,17 +19,26 @@ export default function EditMenuItemPage({
   const { id } = use(params);
   const router = useRouter();
   const categories = useMenuCategories();
-  const { list, update } = useMenuItems();
+  const { list, update, uploadImage } = useMenuItems();
 
   const categoryList = categories.list.data ?? [];
   const items = list.data?.data?.data ?? [];
   const item = items.find((i) => i.id === id);
 
-  function handleSubmit(data: MenuItemFormData) {
+  function handleSubmit(data: MenuItemFormData, imageFile?: File | null) {
     update.mutate(
       { id, data },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          if (imageFile) {
+            try {
+              await uploadImage.mutateAsync({ id, file: imageFile });
+            } catch {
+              toast.error("Menu item updated, but the image failed to upload.");
+              router.push(`/menu/items/${id}`);
+              return;
+            }
+          }
           toast.success("Menu item updated successfully");
           router.push(`/menu/items/${id}`);
         },

@@ -4,8 +4,13 @@ import { API_URL, DEV_PER_TAB_AUTH, DEV_AUTH_TOKEN_KEY } from "@/lib/utils/const
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
+  // NOTE: do NOT set a blanket "Content-Type: application/json" default here.
+  // Axios only auto-applies that header per-request inside transformRequest
+  // (and only for plain-object payloads). Forcing it on the instance makes
+  // transformRequest see a JSON content type even for FormData bodies and
+  // convert them with formDataToJSON() instead of sending real multipart --
+  // which silently drops File contents and breaks uploads (422 on the server).
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
   },
   // In dev per-tab auth mode, disable credentials to prevent cookie-based auth fallback

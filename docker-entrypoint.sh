@@ -28,14 +28,9 @@ fi
 # volume is mounted at storage/app/public; fresh clones/redeploys lose the link).
 ln -sfn /var/www/storage/app/public /var/www/public/storage || true
 
-php artisan migrate --force
 
 # Seed the production admin only when credentials are provided; otherwise skip
 # instead of failing the boot (ProductionBootstrapSeeder warns and skips too).
-if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
-  php artisan db:seed --class=ProductionBootstrapSeeder --force
-else
-  echo "Skipping ProductionBootstrapSeeder: ADMIN_EMAIL and/or ADMIN_PASSWORD not set."
-fi
+
 
 exec php artisan serve --host=0.0.0.0 --port=${PORT:-10000}

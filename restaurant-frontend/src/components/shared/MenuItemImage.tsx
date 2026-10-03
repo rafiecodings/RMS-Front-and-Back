@@ -42,6 +42,10 @@ export function MenuItemImage({
       sizes={sizes}
       priority={priority}
       onError={() => setFailed(true)}
+      // Uploaded images live on the backend at /storage/*. In dev the
+      // next/image optimizer can't fetch them, so serve them raw and let the
+      // /storage rewrite proxy hit the backend directly.
+      unoptimized={effectiveSrc.startsWith("/storage")}
       className={cn("object-cover", className)}
     />
   );

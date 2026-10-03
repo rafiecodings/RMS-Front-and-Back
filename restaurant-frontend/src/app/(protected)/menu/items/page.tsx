@@ -70,7 +70,7 @@ export default function MenuItemsPage() {
     }),
   }), [page, debouncedSearch, categoryFilter, availabilityFilter]);
 
-  const { list, create, update, remove, toggleAvailability } = useMenuItems(params);
+  const { list, create, update, remove, toggleAvailability, uploadImage } = useMenuItems(params);
 
   const items = list.data?.data?.data ?? [];
   const meta = list.data?.data?.meta;
@@ -84,23 +84,41 @@ export default function MenuItemsPage() {
     }, DEBOUNCE_DELAY);
   }
 
-  function handleCreate(data: MenuItemFormData) {
+  function handleCreate(data: MenuItemFormData, imageFile?: File | null) {
     create.mutate(data, {
-      onSuccess: () => {
-        toast.success("Menu item created");
+      onSuccess: async (res) => {
+        if (imageFile) {
+          try {
+            await uploadImage.mutateAsync({ id: res.data.data.id, file: imageFile });
+            toast.success("Menu item created");
+          } catch {
+            toast.error("Menu item created, but the image failed to upload.");
+          }
+        } else {
+          toast.success("Menu item created");
+        }
         setActiveModal(null);
       },
       onError: (e) => toast.error(apiError(e, "Failed to create menu item")),
     });
   }
 
-  function handleEdit(data: MenuItemFormData) {
+  function handleEdit(data: MenuItemFormData, imageFile?: File | null) {
     if (activeModal?.mode !== "edit") return;
     update.mutate(
       { id: activeModal.item.id, data },
       {
-        onSuccess: () => {
-          toast.success("Menu item updated");
+        onSuccess: async () => {
+          if (imageFile) {
+            try {
+              await uploadImage.mutateAsync({ id: activeModal.item.id, file: imageFile });
+              toast.success("Menu item updated");
+            } catch {
+              toast.error("Menu item updated, but the image failed to upload.");
+            }
+          } else {
+            toast.success("Menu item updated");
+          }
           setActiveModal(null);
         },
         onError: (e) => toast.error(apiError(e, "Failed to update menu item")),
@@ -185,7 +203,11 @@ export default function MenuItemsPage() {
                 }}
               >
                 <SelectTrigger className="flex-1 min-w-0 sm:w-[150px] sm:flex-none">
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder="All Categories">
+                    {categoryFilter === "all"
+                      ? "All Categories"
+                      : categoryList.find((c) => c.id === categoryFilter)?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
@@ -274,14 +296,18 @@ export default function MenuItemsPage() {
           if (!open) setActiveModal(null);
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        {/* Flex column with a pinned header/footer: the form body scrolls on its
+            own, so the primary action can never be clipped by the viewport. */}
+        <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="static mx-0 mt-0 mb-0 shrink-0 gap-2 border-b border-border bg-popover px-6 py-4">
             <DialogTitle>
               {activeModal?.mode === "edit" ? "Edit Item" : "Add Item"}
             </DialogTitle>
           </DialogHeader>
           {activeModal?.mode === "add" || activeModal?.mode === "edit" ? (
             <MenuItemForm
+              modal
+              onCancel={() => setActiveModal(null)}
               initialData={activeModal.mode === "edit" ? activeModal.item : undefined}
               categories={categoryList}
               isCategoriesLoading={categories.list.isLoading}

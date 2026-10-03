@@ -299,12 +299,19 @@ class ItemController extends Controller
             'image' => 'required|image|max:5120|mimes:jpeg,png,webp',
         ]);
 
-        if ($item->image_url && str_starts_with($item->image_url, 'storage/')) {
-            Storage::delete(str_replace('storage/', '', $item->image_url));
+        // Drop the previous upload so replacing an image does not leak files.
+        // The stored value may be relative ("/storage/...") or absolute
+        // ("https://host/storage/..."), so match on the path segment rather
+        // than a prefix.
+        if ($item->image_url && str_contains($item->image_url, 'menu-items/')) {
+            $previous = Str::after($item->image_url, 'menu-items/');
+            if ($previous !== '' && $previous !== $item->image_url) {
+                Storage::disk('public')->delete('menu-items/'.$previous);
+            }
         }
 
         $path = $request->file('image')->store('menu-items', 'public');
-        $item->update(['image_url' => Storage::url($path)]);
+        $item->update(['image_url' => '/storage/'.$path]);
 
         return $this->success([
             'id' => $item->id,

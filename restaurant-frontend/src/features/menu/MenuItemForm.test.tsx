@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MenuItemForm } from "./MenuItemForm";
-import type { MenuCategory } from "@/lib/types";
+import type { MenuCategory, MenuItem } from "@/lib/types";
 
 const category: MenuCategory = {
   id: "c-1",
@@ -17,7 +17,7 @@ const category: MenuCategory = {
 
 const UUID = "00000000-0000-0000-0000-000000000001";
 
-const editItem = {
+const editItem: MenuItem = {
   id: "item-1",
   category_id: UUID,
   name: "Herb Rice Bowl",
@@ -135,5 +135,72 @@ describe("MenuItemForm price validation", () => {
 
     expect(screen.getByText("Unknown Category")).toBeInTheDocument();
     expect(screen.queryByText(UUID)).toBeNull();
+  });
+});
+
+describe("MenuItemForm image label", () => {
+  const uploadedItem = {
+    ...editItem,
+    image_url: "/storage/menu-items/CnVYvTp27ZFHOaXUGRL54wJmkHHltMbFUzyVMCTC.png",
+  };
+
+  function renderForm(item: typeof editItem) {
+    return render(
+      <MenuItemForm
+        initialData={item}
+        categories={[{ ...category, id: UUID, name: "Main Course" }]}
+        onSubmit={vi.fn()}
+        submitLabel="Update Item"
+      />
+    );
+  }
+
+  it("never renders the raw storage path for an uploaded image", () => {
+    const { container } = renderForm(uploadedItem);
+    expect(container.textContent).not.toContain("/storage/menu-items/");
+    expect(container.textContent).not.toContain("CnVYvTp27ZFHOaXUGRL54wJmkHHltMbFUzyVMCTC");
+  });
+
+  it("labels an uploaded image with a short readable marker", () => {
+    renderForm(uploadedItem);
+    expect(screen.getByText("Uploaded image")).toBeInTheDocument();
+  });
+
+  it("labels a preset image with its human name, not its path", () => {
+    renderForm({ ...editItem, image_url: "/images/menu-items/halo-halo.jpg" });
+    expect(screen.getByText("Halo-Halo")).toBeInTheDocument();
+    expect(screen.queryByText("/images/menu-items/halo-halo.jpg")).toBeNull();
+  });
+});
+
+describe("MenuItemForm modal layout", () => {
+  it("scrolls the body and pins actions in a footer only in modal mode", () => {
+    const { container, rerender } = render(
+      <MenuItemForm
+        categories={[category]}
+        onSubmit={vi.fn()}
+        submitLabel="Create Item"
+        modal
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(container.querySelector(".flex-1.overflow-y-auto")).not.toBeNull();
+    const submit = screen.getByRole("button", { name: /create item/i });
+    const footer = submit.closest("div");
+    expect(footer?.className).toContain("shrink-0");
+    expect(footer?.className).toContain("border-t");
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+
+    // Page usage (non-modal) must NOT gain a pinned footer.
+    rerender(
+      <MenuItemForm
+        categories={[category]}
+        onSubmit={vi.fn()}
+        submitLabel="Create Item"
+      />
+    );
+    expect(container.querySelector(".flex-1.overflow-y-auto")).toBeNull();
+    expect(screen.queryByRole("button", { name: /cancel/i })).toBeNull();
   });
 });

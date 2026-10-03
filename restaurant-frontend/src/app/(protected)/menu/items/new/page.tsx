@@ -13,13 +13,22 @@ import type { MenuItemFormData } from "@/lib/types";
 export default function NewMenuItemPage() {
   const router = useRouter();
   const categories = useMenuCategories();
-  const { create } = useMenuItems();
+  const { create, uploadImage } = useMenuItems();
 
   const categoryList = categories.list.data ?? [];
 
-  function handleSubmit(data: MenuItemFormData) {
+  function handleSubmit(data: MenuItemFormData, imageFile?: File | null) {
     create.mutate(data, {
-      onSuccess: () => {
+      onSuccess: async (res) => {
+        if (imageFile) {
+          try {
+            await uploadImage.mutateAsync({ id: res.data.data.id, file: imageFile });
+          } catch {
+            toast.error("Menu item created, but the image failed to upload.");
+            router.push("/menu/items");
+            return;
+          }
+        }
         toast.success("Menu item created successfully");
         router.push("/menu/items");
       },

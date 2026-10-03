@@ -2,11 +2,15 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  (isProduction
-    ? "https://rms-backend-dj5q.onrender.com"
-    : "http://127.0.0.1:8000");
+const rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+
+if (isProduction && !rawBackendUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_BACKEND_URL is required for production builds. Set it to the backend origin (e.g. https://api.your-domain.com) so /api/v1 and /storage rewrites can be generated at build time."
+  );
+}
+
+const backendUrl = rawBackendUrl || "http://127.0.0.1:8000";
 
 const securityHeaders = [
   {

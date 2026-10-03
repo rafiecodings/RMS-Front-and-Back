@@ -1,5 +1,19 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import os from "node:os";
+
+// Production/CI/container builds (e.g. HostForge Docker) must never be
+// blocked: PID 1 or platform services may hold port 3000 there, and there is
+// no shared .next cache with a dev server to corrupt. Only enforce the guard
+// on a real local development machine.
+const isNonLocalBuild =
+  process.env.CI === "true" ||
+  process.env.NODE_ENV === "production" ||
+  existsSync("/.dockerenv");
+
+if (isNonLocalBuild) {
+  process.exit(0);
+}
 
 function findPortOwnerPid(port) {
   try {

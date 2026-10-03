@@ -16,6 +16,11 @@ RUN composer install --no-dev --optimize-autoloader
 
 RUN chmod -R 775 storage bootstrap/cache
 
+RUN php artisan storage:link || true
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 10000
 
-CMD php artisan migrate --force && php artisan db:seed --class=ProductionBootstrapSeeder --force && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

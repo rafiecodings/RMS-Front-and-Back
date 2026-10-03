@@ -37,6 +37,12 @@ function findPortOwnerPid(port) {
   } catch { return null; }
 }
 
+// This guard is only needed on the local Windows development machine.
+// Production/container builds must never be blocked by port 3000.
+if (os.platform() !== "win32") {
+  process.exit(0);
+}
+
 const pid = findPortOwnerPid(3000);
 if (pid) {
   console.error(`RMS dev server is currently running on port 3000${pid ? ` (PID ${pid})` : ""}.`);

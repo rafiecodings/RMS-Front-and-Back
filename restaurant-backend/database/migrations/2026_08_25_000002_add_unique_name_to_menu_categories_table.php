@@ -26,7 +26,7 @@ return new class extends Migration
 
         // Defensively de-duplicate names WITHOUT deleting anything.
         $duplicates = \Illuminate\Support\Facades\DB::table('menu_categories')
-            ->select('name', \Illuminate\Support\Facades\DB::raw('MIN(id) AS keep_id'))
+            ->select('name', \Illuminate\Support\Facades\DB::raw('MIN(CAST(id AS TEXT)) AS keep_id'))
             ->groupBy('name')
             ->havingRaw('COUNT(*) > 1')
             ->get();

@@ -14,7 +14,7 @@ return new class extends Migration
         $duplicates = DB::table('invoices')
             ->select('order_id', DB::raw('count(*) as cnt'))
             ->groupBy('order_id')
-            ->having('cnt', '>', 1)
+            ->havingRaw('count(*) > 1')
             ->pluck('order_id');
 
         foreach ($duplicates as $orderId) {
